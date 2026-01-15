@@ -103,53 +103,290 @@ export class MemStorage implements IStorage {
       }
     }
 
-    const commanderData = [
-      { name: "Pyros the Eternal", element: "Fire", title: "Lord of Flames", description: "Commands the fury of ancient volcanoes" },
-      { name: "Aquara the Deep", element: "Water", title: "Queen of Tides", description: "Controls the endless oceans" },
-      { name: "Terran the Unmovable", element: "Earth", title: "Mountain King", description: "Strength of a thousand mountains" },
-      { name: "Zephyros the Swift", element: "Air", title: "Wind Lord", description: "Speed of the eternal storm" },
-      { name: "Gaia the Eternal", element: "Nature", title: "Forest Mother", description: "Life springs from her touch" },
-    ];
+    // Fire General
+    const fireCommander: Commander = {
+      id: "commander-fire",
+      name: "Pyros the Eternal",
+      element: "Fire",
+      title: "Lord of Flames",
+      description: "Commands the fury of ancient volcanoes. Earns advance counters from victories and defeat counters from losses.",
+      abilities: [
+        {
+          id: "ability-fire-1",
+          name: "Scorching Flames",
+          description: "Remove 4 advance counters: Target one non-Fire enemy unit and deal 4 damage to opponent.",
+          phase: "combat",
+          victoryCost: 4,
+          withdrawalCost: 0,
+          effect: { type: "direct_damage", value: 4, target: "enemy_non_element" },
+        },
+        {
+          id: "ability-fire-2",
+          name: "Inferno Blast",
+          description: "Remove 10 advance counters: Deal damage equal to your total Fire unit power to the opponent.",
+          phase: "combat",
+          victoryCost: 10,
+          withdrawalCost: 0,
+          effect: { type: "element_power_damage", value: 0, target: "opponent" },
+        },
+        {
+          id: "ability-fire-3",
+          name: "Burning Rage",
+          description: "Remove 4 defeat counters: Give a Fire unit you control +4 power this battle.",
+          phase: "combat",
+          victoryCost: 0,
+          withdrawalCost: 4,
+          effect: { type: "buff_element_unit", value: 4, target: "fire" },
+        },
+        {
+          id: "ability-fire-4",
+          name: "Volcanic Eruption",
+          description: "Remove 10 defeat counters: Play an extra Fire unit from your hand during deployment.",
+          phase: "deployment",
+          victoryCost: 0,
+          withdrawalCost: 10,
+          effect: { type: "extra_deploy", value: 1, target: "fire" },
+        },
+        {
+          id: "ability-fire-5",
+          name: "Phoenix Rebirth",
+          description: "Remove 4 advance and 4 defeat counters: Shuffle Fire units from hand into deck, draw equal cards.",
+          phase: "draw",
+          victoryCost: 4,
+          withdrawalCost: 4,
+          effect: { type: "cycle_element_cards", value: 0, target: "fire" },
+        },
+      ],
+    };
+    this.commanders.set(fireCommander.id, fireCommander);
 
-    for (const cmd of commanderData) {
-      const commander: Commander = {
-        id: `commander-${cmd.element.toLowerCase()}`,
-        name: cmd.name,
-        element: cmd.element as typeof ELEMENTS[number],
-        title: cmd.title,
-        description: cmd.description,
-        abilities: [
-          {
-            id: `ability-${cmd.element.toLowerCase()}-1`,
-            name: "Power Surge",
-            description: "Boost all allied cards by +2 power",
-            phase: "combat",
-            victoryCost: 2,
-            withdrawalCost: 0,
-            effect: { type: "buff_all", value: 2, target: "allied" },
-          },
-          {
-            id: `ability-${cmd.element.toLowerCase()}-2`,
-            name: "Defensive Stance",
-            description: "Reduce incoming damage by 5",
-            phase: "calculation",
-            victoryCost: 0,
-            withdrawalCost: 2,
-            effect: { type: "reduce_damage", value: 5, target: "self" },
-          },
-          {
-            id: `ability-${cmd.element.toLowerCase()}-3`,
-            name: "Draw Power",
-            description: "Draw 2 additional cards",
-            phase: "draw",
-            victoryCost: 1,
-            withdrawalCost: 1,
-            effect: { type: "draw_cards", value: 2, target: "self" },
-          },
-        ],
-      };
-      this.commanders.set(commander.id, commander);
-    }
+    // Water General
+    const waterCommander: Commander = {
+      id: "commander-water",
+      name: "Aquara the Deep",
+      element: "Water",
+      title: "Queen of Tides",
+      description: "Controls the endless oceans. Earns advance counters from victories and defeat counters from losses.",
+      abilities: [
+        {
+          id: "ability-water-1",
+          name: "Tidal Lock",
+          description: "Remove 4 advance counters: Target one non-Water enemy unit and block its effects.",
+          phase: "combat",
+          victoryCost: 4,
+          withdrawalCost: 0,
+          effect: { type: "block_effects", value: 0, target: "enemy_non_element" },
+        },
+        {
+          id: "ability-water-2",
+          name: "Overwhelming Tide",
+          description: "Remove 10 advance counters: Negate all enemy effects, halve their strength if not Water units.",
+          phase: "combat",
+          victoryCost: 10,
+          withdrawalCost: 0,
+          effect: { type: "negate_and_halve", value: 0, target: "enemy_non_water" },
+        },
+        {
+          id: "ability-water-3",
+          name: "Healing Waters",
+          description: "Remove 4 defeat counters: Give a Water unit you control +4 healing factor this battle.",
+          phase: "combat",
+          victoryCost: 0,
+          withdrawalCost: 4,
+          effect: { type: "healing_factor", value: 4, target: "water" },
+        },
+        {
+          id: "ability-water-4",
+          name: "Ocean's Blessing",
+          description: "Remove 10 defeat counters: Play an extra Water unit from your hand during deployment.",
+          phase: "deployment",
+          victoryCost: 0,
+          withdrawalCost: 10,
+          effect: { type: "extra_deploy", value: 1, target: "water" },
+        },
+        {
+          id: "ability-water-5",
+          name: "Current Flow",
+          description: "Remove 4 advance and 4 defeat counters: Shuffle Water units from hand into deck, draw equal cards.",
+          phase: "draw",
+          victoryCost: 4,
+          withdrawalCost: 4,
+          effect: { type: "cycle_element_cards", value: 0, target: "water" },
+        },
+      ],
+    };
+    this.commanders.set(waterCommander.id, waterCommander);
+
+    // Earth General
+    const earthCommander: Commander = {
+      id: "commander-earth",
+      name: "Terran the Unmovable",
+      element: "Earth",
+      title: "Mountain King",
+      description: "Strength of a thousand mountains. Earns advance counters from victories and defeat counters from losses.",
+      abilities: [
+        {
+          id: "ability-earth-1",
+          name: "Stone Wall",
+          description: "Remove 4 advance counters: Target one of your Earth units - it won't go to the medical ward this turn.",
+          phase: "combat",
+          victoryCost: 4,
+          withdrawalCost: 0,
+          effect: { type: "prevent_ward", value: 0, target: "earth" },
+        },
+        {
+          id: "ability-earth-2",
+          name: "Earthquake",
+          description: "Remove 10 advance counters: Target one non-Earth enemy unit and send it to the medical ward.",
+          phase: "combat",
+          victoryCost: 10,
+          withdrawalCost: 0,
+          effect: { type: "destroy_unit", value: 0, target: "enemy_non_earth" },
+        },
+        {
+          id: "ability-earth-3",
+          name: "Granite Shield",
+          description: "Remove 4 defeat counters: Add +4 shield to an Earth unit you control.",
+          phase: "combat",
+          victoryCost: 0,
+          withdrawalCost: 4,
+          effect: { type: "add_shield", value: 4, target: "earth" },
+        },
+        {
+          id: "ability-earth-4",
+          name: "Mountain's Call",
+          description: "Remove 10 defeat counters: Play an extra Earth unit from your hand during deployment.",
+          phase: "deployment",
+          victoryCost: 0,
+          withdrawalCost: 10,
+          effect: { type: "extra_deploy", value: 1, target: "earth" },
+        },
+        {
+          id: "ability-earth-5",
+          name: "Tectonic Shift",
+          description: "Remove 4 advance and 4 defeat counters: Shuffle Earth units from hand into deck, draw equal cards.",
+          phase: "draw",
+          victoryCost: 4,
+          withdrawalCost: 4,
+          effect: { type: "cycle_element_cards", value: 0, target: "earth" },
+        },
+      ],
+    };
+    this.commanders.set(earthCommander.id, earthCommander);
+
+    // Air General
+    const airCommander: Commander = {
+      id: "commander-air",
+      name: "Zephyros the Swift",
+      element: "Air",
+      title: "Wind Lord",
+      description: "Speed of the eternal storm. Earns advance counters from victories and defeat counters from losses.",
+      abilities: [
+        {
+          id: "ability-air-1",
+          name: "Gale Force",
+          description: "Remove 4 advance counters: Target one non-Air enemy unit and reduce its power by 4.",
+          phase: "combat",
+          victoryCost: 4,
+          withdrawalCost: 0,
+          effect: { type: "reduce_power", value: 4, target: "enemy_non_element" },
+        },
+        {
+          id: "ability-air-2",
+          name: "Cyclone Strike",
+          description: "Remove 10 advance counters: All your Air units attack first, dealing damage before calculation.",
+          phase: "combat",
+          victoryCost: 10,
+          withdrawalCost: 0,
+          effect: { type: "first_strike", value: 0, target: "air" },
+        },
+        {
+          id: "ability-air-3",
+          name: "Wind Barrier",
+          description: "Remove 4 defeat counters: Give an Air unit you control +4 evasion this battle.",
+          phase: "combat",
+          victoryCost: 0,
+          withdrawalCost: 4,
+          effect: { type: "add_evasion", value: 4, target: "air" },
+        },
+        {
+          id: "ability-air-4",
+          name: "Storm's Arrival",
+          description: "Remove 10 defeat counters: Play an extra Air unit from your hand during deployment.",
+          phase: "deployment",
+          victoryCost: 0,
+          withdrawalCost: 10,
+          effect: { type: "extra_deploy", value: 1, target: "air" },
+        },
+        {
+          id: "ability-air-5",
+          name: "Whirlwind",
+          description: "Remove 4 advance and 4 defeat counters: Shuffle Air units from hand into deck, draw equal cards.",
+          phase: "draw",
+          victoryCost: 4,
+          withdrawalCost: 4,
+          effect: { type: "cycle_element_cards", value: 0, target: "air" },
+        },
+      ],
+    };
+    this.commanders.set(airCommander.id, airCommander);
+
+    // Nature General
+    const natureCommander: Commander = {
+      id: "commander-nature",
+      name: "Gaia the Eternal",
+      element: "Nature",
+      title: "Forest Mother",
+      description: "Life springs from her touch. Earns advance counters from victories and defeat counters from losses.",
+      abilities: [
+        {
+          id: "ability-nature-1",
+          name: "Entangling Vines",
+          description: "Remove 4 advance counters: Target one non-Nature enemy unit and reduce its power to 1.",
+          phase: "combat",
+          victoryCost: 4,
+          withdrawalCost: 0,
+          effect: { type: "set_power", value: 1, target: "enemy_non_element" },
+        },
+        {
+          id: "ability-nature-2",
+          name: "Nature's Wrath",
+          description: "Remove 10 advance counters: Return up to 3 units from your medical ward to your deck.",
+          phase: "end",
+          victoryCost: 10,
+          withdrawalCost: 0,
+          effect: { type: "restore_from_ward", value: 3, target: "deck" },
+        },
+        {
+          id: "ability-nature-3",
+          name: "Rejuvenation",
+          description: "Remove 4 defeat counters: Heal 4 HP and give a Nature unit +2 power.",
+          phase: "end",
+          victoryCost: 0,
+          withdrawalCost: 4,
+          effect: { type: "heal_and_buff", value: 4, target: "nature" },
+        },
+        {
+          id: "ability-nature-4",
+          name: "Forest's Gift",
+          description: "Remove 10 defeat counters: Play an extra Nature unit from your hand during deployment.",
+          phase: "deployment",
+          victoryCost: 0,
+          withdrawalCost: 10,
+          effect: { type: "extra_deploy", value: 1, target: "nature" },
+        },
+        {
+          id: "ability-nature-5",
+          name: "Cycle of Life",
+          description: "Remove 4 advance and 4 defeat counters: Shuffle Nature units from hand into deck, draw equal cards.",
+          phase: "draw",
+          victoryCost: 4,
+          withdrawalCost: 4,
+          effect: { type: "cycle_element_cards", value: 0, target: "nature" },
+        },
+      ],
+    };
+    this.commanders.set(natureCommander.id, natureCommander);
 
     const guestPlayer: Player = {
       id: "player-guest",
