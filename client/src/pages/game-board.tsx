@@ -592,23 +592,59 @@ export default function GameBoardPage() {
               )}
             </div>
           </ScrollArea>
-          <div className="p-3 border-t border-purple-500/20">
+          <div className="p-2 border-t border-purple-500/20">
+            <div className="flex gap-1 mb-2 flex-wrap">
+              {[
+                { icon: Trophy, text: "GG" },
+                { icon: Swords, text: "Nice!" },
+                { icon: Heart, text: "Thanks" },
+                { icon: RotateCcw, text: "Thinking" },
+                { icon: Flag, text: "Hurry!" },
+                { icon: Shield, text: "Sorry" },
+              ].map((emote) => {
+                const Icon = emote.icon;
+                return (
+                  <Button
+                    key={emote.text}
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 px-2 text-xs hover:bg-purple-500/20 gap-1"
+                    onClick={() => {
+                      sendGameMessage(gameId!, emote.text);
+                      const newMsg: ChatMessage = {
+                        id: Date.now().toString(),
+                        message: emote.text,
+                        senderId: user?.id || "",
+                        senderName: user?.firstName || "You",
+                        createdAt: new Date().toISOString(),
+                      };
+                      setChatMessages((prev) => [...prev, newMsg]);
+                    }}
+                    data-testid={`emote-${emote.text.toLowerCase().replace(/[^a-z]/g, '')}`}
+                  >
+                    <Icon className="w-3 h-3" />
+                    <span>{emote.text}</span>
+                  </Button>
+                );
+              })}
+            </div>
             <div className="flex gap-2">
               <Input
                 placeholder="Type a message..."
                 value={chatMessage}
                 onChange={(e) => setChatMessage(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSendChat()}
-                className="bg-slate-900/50 border-purple-500/30 text-white"
+                className="bg-slate-900/50 border-purple-500/30 text-white text-sm h-8"
                 data-testid="input-game-chat"
               />
               <Button 
                 size="icon" 
+                className="h-8 w-8"
                 onClick={handleSendChat}
                 disabled={!chatMessage.trim()}
                 data-testid="button-send-game-chat"
               >
-                <Send className="w-4 h-4" />
+                <Send className="w-3 h-3" />
               </Button>
             </div>
           </div>

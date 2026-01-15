@@ -166,3 +166,143 @@ export const matchmakingQueue = pgTable(
 
 export type MatchmakingEntry = typeof matchmakingQueue.$inferSelect;
 export type InsertMatchmakingEntry = typeof matchmakingQueue.$inferInsert;
+
+export const ACHIEVEMENT_CATEGORIES = ["wins", "games", "collection", "social", "special"] as const;
+export type AchievementCategory = typeof ACHIEVEMENT_CATEGORIES[number];
+
+export const achievements = pgTable(
+  "achievements",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    name: varchar("name", { length: 100 }).notNull(),
+    description: text("description").notNull(),
+    category: varchar("category", { length: 20 }).notNull(),
+    icon: varchar("icon", { length: 50 }),
+    requirement: integer("requirement").notNull().default(1),
+    xpReward: integer("xp_reward").default(100),
+    isSecret: boolean("is_secret").default(false),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => [
+    index("idx_achievements_category").on(table.category),
+  ]
+);
+
+export type Achievement = typeof achievements.$inferSelect;
+export type InsertAchievement = typeof achievements.$inferInsert;
+
+export const playerAchievements = pgTable(
+  "player_achievements",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    userId: varchar("user_id").notNull().references(() => users.id),
+    achievementId: varchar("achievement_id").notNull().references(() => achievements.id),
+    progress: integer("progress").default(0),
+    unlockedAt: timestamp("unlocked_at"),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => [
+    index("idx_player_achievements_user").on(table.userId),
+    index("idx_player_achievements_achievement").on(table.achievementId),
+  ]
+);
+
+export type PlayerAchievement = typeof playerAchievements.$inferSelect;
+export type InsertPlayerAchievement = typeof playerAchievements.$inferInsert;
+
+export const CHALLENGE_TYPES = ["win_games", "play_element", "deal_damage", "use_commander", "play_cards"] as const;
+export type ChallengeType = typeof CHALLENGE_TYPES[number];
+
+export const dailyChallenges = pgTable(
+  "daily_challenges",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    name: varchar("name", { length: 100 }).notNull(),
+    description: text("description").notNull(),
+    challengeType: varchar("challenge_type", { length: 30 }).notNull(),
+    requirement: integer("requirement").notNull(),
+    elementFilter: varchar("element_filter", { length: 20 }),
+    xpReward: integer("xp_reward").default(50),
+    activeDate: timestamp("active_date").notNull(),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => [
+    index("idx_daily_challenges_date").on(table.activeDate),
+  ]
+);
+
+export type DailyChallenge = typeof dailyChallenges.$inferSelect;
+export type InsertDailyChallenge = typeof dailyChallenges.$inferInsert;
+
+export const playerChallenges = pgTable(
+  "player_challenges",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    userId: varchar("user_id").notNull().references(() => users.id),
+    challengeId: varchar("challenge_id").notNull().references(() => dailyChallenges.id),
+    progress: integer("progress").default(0),
+    completedAt: timestamp("completed_at"),
+    claimedAt: timestamp("claimed_at"),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => [
+    index("idx_player_challenges_user").on(table.userId),
+    index("idx_player_challenges_challenge").on(table.challengeId),
+  ]
+);
+
+export type PlayerChallenge = typeof playerChallenges.$inferSelect;
+export type InsertPlayerChallenge = typeof playerChallenges.$inferInsert;
+
+export const playerStats = pgTable(
+  "player_stats",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    userId: varchar("user_id").notNull().references(() => users.id).unique(),
+    totalXp: integer("total_xp").default(0),
+    level: integer("level").default(1),
+    gamesPlayed: integer("games_played").default(0),
+    gamesWon: integer("games_won").default(0),
+    gamesLost: integer("games_lost").default(0),
+    totalDamageDealt: integer("total_damage_dealt").default(0),
+    totalCardsPlayed: integer("total_cards_played").default(0),
+    favoriteElement: varchar("favorite_element", { length: 20 }),
+    favoriteCommander: varchar("favorite_commander"),
+    longestWinStreak: integer("longest_win_streak").default(0),
+    currentWinStreak: integer("current_win_streak").default(0),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [
+    index("idx_player_stats_user").on(table.userId),
+    index("idx_player_stats_level").on(table.level),
+    index("idx_player_stats_xp").on(table.totalXp),
+  ]
+);
+
+export type PlayerStats = typeof playerStats.$inferSelect;
+export type InsertPlayerStats = typeof playerStats.$inferInsert;
+
+export const EMOTE_TYPES = ["good_game", "nice_play", "thanks", "thinking", "hurry_up", "sorry"] as const;
+export type EmoteType = typeof EMOTE_TYPES[number];
+
+export const deckCodes = pgTable(
+  "deck_codes",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    code: varchar("code", { length: 20 }).notNull().unique(),
+    deckName: varchar("deck_name", { length: 100 }).notNull(),
+    commanderId: varchar("commander_id").notNull(),
+    cardIds: jsonb("card_ids").notNull(),
+    creatorId: varchar("creator_id").references(() => users.id),
+    isPublic: boolean("is_public").default(false),
+    uses: integer("uses").default(0),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => [
+    index("idx_deck_codes_code").on(table.code),
+    index("idx_deck_codes_creator").on(table.creatorId),
+  ]
+);
+
+export type DeckCode = typeof deckCodes.$inferSelect;
+export type InsertDeckCode = typeof deckCodes.$inferInsert;

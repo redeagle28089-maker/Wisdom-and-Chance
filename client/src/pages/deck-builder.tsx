@@ -8,17 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { Flame, Droplet, Mountain, Wind, Leaf, Plus, Minus, Save, Trash2, Crown, LogIn } from "lucide-react";
+import { Plus, Minus, Save, Trash2, Crown, LogIn, Share2, Download, Copy, Check } from "lucide-react";
+import { elementConfig, CommanderCard } from "@/components/game-card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import type { Card as CardType, Commander, Deck, Element, InsertDeck } from "@shared/schema";
 import { GAME_CONSTANTS } from "@shared/schema";
-
-const elementConfig: Record<Element, { icon: typeof Flame; color: string; bgColor: string }> = {
-  Fire: { icon: Flame, color: "text-red-500", bgColor: "bg-red-600" },
-  Water: { icon: Droplet, color: "text-blue-500", bgColor: "bg-blue-600" },
-  Earth: { icon: Mountain, color: "text-amber-500", bgColor: "bg-amber-600" },
-  Air: { icon: Wind, color: "text-green-400", bgColor: "bg-green-500" },
-  Nature: { icon: Leaf, color: "text-emerald-500", bgColor: "bg-emerald-600" },
-};
 
 export default function DeckBuilderPage() {
   const { toast } = useToast();
@@ -26,6 +20,10 @@ export default function DeckBuilderPage() {
   const [selectedCommander, setSelectedCommander] = useState<string | null>(null);
   const [deckCards, setDeckCards] = useState<Map<string, number>>(new Map());
   const [selectedElement, setSelectedElement] = useState<Element | "all">("all");
+  const [importCode, setImportCode] = useState("");
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const { data: cards = [] } = useQuery<CardType[]>({
     queryKey: ["/api/cards"],
@@ -149,6 +147,86 @@ export default function DeckBuilderPage() {
     });
   };
 
+  const generateDeckCode = () => {
+    const deckData = {
+      n: deckName,
+      c: selectedCommander,
+      d: Array.from(deckCards.entries()).map(([id, count]) => `${id}:${count}`),
+    };
+    return btoa(JSON.stringify(deckData));
+  };
+
+  const copyDeckCode = () => {
+    const code = generateDeckCode();
+    navigator.clipboard.writeText(code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+    toast({ title: "Deck code copied to clipboard!" });
+  };
+
+  const importDeck = () => {
+    try {
+      const decoded = atob(importCode);
+      const data = JSON.parse(decoded);
+      
+      // Validate commander exists
+      if (data.c) {
+        const commanderExists = commanders.some((c) => c.id === data.c);
+        if (!commanderExists) {
+          toast({ title: "Invalid commander in deck code", variant: "destructive" });
+          return;
+        }
+        setSelectedCommander(data.c);
+      }
+      
+      if (data.n && typeof data.n === "string") {
+        setDeckName(data.n.substring(0, 50)); // Limit name length
+      }
+      
+      if (data.d && Array.isArray(data.d)) {
+        const newDeck = new Map<string, number>();
+        const powerCounts: Record<number, number> = {};
+        for (let i = 1; i <= 10; i++) powerCounts[i] = 0;
+        let totalAdded = 0;
+        
+        for (const entry of data.d) {
+          if (typeof entry !== "string") continue;
+          const [id, countStr] = entry.split(":");
+          
+          // Validate card exists
+          const card = cards.find((c) => c.id === id);
+          if (!card) continue;
+          
+          let count = parseInt(countStr) || 1;
+          
+          // Enforce max copies per card
+          count = Math.min(count, GAME_CONSTANTS.MAX_COPIES_PER_CARD);
+          
+          // Enforce power rank limits
+          const availableForPower = GAME_CONSTANTS.CARDS_PER_POWER_RANK - (powerCounts[card.power] || 0);
+          count = Math.min(count, availableForPower);
+          
+          // Enforce total deck size
+          const availableTotal = GAME_CONSTANTS.DECK_SIZE - totalAdded;
+          count = Math.min(count, availableTotal);
+          
+          if (count > 0) {
+            newDeck.set(id, count);
+            powerCounts[card.power] = (powerCounts[card.power] || 0) + count;
+            totalAdded += count;
+          }
+        }
+        setDeckCards(newDeck);
+      }
+      
+      setImportDialogOpen(false);
+      setImportCode("");
+      toast({ title: "Deck imported successfully!" });
+    } catch {
+      toast({ title: "Invalid deck code", variant: "destructive" });
+    }
+  };
+
   if (authLoading) {
     return (
       <div className="min-h-full bg-gradient-to-br from-slate-900 via-purple-900/30 to-slate-900 p-4 md:p-6 flex items-center justify-center">
@@ -201,28 +279,15 @@ export default function DeckBuilderPage() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                  {commanders.map((commander) => {
-                    const config = elementConfig[commander.element];
-                    const Icon = config.icon;
-                    return (
-                      <button
-                        key={commander.id}
-                        onClick={() => setSelectedCommander(commander.id)}
-                        className={`p-3 rounded-lg border-2 transition-all ${
-                          selectedCommander === commander.id
-                            ? "border-yellow-500 bg-yellow-500/20"
-                            : "border-purple-500/30 bg-slate-900/50 hover:border-purple-500/50"
-                        }`}
-                        data-testid={`commander-${commander.id}`}
-                      >
-                        <div className={`w-10 h-10 ${config.bgColor} rounded-lg flex items-center justify-center mx-auto mb-2`}>
-                          <Icon className="w-6 h-6 text-white" />
-                        </div>
-                        <p className="text-white text-sm font-medium truncate">{commander.name.split(' ')[0]}</p>
-                        <p className="text-purple-300 text-xs">{commander.element}</p>
-                      </button>
-                    );
-                  })}
+                  {commanders.map((commander) => (
+                    <CommanderCard
+                      key={commander.id}
+                      commander={commander}
+                      size="sm"
+                      onClick={() => setSelectedCommander(commander.id)}
+                      selected={selectedCommander === commander.id}
+                    />
+                  ))}
                 </div>
               </CardContent>
             </Card>
@@ -390,6 +455,72 @@ export default function DeckBuilderPage() {
                     <Save className="w-4 h-4 mr-2" />
                     Save Deck
                   </Button>
+                </div>
+
+                <div className="flex gap-2 pt-2 border-t border-purple-500/20">
+                  <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        className="flex-1"
+                        disabled={totalCards === 0}
+                        data-testid="button-export-deck"
+                      >
+                        <Share2 className="w-4 h-4 mr-2" />
+                        Export
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="bg-slate-800 border-purple-500/30">
+                      <DialogHeader>
+                        <DialogTitle className="text-white">Export Deck Code</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <p className="text-purple-200 text-sm">Share this code with friends to let them import your deck!</p>
+                        <div className="bg-slate-900/50 p-3 rounded-lg">
+                          <code className="text-xs text-green-400 break-all block max-h-32 overflow-auto">
+                            {generateDeckCode()}
+                          </code>
+                        </div>
+                        <Button onClick={copyDeckCode} className="w-full" data-testid="button-copy-code">
+                          {copied ? <Check className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
+                          {copied ? "Copied!" : "Copy Code"}
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+
+                  <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" className="flex-1" data-testid="button-import-deck">
+                        <Download className="w-4 h-4 mr-2" />
+                        Import
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="bg-slate-800 border-purple-500/30">
+                      <DialogHeader>
+                        <DialogTitle className="text-white">Import Deck Code</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <p className="text-purple-200 text-sm">Paste a deck code to import someone else's deck!</p>
+                        <Input
+                          placeholder="Paste deck code here..."
+                          value={importCode}
+                          onChange={(e) => setImportCode(e.target.value)}
+                          className="bg-slate-900/50 border-purple-500/30 text-white"
+                          data-testid="input-import-code"
+                        />
+                        <Button 
+                          onClick={importDeck} 
+                          className="w-full bg-gradient-to-r from-green-600 to-teal-600"
+                          disabled={!importCode.trim()}
+                          data-testid="button-apply-import"
+                        >
+                          <Download className="w-4 h-4 mr-2" />
+                          Import Deck
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
                 </div>
 
                 {!isValidDeck && totalCards > 0 && (

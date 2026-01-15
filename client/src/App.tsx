@@ -18,6 +18,9 @@ import ProfilePage from "@/pages/profile";
 import FriendsPage from "@/pages/friends";
 import LobbyPage from "@/pages/lobby";
 import RoomPage from "@/pages/room";
+import AchievementsPage from "@/pages/achievements";
+import LeaderboardPage from "@/pages/leaderboard";
+import DailyChallengesPage from "@/pages/daily-challenges";
 import NotFound from "@/pages/not-found";
 
 function AppContent() {
@@ -51,6 +54,9 @@ function AppContent() {
               <Route path="/friends" component={FriendsPage} />
               <Route path="/lobby" component={LobbyPage} />
               <Route path="/room/:id" component={RoomPage} />
+              <Route path="/achievements" component={AchievementsPage} />
+              <Route path="/leaderboard" component={LeaderboardPage} />
+              <Route path="/challenges" component={DailyChallengesPage} />
               <Route component={NotFound} />
             </Switch>
           </main>

@@ -9,9 +9,14 @@ import {
   playerRatings,
   userPresence,
   matchmakingQueue,
+  achievements,
+  playerAchievements,
+  dailyChallenges,
+  playerChallenges,
+  playerStats,
   users
 } from "@shared/schema";
-import { eq, and, or, desc, sql } from "drizzle-orm";
+import { eq, and, or, desc, sql, gte, lt } from "drizzle-orm";
 import { getWebSocketServer } from "./websocket";
 
 export function registerMultiplayerRoutes(app: Express) {
@@ -563,24 +568,153 @@ export function registerMultiplayerRoutes(app: Express) {
   });
 
   app.get("/api/leaderboard", async (req, res) => {
-    const leaderboard = await db
+    const leaderboardData = await db
       .select({
+        id: playerRatings.id,
         rating: playerRatings.rating,
         wins: playerRatings.wins,
         losses: playerRatings.losses,
-        user: {
-          id: users.id,
-          firstName: users.firstName,
-          lastName: users.lastName,
-          profileImageUrl: users.profileImageUrl,
-        },
+        streak: playerRatings.streak,
+        userId: users.id,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        profileImageUrl: users.profileImageUrl,
       })
       .from(playerRatings)
       .leftJoin(users, eq(playerRatings.userId, users.id))
       .orderBy(desc(playerRatings.rating))
       .limit(100);
 
-    res.json(leaderboard);
+    const formattedLeaderboard = leaderboardData.map((entry, index) => {
+      const displayName = entry.firstName 
+        ? `${entry.firstName}${entry.lastName ? ` ${entry.lastName}` : ''}`
+        : 'Unknown Player';
+      const totalGames = (entry.wins || 0) + (entry.losses || 0);
+      const winRate = totalGames > 0 ? ((entry.wins || 0) / totalGames) * 100 : 0;
+      
+      return {
+        id: entry.id,
+        rank: index + 1,
+        userId: entry.userId,
+        displayName,
+        profileImageUrl: entry.profileImageUrl,
+        rating: entry.rating || 1000,
+        wins: entry.wins || 0,
+        losses: entry.losses || 0,
+        winRate,
+        streak: entry.streak || 0,
+        tier: getTier(entry.rating || 1000),
+      };
+    });
+
+    res.json(formattedLeaderboard);
+  });
+
+  function getTier(rating: number): string {
+    if (rating < 800) return "Bronze";
+    if (rating < 1000) return "Silver";
+    if (rating < 1200) return "Gold";
+    if (rating < 1400) return "Platinum";
+    if (rating < 1600) return "Diamond";
+    return "Master";
+  }
+
+  app.get("/api/achievements", async (req, res) => {
+    const allAchievements = await db.select().from(achievements).orderBy(achievements.category);
+    res.json(allAchievements);
+  });
+
+  app.get("/api/player-achievements", async (req, res) => {
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const userId = (req.user as any).id;
+    const playerAchs = await db
+      .select()
+      .from(playerAchievements)
+      .where(eq(playerAchievements.userId, userId));
+
+    res.json(playerAchs);
+  });
+
+  app.get("/api/daily-challenges", async (req, res) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const todaysChallenges = await db
+      .select()
+      .from(dailyChallenges)
+      .where(
+        and(
+          gte(dailyChallenges.activeDate, today),
+          lt(dailyChallenges.activeDate, tomorrow)
+        )
+      );
+
+    res.json(todaysChallenges);
+  });
+
+  app.get("/api/player-challenges", async (req, res) => {
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const userId = (req.user as any).id;
+    const playerChs = await db
+      .select()
+      .from(playerChallenges)
+      .where(eq(playerChallenges.userId, userId));
+
+    res.json(playerChs);
+  });
+
+  app.post("/api/player-challenges/:id/claim", async (req, res) => {
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const userId = (req.user as any).id;
+    const challengeId = req.params.id;
+
+    const [playerCh] = await db
+      .select()
+      .from(playerChallenges)
+      .where(
+        and(
+          eq(playerChallenges.userId, userId),
+          eq(playerChallenges.challengeId, challengeId)
+        )
+      );
+
+    if (!playerCh || !playerCh.completedAt || playerCh.claimedAt) {
+      return res.status(400).json({ message: "Cannot claim this challenge" });
+    }
+
+    const [updated] = await db
+      .update(playerChallenges)
+      .set({ claimedAt: new Date() })
+      .where(eq(playerChallenges.id, playerCh.id))
+      .returning();
+
+    res.json(updated);
+  });
+
+  app.get("/api/player-stats", async (req, res) => {
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const userId = (req.user as any).id;
+    let [stats] = await db.select().from(playerStats).where(eq(playerStats.userId, userId));
+
+    if (!stats) {
+      [stats] = await db.insert(playerStats).values({ userId }).returning();
+    }
+
+    res.json(stats);
   });
 
   app.get("/api/users/search", async (req, res) => {

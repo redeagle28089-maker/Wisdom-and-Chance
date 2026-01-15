@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Home, BookOpen, Database, Layers, Swords, Trophy, User, GraduationCap, LogIn, LogOut, Users, Gamepad2 } from "lucide-react";
+import { Home, BookOpen, Database, Layers, Swords, Trophy, User, GraduationCap, LogIn, LogOut, Users, Gamepad2, Medal, Calendar, Star } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -28,6 +28,12 @@ const playItems = [
   { title: "Practice", url: "/practice", icon: Swords },
   { title: "Multiplayer", url: "/lobby", icon: Gamepad2 },
   { title: "Friends", url: "/friends", icon: Users },
+];
+
+const progressItems = [
+  { title: "Achievements", url: "/achievements", icon: Trophy },
+  { title: "Leaderboard", url: "/leaderboard", icon: Medal },
+  { title: "Daily Challenges", url: "/challenges", icon: Calendar },
   { title: "Profile", url: "/profile", icon: User },
 ];
 
@@ -83,6 +89,28 @@ export function GameSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {playItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton 
+                    asChild 
+                    isActive={location === item.url}
+                    data-testid={`nav-${item.title.toLowerCase().replace(/\s+/g, '-')}`}
+                  >
+                    <Link href={item.url}>
+                      <item.icon className="w-4 h-4" />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-purple-400">Progress</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {progressItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton 
                     asChild 

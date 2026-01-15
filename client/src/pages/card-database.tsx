@@ -1,74 +1,11 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Flame, Droplet, Mountain, Wind, Leaf, Zap, Plus, Heart, Shield } from "lucide-react";
+import { Search, Flame, Droplet, Mountain, Wind, Leaf } from "lucide-react";
+import { GameCard, elementConfig } from "@/components/game-card";
 import type { Card as CardType, Element } from "@shared/schema";
-
-const elementConfig: Record<Element, { icon: typeof Flame; color: string; bgColor: string; borderColor: string }> = {
-  Fire: { icon: Flame, color: "text-red-500", bgColor: "bg-gradient-to-br from-red-600 to-orange-600", borderColor: "border-red-500/50" },
-  Water: { icon: Droplet, color: "text-blue-500", bgColor: "bg-gradient-to-br from-blue-600 to-cyan-600", borderColor: "border-blue-500/50" },
-  Earth: { icon: Mountain, color: "text-amber-500", bgColor: "bg-gradient-to-br from-amber-700 to-yellow-600", borderColor: "border-amber-500/50" },
-  Air: { icon: Wind, color: "text-green-400", bgColor: "bg-gradient-to-br from-green-400 to-teal-400", borderColor: "border-green-400/50" },
-  Nature: { icon: Leaf, color: "text-emerald-500", bgColor: "bg-gradient-to-br from-green-700 to-emerald-600", borderColor: "border-emerald-500/50" },
-};
-
-const traitIcons: Record<string, typeof Zap> = {
-  "Quick Strike": Zap,
-  "Care Package": Plus,
-  "Restoration": Heart,
-  "Guardian": Shield,
-};
-
-function GameCard({ card }: { card: CardType }) {
-  const config = elementConfig[card.element];
-  const ElementIcon = config.icon;
-  const TraitIcon = card.trait ? traitIcons[card.trait] : null;
-
-  return (
-    <div
-      className={`relative w-full aspect-[3/4] rounded-lg border-2 ${config.borderColor} overflow-hidden shadow-lg hover-elevate cursor-pointer`}
-      data-testid={`card-${card.id}`}
-    >
-      <div className={`absolute inset-0 ${config.bgColor} opacity-90`} />
-      <div className="relative h-full p-3 flex flex-col">
-        <div className="flex justify-between items-start mb-2">
-          <div className="w-8 h-8 bg-black/40 rounded-full flex items-center justify-center text-white font-bold text-lg">
-            {card.power}
-          </div>
-          {TraitIcon && (
-            <div className="w-6 h-6 bg-black/40 rounded flex items-center justify-center">
-              <TraitIcon className="w-4 h-4 text-yellow-400" />
-            </div>
-          )}
-        </div>
-
-        <div className="flex-1 flex items-center justify-center">
-          <ElementIcon className="w-12 h-12 text-white/80" />
-        </div>
-
-        <div className="mt-auto">
-          <h3 className="text-white font-bold text-sm truncate mb-1">{card.name}</h3>
-          <div className="flex justify-between text-xs">
-            {card.buffModifier > 0 && (
-              <Badge variant="secondary" className="bg-green-600/80 text-white text-xs px-1">
-                +{card.buffModifier}
-              </Badge>
-            )}
-            {card.debuffModifier > 0 && (
-              <Badge variant="secondary" className="bg-red-600/80 text-white text-xs px-1 ml-auto">
-                -{card.debuffModifier}
-              </Badge>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export default function CardDatabasePage() {
   const [search, setSearch] = useState("");
