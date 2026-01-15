@@ -1,8 +1,10 @@
 import type { Express } from "express";
 import type { Server } from "http";
 import { z } from "zod";
+import { eq } from "drizzle-orm";
 import { storage } from "./storage";
-import { insertCardSchema, insertDeckSchema, insertPlayerSchema, insertGameSchema, ELEMENTS } from "@shared/schema";
+import { db } from "./db";
+import { insertCardSchema, insertDeckSchema, insertPlayerSchema, insertGameSchema, ELEMENTS, userDecks, insertUserDeckSchema, GAME_CONSTANTS } from "@shared/schema";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import { registerMultiplayerRoutes } from "./multiplayerRoutes";
 import { generateImage, generateText } from "./replit_integrations/image/client";
@@ -179,6 +181,215 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
       return res.status(404).json({ message: "Game not found" });
     }
     res.status(204).send();
+  });
+
+  // User Decks - Saved deck endpoints (database-backed)
+  app.get("/api/user-decks", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+      const decks = await db.select().from(userDecks).where(eq(userDecks.userId, userId));
+      res.json(decks);
+    } catch (error) {
+      console.error("Error fetching user decks:", error);
+      res.status(500).json({ error: "Failed to fetch decks" });
+    }
+  });
+
+  app.get("/api/user-decks/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+      const [deck] = await db.select().from(userDecks)
+        .where(eq(userDecks.id, req.params.id));
+      
+      if (!deck) {
+        return res.status(404).json({ error: "Deck not found" });
+      }
+      if (deck.userId !== userId) {
+        return res.status(403).json({ error: "Not authorized to view this deck" });
+      }
+      res.json(deck);
+    } catch (error) {
+      console.error("Error fetching deck:", error);
+      res.status(500).json({ error: "Failed to fetch deck" });
+    }
+  });
+
+  const createUserDeckSchema = z.object({
+    name: z.string().min(1, "Deck name is required").max(50, "Deck name too long"),
+    commanderId: z.string().min(1, "Commander is required"),
+    cardIds: z.array(z.string()).length(GAME_CONSTANTS.DECK_SIZE, `Deck must have exactly ${GAME_CONSTANTS.DECK_SIZE} cards`),
+  });
+
+  async function validateDeckCards(cardIds: string[]): Promise<{ valid: boolean; error?: string }> {
+    const allCards = await storage.getCards();
+    const cardMap = new Map(allCards.map(c => [c.id, c]));
+
+    // Check all cards exist
+    const invalidCards = cardIds.filter(id => !cardMap.has(id));
+    if (invalidCards.length > 0) {
+      return { valid: false, error: `Invalid card IDs: ${invalidCards.slice(0, 5).join(", ")}` };
+    }
+
+    // Check max 3 copies per card
+    const cardCounts = new Map<string, number>();
+    for (const cardId of cardIds) {
+      const count = (cardCounts.get(cardId) || 0) + 1;
+      if (count > GAME_CONSTANTS.MAX_COPIES_PER_CARD) {
+        const card = cardMap.get(cardId);
+        return { valid: false, error: `Maximum ${GAME_CONSTANTS.MAX_COPIES_PER_CARD} copies of "${card?.name}" allowed` };
+      }
+      cardCounts.set(cardId, count);
+    }
+
+    // Check 4 cards per power rank
+    const powerCounts: Record<number, number> = {};
+    for (let i = 1; i <= 10; i++) powerCounts[i] = 0;
+    
+    for (const cardId of cardIds) {
+      const card = cardMap.get(cardId);
+      if (card) {
+        powerCounts[card.power]++;
+      }
+    }
+
+    for (let power = 1; power <= 10; power++) {
+      if (powerCounts[power] !== GAME_CONSTANTS.CARDS_PER_POWER_RANK) {
+        return { valid: false, error: `Power ${power} needs exactly ${GAME_CONSTANTS.CARDS_PER_POWER_RANK} cards, found ${powerCounts[power]}` };
+      }
+    }
+
+    return { valid: true };
+  }
+
+  app.post("/api/user-decks", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
+      const parseResult = createUserDeckSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ error: parseResult.error.flatten().fieldErrors });
+      }
+
+      const { name, commanderId, cardIds } = parseResult.data;
+
+      // Validate commander exists
+      const commander = await storage.getCommander(commanderId);
+      if (!commander) {
+        return res.status(400).json({ error: "Invalid commander" });
+      }
+
+      // Validate deck cards (existence, copies, power distribution)
+      const deckValidation = await validateDeckCards(cardIds);
+      if (!deckValidation.valid) {
+        return res.status(400).json({ error: deckValidation.error });
+      }
+
+      const [newDeck] = await db.insert(userDecks).values({
+        userId,
+        name,
+        commanderId,
+        cardIds,
+      }).returning();
+
+      res.status(201).json(newDeck);
+    } catch (error) {
+      console.error("Error creating deck:", error);
+      res.status(500).json({ error: "Failed to create deck" });
+    }
+  });
+
+  app.patch("/api/user-decks/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
+      // Check deck exists and belongs to user
+      const [existingDeck] = await db.select().from(userDecks)
+        .where(eq(userDecks.id, req.params.id));
+      
+      if (!existingDeck) {
+        return res.status(404).json({ error: "Deck not found" });
+      }
+      if (existingDeck.userId !== userId) {
+        return res.status(403).json({ error: "Not authorized to edit this deck" });
+      }
+
+      const updateSchema = z.object({
+        name: z.string().min(1).max(50).optional(),
+        commanderId: z.string().min(1).optional(),
+        cardIds: z.array(z.string()).length(GAME_CONSTANTS.DECK_SIZE).optional(),
+      });
+
+      const parseResult = updateSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ error: parseResult.error.flatten().fieldErrors });
+      }
+
+      const updates = parseResult.data;
+      
+      // Validate commander if provided
+      if (updates.commanderId) {
+        const commander = await storage.getCommander(updates.commanderId);
+        if (!commander) {
+          return res.status(400).json({ error: "Invalid commander" });
+        }
+      }
+
+      // Validate cards if provided (existence, copies, power distribution)
+      if (updates.cardIds) {
+        const deckValidation = await validateDeckCards(updates.cardIds);
+        if (!deckValidation.valid) {
+          return res.status(400).json({ error: deckValidation.error });
+        }
+      }
+
+      const [updatedDeck] = await db.update(userDecks)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(eq(userDecks.id, req.params.id))
+        .returning();
+
+      res.json(updatedDeck);
+    } catch (error) {
+      console.error("Error updating deck:", error);
+      res.status(500).json({ error: "Failed to update deck" });
+    }
+  });
+
+  app.delete("/api/user-decks/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
+      // Check deck exists and belongs to user
+      const [existingDeck] = await db.select().from(userDecks)
+        .where(eq(userDecks.id, req.params.id));
+      
+      if (!existingDeck) {
+        return res.status(404).json({ error: "Deck not found" });
+      }
+      if (existingDeck.userId !== userId) {
+        return res.status(403).json({ error: "Not authorized to delete this deck" });
+      }
+
+      await db.delete(userDecks).where(eq(userDecks.id, req.params.id));
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting deck:", error);
+      res.status(500).json({ error: "Failed to delete deck" });
+    }
   });
 
   // AI Deck Suggestion endpoint

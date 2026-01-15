@@ -8,11 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { Plus, Minus, Save, Trash2, Crown, LogIn, Share2, Download, Copy, Check, Sparkles, Loader2 } from "lucide-react";
+import { Plus, Minus, Save, Trash2, Crown, LogIn, Share2, Download, Copy, Check, Sparkles, Loader2, FolderOpen, Edit2 } from "lucide-react";
 import { elementConfig, CommanderWithPopup, CardWithPopup } from "@/components/game-card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { Card as CardType, Commander, Element, InsertDeck } from "@shared/schema";
+import type { Card as CardType, Commander, Element, UserDeck } from "@shared/schema";
 import { GAME_CONSTANTS } from "@shared/schema";
 
 type Playstyle = "aggressive" | "defensive" | "balanced";
@@ -37,6 +37,8 @@ export default function DeckBuilderPage() {
   const [playstyle, setPlaystyle] = useState<Playstyle>("balanced");
   const [aiSuggestion, setAiSuggestion] = useState<DeckSuggestion | null>(null);
   const [aiDialogOpen, setAiDialogOpen] = useState(false);
+  const [editingDeckId, setEditingDeckId] = useState<string | null>(null);
+  const [savedDecksOpen, setSavedDecksOpen] = useState(false);
 
   const { data: cards = [] } = useQuery<CardType[]>({
     queryKey: ["/api/cards"],
@@ -48,17 +50,41 @@ export default function DeckBuilderPage() {
 
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
 
+  const { data: savedDecks = [], isLoading: decksLoading } = useQuery<UserDeck[]>({
+    queryKey: ["/api/user-decks"],
+    enabled: isAuthenticated,
+  });
+
   const saveDeckMutation = useMutation({
-    mutationFn: async (deck: InsertDeck) => {
-      const res = await apiRequest("POST", "/api/decks", deck);
-      return res.json();
+    mutationFn: async (deck: { name: string; commanderId: string; cardIds: string[] }) => {
+      if (editingDeckId) {
+        const res = await apiRequest("PATCH", `/api/user-decks/${editingDeckId}`, deck);
+        return res.json();
+      } else {
+        const res = await apiRequest("POST", "/api/user-decks", deck);
+        return res.json();
+      }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/decks"] });
-      toast({ title: "Deck saved successfully!" });
+      queryClient.invalidateQueries({ queryKey: ["/api/user-decks"] });
+      toast({ title: editingDeckId ? "Deck updated!" : "Deck saved to your account!" });
+      setEditingDeckId(null);
     },
     onError: () => {
       toast({ title: "Failed to save deck", variant: "destructive" });
+    },
+  });
+
+  const deleteDeckMutation = useMutation({
+    mutationFn: async (deckId: string) => {
+      await apiRequest("DELETE", `/api/user-decks/${deckId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user-decks"] });
+      toast({ title: "Deck deleted" });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete deck", variant: "destructive" });
     },
   });
 
@@ -186,10 +212,31 @@ export default function DeckBuilderPage() {
 
     saveDeckMutation.mutate({
       name: deckName,
-      playerId: user.id,
       commanderId: selectedCommander!,
       cardIds,
     });
+  };
+
+  const loadSavedDeck = (deck: UserDeck) => {
+    setDeckName(deck.name);
+    setSelectedCommander(deck.commanderId);
+    setEditingDeckId(deck.id);
+    
+    // Convert cardIds array to count map
+    const cardCountMap = new Map<string, number>();
+    deck.cardIds.forEach((cardId) => {
+      cardCountMap.set(cardId, (cardCountMap.get(cardId) || 0) + 1);
+    });
+    setDeckCards(cardCountMap);
+    setSavedDecksOpen(false);
+    toast({ title: `Loaded "${deck.name}"` });
+  };
+
+  const startNewDeck = () => {
+    setEditingDeckId(null);
+    setDeckName("My Deck");
+    setSelectedCommander(null);
+    setDeckCards(new Map());
   };
 
   const generateDeckCode = () => {
@@ -429,8 +476,109 @@ export default function DeckBuilderPage() {
 
           <div className="space-y-6">
             <Card className="bg-slate-800/50 border-purple-500/20">
-              <CardHeader>
-                <CardTitle className="text-white">Your Deck</CardTitle>
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-white">
+                    {editingDeckId ? (
+                      <span className="flex items-center gap-2">
+                        <Edit2 className="w-4 h-4 text-blue-400" />
+                        Editing Deck
+                      </span>
+                    ) : (
+                      "Your Deck"
+                    )}
+                  </CardTitle>
+                  <Dialog open={savedDecksOpen} onOpenChange={setSavedDecksOpen}>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" size="sm" data-testid="button-saved-decks">
+                        <FolderOpen className="w-4 h-4 mr-2" />
+                        My Decks ({savedDecks.length})
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="bg-slate-800 border-purple-500/30 max-w-lg">
+                      <DialogHeader>
+                        <DialogTitle className="text-white flex items-center gap-2">
+                          <FolderOpen className="w-5 h-5 text-purple-400" />
+                          Your Saved Decks
+                        </DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-3">
+                        <Button 
+                          onClick={() => { startNewDeck(); setSavedDecksOpen(false); }} 
+                          className="w-full bg-gradient-to-r from-green-600 to-teal-600"
+                          data-testid="button-new-deck"
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Create New Deck
+                        </Button>
+                        {decksLoading ? (
+                          <div className="flex items-center justify-center py-8">
+                            <Loader2 className="w-6 h-6 animate-spin text-purple-400" />
+                          </div>
+                        ) : savedDecks.length === 0 ? (
+                          <div className="text-center py-8">
+                            <p className="text-purple-300">No saved decks yet.</p>
+                            <p className="text-purple-400 text-sm">Build and save your first deck!</p>
+                          </div>
+                        ) : (
+                          <ScrollArea className="h-[300px]">
+                            <div className="space-y-2">
+                              {savedDecks.map((deck) => {
+                                const cmd = commanders.find((c) => c.id === deck.commanderId);
+                                const cmdConfig = cmd ? elementConfig[cmd.element] : null;
+                                return (
+                                  <div 
+                                    key={deck.id}
+                                    className={`p-3 rounded-lg border transition-colors ${
+                                      editingDeckId === deck.id 
+                                        ? "bg-blue-500/20 border-blue-500/50" 
+                                        : "bg-slate-900/50 border-purple-500/30 hover:border-purple-500/50"
+                                    }`}
+                                  >
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-white font-medium truncate">{deck.name}</p>
+                                        <p className="text-purple-300 text-sm flex items-center gap-1">
+                                          {cmd && cmdConfig && (
+                                            <>
+                                              <Crown className="w-3 h-3 text-yellow-500" />
+                                              {cmd.name}
+                                            </>
+                                          )}
+                                        </p>
+                                      </div>
+                                      <div className="flex gap-2">
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => loadSavedDeck(deck)}
+                                          data-testid={`load-deck-${deck.id}`}
+                                        >
+                                          <Edit2 className="w-3 h-3 mr-1" />
+                                          Load
+                                        </Button>
+                                        <Button
+                                          size="icon"
+                                          variant="ghost"
+                                          className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                                          onClick={() => deleteDeckMutation.mutate(deck.id)}
+                                          disabled={deleteDeckMutation.isPending}
+                                          data-testid={`delete-deck-${deck.id}`}
+                                        >
+                                          <Trash2 className="w-4 h-4" />
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </ScrollArea>
+                        )}
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <Input
@@ -485,20 +633,24 @@ export default function DeckBuilderPage() {
                   <Button
                     variant="outline"
                     className="flex-1"
-                    onClick={clearDeck}
+                    onClick={() => { clearDeck(); setEditingDeckId(null); }}
                     data-testid="button-clear-deck"
                   >
                     <Trash2 className="w-4 h-4 mr-2" />
                     Clear
                   </Button>
                   <Button
-                    className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600"
+                    className={`flex-1 ${editingDeckId ? 'bg-gradient-to-r from-blue-600 to-cyan-600' : 'bg-gradient-to-r from-purple-600 to-pink-600'}`}
                     onClick={saveDeck}
                     disabled={!isValidDeck || saveDeckMutation.isPending}
                     data-testid="button-save-deck"
                   >
-                    <Save className="w-4 h-4 mr-2" />
-                    Save Deck
+                    {saveDeckMutation.isPending ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Save className="w-4 h-4 mr-2" />
+                    )}
+                    {editingDeckId ? "Update Deck" : "Save Deck"}
                   </Button>
                 </div>
 

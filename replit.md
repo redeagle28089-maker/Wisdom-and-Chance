@@ -8,6 +8,13 @@ A tactical trading card game simulator built with React, Express, and TypeScript
 **Current State:** Fully functional TCG with Google authentication, multiplayer rooms, friend system, and real-time gameplay.
 
 ## Recent Changes
+- **January 2026:** User Deck Persistence
+  - Save decks to your account (persists in PostgreSQL database)
+  - "My Decks" button shows all saved decks with load/delete options
+  - Edit existing decks with "Update Deck" functionality
+  - Create new decks from saved decks dialog
+  - Deck validation before save (40 cards, proper power distribution)
+
 - **January 2026:** AI Deck Suggestion System
   - AI-powered deck builder using Gemini 2.5 Flash model
   - Select commander and playstyle (Aggressive/Defensive/Balanced)
@@ -138,12 +145,19 @@ A tactical trading card game simulator built with React, Express, and TypeScript
 - `GET /api/cards` - List all cards
 - `GET /api/cards/:id` - Get single card
 - `GET /api/commanders` - List all commanders
-- `GET /api/decks` - List all decks
-- `POST /api/decks` - Create deck (requires auth)
+- `GET /api/decks` - List all decks (in-memory)
+- `POST /api/decks` - Create deck (in-memory)
 - `POST /api/deck-suggestions` - AI deck suggestion (requires auth, uses Gemini)
 - `GET /api/games` - List all games
 - `POST /api/games` - Create game (requires auth)
 - `PATCH /api/games/:id` - Update game state
+
+#### User Decks (requires auth, persisted in database)
+- `GET /api/user-decks` - List user's saved decks
+- `GET /api/user-decks/:id` - Get specific saved deck
+- `POST /api/user-decks` - Save new deck to account
+- `PATCH /api/user-decks/:id` - Update existing saved deck
+- `DELETE /api/user-decks/:id` - Delete saved deck
 
 #### Friend System (requires auth)
 - `GET /api/friends` - List friends with online status
