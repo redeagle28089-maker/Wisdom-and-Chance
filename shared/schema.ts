@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+export * from "./models/auth";
+
 export const ELEMENTS = ["Fire", "Water", "Earth", "Air", "Nature"] as const;
 export type Element = typeof ELEMENTS[number];
 

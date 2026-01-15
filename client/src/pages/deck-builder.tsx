@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { Flame, Droplet, Mountain, Wind, Leaf, Plus, Minus, Save, Trash2, Crown } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
+import { Flame, Droplet, Mountain, Wind, Leaf, Plus, Minus, Save, Trash2, Crown, LogIn } from "lucide-react";
 import type { Card as CardType, Commander, Deck, Element, InsertDeck } from "@shared/schema";
 import { GAME_CONSTANTS } from "@shared/schema";
 
@@ -34,9 +35,7 @@ export default function DeckBuilderPage() {
     queryKey: ["/api/commanders"],
   });
 
-  const { data: player } = useQuery({
-    queryKey: ["/api/guest-player"],
-  });
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
 
   const saveDeckMutation = useMutation({
     mutationFn: async (deck: InsertDeck) => {
@@ -130,7 +129,7 @@ export default function DeckBuilderPage() {
   };
 
   const saveDeck = () => {
-    if (!isValidDeck || !player) {
+    if (!isValidDeck || !user) {
       toast({ title: "Please complete your deck first", variant: "destructive" });
       return;
     }
@@ -144,11 +143,44 @@ export default function DeckBuilderPage() {
 
     saveDeckMutation.mutate({
       name: deckName,
-      playerId: (player as { id: string }).id,
+      playerId: user.id,
       commanderId: selectedCommander!,
       cardIds,
     });
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-full bg-gradient-to-br from-slate-900 via-purple-900/30 to-slate-900 p-4 md:p-6 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-purple-200">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-full bg-gradient-to-br from-slate-900 via-purple-900/30 to-slate-900 p-4 md:p-6 flex items-center justify-center">
+        <Card className="bg-slate-800/50 border-purple-500/20 max-w-md w-full">
+          <CardContent className="p-8 text-center">
+            <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full mx-auto mb-4 flex items-center justify-center">
+              <Crown className="w-10 h-10 text-white" />
+            </div>
+            <h2 className="text-2xl font-bold text-white mb-2">Sign In to Build Decks</h2>
+            <p className="text-purple-200 mb-6">Sign in to create and save your custom decks.</p>
+            <a href="/api/login">
+              <Button className="bg-gradient-to-r from-purple-600 to-pink-600" data-testid="button-login">
+                <LogIn className="w-4 h-4 mr-2" />
+                Sign In with Google
+              </Button>
+            </a>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-full bg-gradient-to-br from-slate-900 via-purple-900/30 to-slate-900 p-4 md:p-6">

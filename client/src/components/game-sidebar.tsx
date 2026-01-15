@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Home, BookOpen, Database, Layers, Swords, Trophy, User, GraduationCap } from "lucide-react";
+import { Home, BookOpen, Database, Layers, Swords, Trophy, User, GraduationCap, LogIn, LogOut } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -12,6 +12,9 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { useAuth } from "@/hooks/use-auth";
 
 const menuItems = [
   { title: "Home", url: "/", icon: Home },
@@ -28,6 +31,13 @@ const playItems = [
 
 export function GameSidebar() {
   const [location] = useLocation();
+  const { user, isAuthenticated, isLoading } = useAuth();
+
+  const displayName = user?.firstName 
+    ? `${user.firstName}${user.lastName ? ` ${user.lastName}` : ''}`
+    : user?.email?.split('@')[0] || 'Player';
+
+  const initials = displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 
   return (
     <Sidebar className="border-r border-purple-500/20">
@@ -90,10 +100,44 @@ export function GameSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="border-t border-purple-500/20 p-4">
-        <div className="flex items-center gap-2 text-sm text-purple-300">
-          <Trophy className="w-4 h-4" />
-          <span>Guest Player</span>
-        </div>
+        {isLoading ? (
+          <div className="flex items-center gap-2 text-sm text-purple-300">
+            <div className="w-8 h-8 rounded-full bg-purple-500/20 animate-pulse" />
+            <span>Loading...</span>
+          </div>
+        ) : isAuthenticated && user ? (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Avatar className="w-8 h-8">
+                {user.profileImageUrl && <AvatarImage src={user.profileImageUrl} alt={displayName} />}
+                <AvatarFallback className="bg-purple-600 text-white text-xs">{initials}</AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-white truncate">{displayName}</p>
+                <p className="text-xs text-purple-400 truncate">{user.email}</p>
+              </div>
+            </div>
+            <a href="/api/logout" data-testid="button-logout">
+              <Button variant="outline" size="sm" className="w-full border-purple-500/30 text-purple-200 hover:bg-purple-500/20">
+                <LogOut className="w-4 h-4 mr-2" />
+                Sign Out
+              </Button>
+            </a>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-sm text-purple-300">
+              <User className="w-4 h-4" />
+              <span>Guest Player</span>
+            </div>
+            <a href="/api/login" data-testid="button-login">
+              <Button className="w-full bg-gradient-to-r from-purple-600 to-pink-600">
+                <LogIn className="w-4 h-4 mr-2" />
+                Sign In with Google
+              </Button>
+            </a>
+          </div>
+        )}
       </SidebarFooter>
     </Sidebar>
   );

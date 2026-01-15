@@ -6,7 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Swords, Crown, Flame, Droplet, Mountain, Wind, Leaf, Play, Layers, History, Trophy, Clock, Eye, Brain, Zap, Target } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
+import { Swords, Crown, Flame, Droplet, Mountain, Wind, Leaf, Play, Layers, History, Trophy, Clock, Eye, Brain, Zap, Target, LogIn } from "lucide-react";
 import type { Deck, Commander, Element, Game, InsertGame, GameState, Card as CardType, AIDifficulty } from "@shared/schema";
 import { GAME_CONSTANTS, AI_DIFFICULTY } from "@shared/schema";
 import { Link } from "wouter";
@@ -45,13 +46,11 @@ export default function PracticePage() {
   const [selectedDeckId, setSelectedDeckId] = useState<string | null>(null);
   const [selectedDifficulty, setSelectedDifficulty] = useState<AIDifficulty>("medium");
 
-  const { data: player } = useQuery({
-    queryKey: ["/api/guest-player"],
-  });
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
 
   const { data: decks = [] } = useQuery<Deck[]>({
     queryKey: ["/api/decks"],
-    enabled: !!player,
+    enabled: !!user,
   });
 
   const { data: commanders = [] } = useQuery<Commander[]>({
@@ -64,12 +63,12 @@ export default function PracticePage() {
 
   const { data: games = [] } = useQuery<Game[]>({
     queryKey: ["/api/games"],
-    enabled: !!player,
+    enabled: !!user,
   });
 
-  const playerDecks = decks.filter((d) => d.playerId === (player as { id: string })?.id);
+  const playerDecks = decks.filter((d) => d.playerId === user?.id);
   const playerGames = games.filter(
-    (g) => g.player1Id === (player as { id: string })?.id && g.gameType === "practice"
+    (g) => g.player1Id === user?.id && g.gameType === "practice"
   ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   const startGameMutation = useMutation({
@@ -87,7 +86,7 @@ export default function PracticePage() {
   });
 
   const startPracticeGame = () => {
-    if (!selectedDeckId || !player) {
+    if (!selectedDeckId || !user) {
       toast({ title: "Please select a deck first", variant: "destructive" });
       return;
     }
@@ -116,7 +115,7 @@ export default function PracticePage() {
     };
 
     const gameData: InsertGame = {
-      player1Id: (player as { id: string }).id,
+      player1Id: user.id,
       player2Id: "player-ai",
       player1DeckId: selectedDeckId,
       player2DeckId: aiCommander.id,
@@ -128,7 +127,7 @@ export default function PracticePage() {
       player2WithdrawalPoints: 0,
       currentPhase: "draw",
       currentTurn: 1,
-      activePlayer: (player as { id: string }).id,
+      activePlayer: user.id,
       status: "in_progress",
       gameType: "practice",
       aiDifficulty: selectedDifficulty,
@@ -139,6 +138,39 @@ export default function PracticePage() {
 
     startGameMutation.mutate(gameData);
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-full bg-gradient-to-br from-slate-900 via-purple-900/30 to-slate-900 p-4 md:p-6 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-purple-200">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-full bg-gradient-to-br from-slate-900 via-purple-900/30 to-slate-900 p-4 md:p-6 flex items-center justify-center">
+        <Card className="bg-slate-800/50 border-purple-500/20 max-w-md w-full">
+          <CardContent className="p-8 text-center">
+            <div className="w-20 h-20 bg-gradient-to-br from-red-500 to-orange-500 rounded-full mx-auto mb-4 flex items-center justify-center">
+              <Swords className="w-10 h-10 text-white" />
+            </div>
+            <h2 className="text-2xl font-bold text-white mb-2">Sign In to Play</h2>
+            <p className="text-purple-200 mb-6">Sign in to start practice games and track your progress.</p>
+            <a href="/api/login">
+              <Button className="bg-gradient-to-r from-purple-600 to-pink-600" data-testid="button-login">
+                <LogIn className="w-4 h-4 mr-2" />
+                Sign In with Google
+              </Button>
+            </a>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-full bg-gradient-to-br from-slate-900 via-purple-900/30 to-slate-900 p-4 md:p-6">
@@ -309,8 +341,8 @@ export default function PracticePage() {
                   ) : (
                     <div className="space-y-3 max-h-96 overflow-y-auto">
                       {playerGames.slice(0, 10).map((game) => {
-                        const isWin = game.winnerId === (player as { id: string })?.id;
-                        const isLoss = game.winnerId && game.winnerId !== (player as { id: string })?.id;
+                        const isWin = game.winnerId === user?.id;
+                        const isLoss = game.winnerId && game.winnerId !== user?.id;
                         const isInProgress = game.status === "in_progress";
 
                         return (

@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { 
   User, 
   Trophy, 
@@ -16,10 +17,12 @@ import {
   Calendar,
   TrendingUp,
   Target,
-  History
+  History,
+  LogIn
 } from "lucide-react";
 import { Link } from "wouter";
-import type { Deck, Commander, Game, Element, Player } from "@shared/schema";
+import type { Deck, Commander, Game, Element } from "@shared/schema";
+import { useAuth } from "@/hooks/use-auth";
 
 const elementConfig: Record<Element, { icon: typeof Flame; color: string; bgColor: string }> = {
   Fire: { icon: Flame, color: "text-red-500", bgColor: "bg-red-600" },
@@ -35,13 +38,11 @@ function formatDate(date: Date | string): string {
 }
 
 export default function ProfilePage() {
-  const { data: player } = useQuery<Player>({
-    queryKey: ["/api/guest-player"],
-  });
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
 
   const { data: decks = [] } = useQuery<Deck[]>({
     queryKey: ["/api/decks"],
-    enabled: !!player,
+    enabled: !!user,
   });
 
   const { data: commanders = [] } = useQuery<Commander[]>({
@@ -50,14 +51,14 @@ export default function ProfilePage() {
 
   const { data: games = [] } = useQuery<Game[]>({
     queryKey: ["/api/games"],
-    enabled: !!player,
+    enabled: !!user,
   });
 
-  const playerDecks = decks.filter((d) => d.playerId === player?.id);
-  const playerGames = games.filter((g) => g.player1Id === player?.id);
+  const playerDecks = decks.filter((d) => d.playerId === user?.id);
+  const playerGames = games.filter((g) => g.player1Id === user?.id);
   
-  const wins = playerGames.filter((g) => g.winnerId === player?.id).length;
-  const losses = playerGames.filter((g) => g.winnerId && g.winnerId !== player?.id).length;
+  const wins = playerGames.filter((g) => g.winnerId === user?.id).length;
+  const losses = playerGames.filter((g) => g.winnerId && g.winnerId !== user?.id).length;
   const inProgress = playerGames.filter((g) => g.status === "in_progress").length;
   const winRate = wins + losses > 0 ? Math.round((wins / (wins + losses)) * 100) : 0;
 
@@ -65,21 +66,63 @@ export default function ProfilePage() {
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 5);
 
+  const displayName = user?.firstName 
+    ? `${user.firstName}${user.lastName ? ` ${user.lastName}` : ''}`
+    : user?.email?.split('@')[0] || 'Player';
+
+  const initials = displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+
+  if (authLoading) {
+    return (
+      <div className="min-h-full bg-gradient-to-br from-slate-900 via-purple-900/30 to-slate-900 p-4 md:p-6 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-purple-200">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-full bg-gradient-to-br from-slate-900 via-purple-900/30 to-slate-900 p-4 md:p-6 flex items-center justify-center">
+        <Card className="bg-slate-800/50 border-purple-500/20 max-w-md w-full">
+          <CardContent className="p-8 text-center">
+            <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full mx-auto mb-4 flex items-center justify-center">
+              <User className="w-10 h-10 text-white" />
+            </div>
+            <h2 className="text-2xl font-bold text-white mb-2">Sign In Required</h2>
+            <p className="text-purple-200 mb-6">Sign in to view your profile, track your stats, and save your progress.</p>
+            <a href="/api/login">
+              <Button className="bg-gradient-to-r from-purple-600 to-pink-600" data-testid="button-login">
+                <LogIn className="w-4 h-4 mr-2" />
+                Sign In with Google
+              </Button>
+            </a>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-full bg-gradient-to-br from-slate-900 via-purple-900/30 to-slate-900 p-4 md:p-6">
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full mb-4 shadow-xl">
-            <User className="w-10 h-10 text-white" />
-          </div>
+          <Avatar className="w-20 h-20 mx-auto mb-4 ring-4 ring-purple-500/50">
+            {user?.profileImageUrl && <AvatarImage src={user.profileImageUrl} alt={displayName} />}
+            <AvatarFallback className="bg-gradient-to-br from-purple-500 to-pink-500 text-white text-2xl">
+              {initials}
+            </AvatarFallback>
+          </Avatar>
           <h1 className="text-3xl md:text-4xl font-bold text-white mb-2" data-testid="text-profile-title">
-            {player?.displayName || "Guest Player"}
+            {displayName}
           </h1>
-          <p className="text-purple-300">@{player?.username || "guest"}</p>
-          {player?.createdAt && (
+          <p className="text-purple-300">{user?.email}</p>
+          {user?.createdAt && (
             <div className="flex items-center justify-center gap-2 mt-2 text-purple-400 text-sm">
               <Calendar className="w-4 h-4" />
-              <span>Joined {formatDate(player.createdAt)}</span>
+              <span>Joined {formatDate(user.createdAt)}</span>
             </div>
           )}
         </div>
@@ -187,8 +230,8 @@ export default function ProfilePage() {
               ) : (
                 <div className="space-y-3">
                   {recentGames.map((game) => {
-                    const isWin = game.winnerId === player?.id;
-                    const isLoss = game.winnerId && game.winnerId !== player?.id;
+                    const isWin = game.winnerId === user?.id;
+                    const isLoss = game.winnerId && game.winnerId !== user?.id;
                     const isInProgress = game.status === "in_progress";
 
                     return (

@@ -2,8 +2,11 @@ import type { Express } from "express";
 import type { Server } from "http";
 import { storage } from "./storage";
 import { insertCardSchema, insertDeckSchema, insertPlayerSchema, insertGameSchema } from "@shared/schema";
+import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
 
 export async function registerRoutes(server: Server, app: Express): Promise<void> {
+  await setupAuth(app);
+  registerAuthRoutes(app);
   app.get("/api/cards", async (req, res) => {
     const cards = await storage.getCards();
     res.json(cards);
@@ -153,10 +156,5 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
       return res.status(404).json({ message: "Game not found" });
     }
     res.status(204).send();
-  });
-
-  app.get("/api/guest-player", async (req, res) => {
-    const guest = await storage.getPlayer("player-guest");
-    res.json(guest);
   });
 }

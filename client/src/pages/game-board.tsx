@@ -6,7 +6,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Heart, Swords, Trophy, Flag, ArrowRight, Shield, Flame, Droplet, Mountain, Wind, Leaf, RotateCcw } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
+import { Heart, Swords, Trophy, Flag, ArrowRight, Shield, Flame, Droplet, Mountain, Wind, Leaf, RotateCcw, LogIn } from "lucide-react";
 import type { Game, Card as CardType, Element, BattlefieldCard } from "@shared/schema";
 import { GAME_CONSTANTS } from "@shared/schema";
 
@@ -87,9 +88,7 @@ export default function GameBoardPage() {
     queryKey: ["/api/cards"],
   });
 
-  const { data: player } = useQuery({
-    queryKey: ["/api/guest-player"],
-  });
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
 
   const updateGameMutation = useMutation({
     mutationFn: async (updates: Partial<Game>) => {
@@ -111,7 +110,7 @@ export default function GameBoardPage() {
     );
   }
 
-  const isPlayer1 = game.player1Id === (player as { id: string })?.id;
+  const isPlayer1 = game.player1Id === user?.id;
   const myHP = isPlayer1 ? game.player1HP : game.player2HP;
   const opponentHP = isPlayer1 ? game.player2HP : game.player1HP;
   const myHand = isPlayer1 ? game.gameState.player1Hand : game.gameState.player2Hand;
@@ -120,7 +119,7 @@ export default function GameBoardPage() {
   const opponentBattlefield = isPlayer1 ? game.gameState.player2Battlefield : game.gameState.player1Battlefield;
   const myDeckSize = isPlayer1 ? game.gameState.player1Deck.length : game.gameState.player2Deck.length;
   const opponentDeckSize = isPlayer1 ? game.gameState.player2Deck.length : game.gameState.player1Deck.length;
-  const isMyTurn = game.activePlayer === (player as { id: string })?.id;
+  const isMyTurn = game.activePlayer === user?.id;
 
   const handleCardSelect = (cardId: string) => {
     if (game.currentPhase !== "deployment" || !isMyTurn) return;
@@ -298,7 +297,7 @@ export default function GameBoardPage() {
             <Trophy className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
             <h1 className="text-3xl font-bold text-white mb-2">Game Over!</h1>
             <p className="text-purple-200 text-lg mb-6">
-              {game.winnerId === (player as { id: string })?.id ? "You won!" : "You lost!"}
+              {game.winnerId === user?.id ? "You won!" : "You lost!"}
             </p>
             <div className="flex gap-4 justify-center">
               <Button variant="outline" onClick={() => navigate("/practice")} data-testid="button-back-to-practice">

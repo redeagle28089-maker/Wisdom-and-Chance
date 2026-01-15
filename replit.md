@@ -5,9 +5,16 @@ A tactical trading card game simulator built with React, Express, and TypeScript
 
 **Purpose:** Card game simulator with deck building and practice battles.
 
-**Current State:** Fully functional TCG with all core features implemented.
+**Current State:** Fully functional TCG with Google authentication and all core features implemented.
 
 ## Recent Changes
+- **January 2026:** Google Authentication Integration
+  - Replit Auth with Google/GitHub/email login via OIDC
+  - PostgreSQL database for user accounts and sessions
+  - Protected pages: Practice, Deck Builder, Profile require login
+  - User data persists across sessions
+  - Profile shows authenticated user info and stats
+
 - **January 2026:** Complete TCG implementation
   - 5 elements: Fire, Water, Earth, Air, Nature
   - 200 seeded cards (40 per element, powers 1-10)
@@ -43,7 +50,9 @@ A tactical trading card game simulator built with React, Express, and TypeScript
 ### Tech Stack
 - **Frontend:** React 18, Tailwind CSS, Shadcn UI, Wouter, TanStack Query
 - **Backend:** Express.js, TypeScript
-- **Storage:** In-memory (MemStorage class)
+- **Database:** PostgreSQL (via DATABASE_URL)
+- **Authentication:** Replit Auth (OIDC with Google/GitHub/email)
+- **Storage:** In-memory (MemStorage class) for game data
 
 ### Directory Structure
 ```
@@ -53,42 +62,67 @@ A tactical trading card game simulator built with React, Express, and TypeScript
 │   │   │   ├── ui/         # Shadcn primitives
 │   │   │   ├── game-sidebar.tsx
 │   │   │   └── theme-*.tsx
+│   │   ├── hooks/
+│   │   │   └── use-auth.ts # Authentication hook
 │   │   ├── pages/
 │   │   │   ├── home.tsx
 │   │   │   ├── rules.tsx
 │   │   │   ├── tutorial.tsx
 │   │   │   ├── card-database.tsx
-│   │   │   ├── deck-builder.tsx
-│   │   │   ├── practice.tsx
-│   │   │   ├── profile.tsx
-│   │   │   └── game-board.tsx
+│   │   │   ├── deck-builder.tsx  # Protected
+│   │   │   ├── practice.tsx      # Protected
+│   │   │   ├── profile.tsx       # Protected
+│   │   │   └── game-board.tsx    # Protected
 │   │   └── App.tsx
 ├── server/
+│   ├── replit_integrations/
+│   │   └── auth/           # Replit Auth integration
+│   │       ├── index.ts
+│   │       ├── replitAuth.ts
+│   │       └── storage.ts
 │   ├── routes.ts           # API endpoints
 │   ├── storage.ts          # In-memory data + seed
 │   └── index.ts            # Express server
 ├── shared/
-│   └── schema.ts           # TypeScript types + Zod schemas
+│   ├── schema.ts           # TypeScript types + Zod schemas
+│   └── models/
+│       └── auth.ts         # Auth types
 └── design_guidelines.md    # TCG design system
 ```
 
 ### API Endpoints
+
+#### Authentication (Replit Auth)
+- `GET /api/login` - Start login flow (redirects to OIDC provider)
+- `GET /api/logout` - Logout and destroy session
+- `GET /api/auth/user` - Get current authenticated user
+
+#### Game Data
 - `GET /api/cards` - List all cards
 - `GET /api/cards/:id` - Get single card
 - `GET /api/commanders` - List all commanders
 - `GET /api/decks` - List all decks
-- `POST /api/decks` - Create deck
+- `POST /api/decks` - Create deck (requires auth)
 - `GET /api/games` - List all games
-- `POST /api/games` - Create game
+- `POST /api/games` - Create game (requires auth)
 - `PATCH /api/games/:id` - Update game state
-- `GET /api/guest-player` - Get guest player
 
 ### Data Models
+
+#### User (from auth)
+- id: string (UUID)
+- email: string
+- firstName: string | null
+- lastName: string | null
+- profileImageUrl: string | null
+- createdAt: Date
+- updatedAt: Date
+
+#### Game Data
 - **Card**: id, name, element, power (1-10), trait, buff/debuff modifiers
 - **Commander**: id, name, element, title, abilities
 - **Deck**: id, name, playerId, commanderId, cardIds[]
 - **Game**: id, players, HP, phase, turn, gameState, status, aiDifficulty
-- **Player**: id, username, displayName, wins, losses
 
 ## Running the App
 `npm run dev` starts Express backend + Vite frontend on port 5000.
@@ -96,10 +130,12 @@ A tactical trading card game simulator built with React, Express, and TypeScript
 ## Features
 
 ### Implemented
+- Google/GitHub/email authentication via Replit Auth
+- User accounts with persistent progress
 - Home page with hero section and feature highlights
 - Rules page with complete game mechanics
 - Tutorial page with 5-step learning guide
-- Card Database with element filtering
+- Card Database with element filtering (public)
 - Deck Builder with validation (40 cards, power distribution, max 3 copies)
 - Commander selection for decks
 - Practice mode with AI opponent
@@ -108,3 +144,7 @@ A tactical trading card game simulator built with React, Express, and TypeScript
 - Player profile with stats (wins, losses, win rate)
 - Turn-based gameplay with 5 phases
 - Dark fantasy themed UI with element colors
+
+### Page Access
+- **Public:** Home, Rules, Tutorial, Card Database
+- **Protected (requires login):** Deck Builder, Practice, Profile, Game Board
