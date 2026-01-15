@@ -20,14 +20,18 @@ export const elementConfig: Record<Element, {
   color: string; 
   bgColor: string; 
   borderColor: string;
+  solidBorder: string;
   cardArt: string;
   commanderArt: string;
+  headerBg: string;
 }> = {
   Fire: { 
     icon: Flame, 
     color: "text-red-500", 
     bgColor: "bg-gradient-to-br from-red-600 to-orange-600", 
     borderColor: "border-red-500/50",
+    solidBorder: "border-red-500",
+    headerBg: "bg-red-600",
     cardArt: fireCardArt,
     commanderArt: fireCommanderArt,
   },
@@ -36,6 +40,8 @@ export const elementConfig: Record<Element, {
     color: "text-blue-500", 
     bgColor: "bg-gradient-to-br from-blue-600 to-cyan-600", 
     borderColor: "border-blue-500/50",
+    solidBorder: "border-blue-500",
+    headerBg: "bg-blue-600",
     cardArt: waterCardArt,
     commanderArt: waterCommanderArt,
   },
@@ -44,22 +50,28 @@ export const elementConfig: Record<Element, {
     color: "text-amber-500", 
     bgColor: "bg-gradient-to-br from-amber-700 to-yellow-600", 
     borderColor: "border-amber-500/50",
+    solidBorder: "border-orange-500",
+    headerBg: "bg-orange-600",
     cardArt: earthCardArt,
     commanderArt: earthCommanderArt,
   },
   Air: { 
     icon: Wind, 
-    color: "text-green-400", 
-    bgColor: "bg-gradient-to-br from-green-400 to-teal-400", 
-    borderColor: "border-green-400/50",
+    color: "text-cyan-400", 
+    bgColor: "bg-gradient-to-br from-cyan-400 to-teal-400", 
+    borderColor: "border-cyan-400/50",
+    solidBorder: "border-cyan-400",
+    headerBg: "bg-cyan-600",
     cardArt: airCardArt,
     commanderArt: airCommanderArt,
   },
   Nature: { 
     icon: Leaf, 
-    color: "text-emerald-500", 
+    color: "text-green-500", 
     bgColor: "bg-gradient-to-br from-green-700 to-emerald-600", 
-    borderColor: "border-emerald-500/50",
+    borderColor: "border-green-500/50",
+    solidBorder: "border-green-500",
+    headerBg: "bg-green-600",
     cardArt: natureCardArt,
     commanderArt: natureCommanderArt,
   },
@@ -92,7 +104,6 @@ export function GameCard({
   faceDown = false,
 }: GameCardProps) {
   const config = elementConfig[card.element];
-  const ElementIcon = config.icon;
   const TraitIcon = card.trait ? traitIcons[card.trait] : null;
 
   const sizeClasses = {
@@ -104,7 +115,7 @@ export function GameCard({
   if (faceDown) {
     return (
       <div
-        className={`relative ${sizeClasses[size]} aspect-[3/4] rounded-lg border-2 border-purple-500/50 overflow-hidden shadow-lg bg-gradient-to-br from-purple-900 to-slate-900`}
+        className={`relative ${sizeClasses[size]} aspect-[3/4] rounded-lg border-4 border-purple-600 overflow-hidden shadow-lg bg-gradient-to-br from-purple-900 to-slate-900`}
         data-testid={`card-${card.id}-facedown`}
       >
         <div className="absolute inset-0 flex items-center justify-center">
@@ -120,7 +131,7 @@ export function GameCard({
   return (
     <div
       onClick={disabled ? undefined : onClick}
-      className={`relative ${sizeClasses[size]} aspect-[3/4] rounded-lg border-2 ${config.borderColor} overflow-hidden shadow-lg transition-all duration-200
+      className={`relative ${sizeClasses[size]} aspect-[3/4] rounded-lg border-4 ${config.solidBorder} overflow-hidden shadow-lg transition-all duration-200
         ${onClick && !disabled ? "cursor-pointer hover-elevate" : ""}
         ${selected ? "ring-2 ring-yellow-400 ring-offset-2 ring-offset-slate-900" : ""}
         ${disabled ? "opacity-50 cursor-not-allowed" : ""}
@@ -137,42 +148,30 @@ export function GameCard({
         <div className={`absolute inset-0 ${config.bgColor} opacity-90`} />
       )}
       
-      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+      {/* Power badge - top left */}
+      <div className="absolute top-1.5 left-1.5 min-w-7 h-7 px-1.5 bg-slate-900/90 rounded flex items-center justify-center text-white font-bold text-sm shadow-lg border border-white/30">
+        {card.power}
+      </div>
       
-      <div className="relative h-full p-2 flex flex-col">
-        <div className="flex justify-between items-start">
-          <div className="w-8 h-8 bg-black/60 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg border border-white/20">
-            {card.power}
-          </div>
-          <div className="flex gap-1">
-            {TraitIcon && (
-              <div className="w-6 h-6 bg-black/60 rounded flex items-center justify-center border border-yellow-400/30">
-                <TraitIcon className="w-4 h-4 text-yellow-400" />
-              </div>
-            )}
-            <div className="w-6 h-6 bg-black/60 rounded flex items-center justify-center border border-white/20">
-              <ElementIcon className={`w-4 h-4 ${config.color}`} />
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-auto">
-          <div className="bg-black/70 rounded px-2 py-1 backdrop-blur-sm">
-            <h3 className="text-white font-bold text-xs truncate">{card.name}</h3>
-          </div>
-          <div className="flex justify-between mt-1 gap-1">
-            {card.buffModifier > 0 && (
-              <Badge variant="secondary" className="bg-green-600/90 text-white text-xs px-1 border border-green-400/30">
-                +{card.buffModifier}
-              </Badge>
-            )}
-            {card.debuffModifier > 0 && (
-              <Badge variant="secondary" className="bg-red-600/90 text-white text-xs px-1 ml-auto border border-red-400/30">
-                -{card.debuffModifier}
-              </Badge>
-            )}
-          </div>
-        </div>
+      {/* Trait value badge - top right */}
+      <div className="absolute top-1.5 right-1.5 min-w-7 h-7 px-1.5 bg-white/95 rounded flex items-center justify-center text-slate-900 font-bold text-xs shadow-lg gap-0.5">
+        <span>{card.power}</span>
+        {TraitIcon && <TraitIcon className="w-3 h-3" />}
+      </div>
+      
+      {/* Buff badge - bottom left */}
+      <div className="absolute bottom-7 left-1.5 min-w-7 h-6 px-1.5 bg-green-500 rounded flex items-center justify-center text-white font-bold text-xs shadow-lg">
+        +{card.buffModifier}
+      </div>
+      
+      {/* Debuff badge - bottom right */}
+      <div className="absolute bottom-7 right-1.5 min-w-7 h-6 px-1.5 bg-red-500 rounded flex items-center justify-center text-white font-bold text-xs shadow-lg">
+        -{card.debuffModifier}
+      </div>
+      
+      {/* UNIT label at bottom center */}
+      <div className="absolute bottom-0 left-0 right-0 bg-slate-900/95 py-1.5 text-center">
+        <span className="text-white font-bold text-xs tracking-wider">UNIT</span>
       </div>
     </div>
   );
@@ -203,34 +202,52 @@ export function CommanderCard({
   return (
     <div
       onClick={onClick}
-      className={`relative ${sizeClasses[size]} aspect-[3/4] rounded-lg border-2 ${config.borderColor} overflow-hidden shadow-xl transition-all duration-200
+      className={`relative ${sizeClasses[size]} rounded-xl overflow-hidden shadow-xl transition-all duration-200 bg-slate-800
         ${onClick ? "cursor-pointer hover-elevate" : ""}
         ${selected ? "ring-2 ring-yellow-400 ring-offset-2 ring-offset-slate-900" : ""}
       `}
       data-testid={`commander-${commander.id}`}
     >
-      <img 
-        src={commander.imageUrl || config.commanderArt} 
-        alt={commander.name}
-        className="absolute inset-0 w-full h-full object-cover"
-      />
-      
-      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
-      
-      <div className="absolute top-0 left-0 right-0 p-2 flex justify-between items-start">
-        <div className="px-2 py-1 bg-yellow-500/90 rounded text-xs font-bold text-black border border-yellow-300">
-          COMMANDER
-        </div>
-        <div className="w-8 h-8 bg-black/60 rounded-full flex items-center justify-center border border-white/20">
-          <ElementIcon className={`w-5 h-5 ${config.color}`} />
-        </div>
+      {/* Header bar with element color */}
+      <div className={`${config.headerBg} px-3 py-2 flex items-center gap-2`}>
+        <ElementIcon className="w-4 h-4 text-white" />
+        <span className="text-white text-xs font-bold uppercase tracking-wide">
+          {commander.element} Commander
+        </span>
       </div>
       
-      <div className="absolute bottom-0 left-0 right-0 p-3">
-        <div className="bg-black/80 rounded-lg p-2 backdrop-blur-sm border border-white/10">
-          <h3 className="text-white font-bold text-sm">{commander.name}</h3>
-          <p className="text-purple-300 text-xs italic">{commander.title}</p>
-        </div>
+      {/* Commander name */}
+      <div className="px-3 py-2 bg-slate-800">
+        <h3 className="text-white font-bold text-sm">{commander.name}</h3>
+        <p className="text-slate-400 text-xs">{commander.title}</p>
+      </div>
+      
+      {/* Commander artwork */}
+      <div className="relative aspect-video">
+        <img 
+          src={commander.imageUrl || config.commanderArt} 
+          alt={commander.name}
+          className="w-full h-full object-cover"
+        />
+      </div>
+      
+      {/* Description */}
+      <div className="px-3 py-2 bg-slate-800">
+        <p className="text-slate-300 text-xs leading-relaxed line-clamp-2">
+          {commander.description}
+        </p>
+      </div>
+      
+      {/* Abilities list */}
+      <div className="px-3 py-2 bg-slate-900/50 space-y-1.5">
+        {commander.abilities.slice(0, 3).map((ability, index) => (
+          <div key={index} className="flex items-start gap-2">
+            <span className="text-white text-xs font-medium flex-1">{ability.name}</span>
+            <Badge className="bg-purple-600 text-white text-[10px] px-1.5 py-0 h-4">
+              P {ability.victoryCost || ability.withdrawalCost || 1}
+            </Badge>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -321,7 +338,7 @@ export function CardWithPopup({ enablePopup = true, ...props }: CardWithPopupPro
               <div className="flex items-center justify-center gap-1">
                 <Swords className={`w-4 h-4 ${card.buffModifier > 0 ? 'text-green-400' : 'text-slate-500'}`} />
                 <span className={`font-bold text-lg ${card.buffModifier > 0 ? 'text-green-400' : 'text-slate-500'}`}>
-                  {card.buffModifier > 0 ? `+${card.buffModifier}` : '0'}
+                  +{card.buffModifier}
                 </span>
               </div>
             </div>
@@ -330,7 +347,7 @@ export function CardWithPopup({ enablePopup = true, ...props }: CardWithPopupPro
               <div className="flex items-center justify-center gap-1">
                 <Shield className={`w-4 h-4 ${card.debuffModifier > 0 ? 'text-red-400' : 'text-slate-500'}`} />
                 <span className={`font-bold text-lg ${card.debuffModifier > 0 ? 'text-red-400' : 'text-slate-500'}`}>
-                  {card.debuffModifier > 0 ? `-${card.debuffModifier}` : '0'}
+                  -{card.debuffModifier}
                 </span>
               </div>
             </div>
@@ -362,60 +379,60 @@ export function CommanderWithPopup({ enablePopup = true, ...props }: CommanderWi
         </div>
       </HoverCardTrigger>
       <HoverCardContent 
-        className="w-80 p-0 bg-slate-900 border-2 border-yellow-500/50 shadow-2xl z-50 animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95"
+        className="w-80 p-0 bg-slate-800 border-2 border-yellow-500/50 shadow-2xl z-50 animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95"
         side="top"
         align="center"
         sideOffset={8}
         collisionPadding={16}
         avoidCollisions={true}
       >
+        {/* Header with element color */}
+        <div className={`${config.headerBg} px-4 py-2 flex items-center gap-2`}>
+          <ElementIcon className="w-5 h-5 text-white" />
+          <div>
+            <h3 className="text-white font-bold text-lg">{commander.name}</h3>
+            <span className="text-white/80 text-xs uppercase tracking-wide">
+              {commander.element} Commander
+            </span>
+          </div>
+        </div>
+
+        {/* Artwork */}
         <div className="relative">
           <img 
             src={commander.imageUrl || config.commanderArt} 
             alt={commander.name}
-            className="w-full h-44 object-cover"
+            className="w-full h-40 object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/50 to-transparent" />
-          <div className="absolute top-2 left-2">
-            <Badge className="bg-yellow-500 text-black font-bold border border-yellow-300">
-              <Crown className="w-3 h-3 mr-1" />
-              COMMANDER
-            </Badge>
-          </div>
-          <div className="absolute top-2 right-2">
-            <div className={`px-2 py-1 ${config.bgColor} rounded text-xs font-bold text-white flex items-center gap-1`}>
-              <ElementIcon className="w-3 h-3" />
-              {commander.element}
-            </div>
-          </div>
-          <div className="absolute bottom-2 left-3 right-3">
-            <h3 className="text-white font-bold text-xl drop-shadow-lg">{commander.name}</h3>
-            <p className="text-purple-300 text-sm italic drop-shadow-lg">{commander.title}</p>
-          </div>
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-800 via-transparent to-transparent" />
+        </div>
+
+        {/* Description */}
+        <div className="px-4 py-3 bg-slate-800">
+          <p className="text-slate-300 text-sm leading-relaxed">
+            {commander.description}
+          </p>
         </div>
         
-        <div className="p-3 space-y-3">
-          <div>
-            <h4 className="text-purple-300 text-xs uppercase tracking-wider font-semibold mb-2">Commander Abilities</h4>
-            <div className="space-y-2">
-              {commander.abilities.map((ability, index) => (
-                <div key={index} className="p-2 bg-purple-500/10 rounded-lg border border-purple-500/30">
-                  <p className="text-yellow-400 font-medium text-sm">{ability.name}</p>
-                  <p className="text-purple-200 text-xs mt-1">{ability.description}</p>
-                  {(ability.victoryCost > 0 || ability.withdrawalCost > 0) && (
-                    <div className="flex gap-2 mt-1">
-                      {ability.victoryCost > 0 && (
-                        <span className="text-green-400 text-xs">Victory: {ability.victoryCost}</span>
-                      )}
-                      {ability.withdrawalCost > 0 && (
-                        <span className="text-red-400 text-xs">Defeat: {ability.withdrawalCost}</span>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))}
+        {/* Abilities */}
+        <div className="px-4 py-3 bg-slate-900/50 space-y-2">
+          <h4 className="text-purple-300 text-xs uppercase tracking-wider font-semibold">Commander Abilities</h4>
+          {commander.abilities.map((ability, index) => (
+            <div key={index} className="p-2 bg-slate-800/50 rounded-lg border border-slate-700/50">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-yellow-400 font-medium text-sm">{ability.name}</span>
+                <Badge className="bg-purple-600 text-white text-[10px] px-1.5 py-0 h-4">
+                  P {ability.victoryCost || ability.withdrawalCost || 1}
+                </Badge>
+                {ability.phase === "deployment" && (
+                  <Badge className="bg-green-600 text-white text-[10px] px-1.5 py-0 h-4">
+                    deployment
+                  </Badge>
+                )}
+              </div>
+              <p className="text-slate-400 text-xs">{ability.description}</p>
             </div>
-          </div>
+          ))}
         </div>
       </HoverCardContent>
     </HoverCard>
