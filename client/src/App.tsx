@@ -21,6 +21,7 @@ import RoomPage from "@/pages/room";
 import AchievementsPage from "@/pages/achievements";
 import LeaderboardPage from "@/pages/leaderboard";
 import DailyChallengesPage from "@/pages/daily-challenges";
+import AdminCardArtPage from "@/pages/admin-card-art";
 import NotFound from "@/pages/not-found";
 
 function AppContent() {
@@ -57,6 +58,7 @@ function AppContent() {
               <Route path="/achievements" component={AchievementsPage} />
               <Route path="/leaderboard" component={LeaderboardPage} />
               <Route path="/challenges" component={DailyChallengesPage} />
+              <Route path="/admin/card-art" component={AdminCardArtPage} />
               <Route component={NotFound} />
             </Switch>
           </main>

@@ -1,5 +1,6 @@
 import { Link, useLocation } from "wouter";
-import { Home, BookOpen, Database, Layers, Swords, Trophy, User, GraduationCap, LogIn, LogOut, Users, Gamepad2, Medal, Calendar, Star } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Home, BookOpen, Database, Layers, Swords, Trophy, User, GraduationCap, LogIn, LogOut, Users, Gamepad2, Medal, Calendar, Crown } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -40,6 +41,11 @@ const progressItems = [
 export function GameSidebar() {
   const [location] = useLocation();
   const { user, isAuthenticated, isLoading } = useAuth();
+
+  const { data: adminCheck } = useQuery<{ isAdmin: boolean }>({
+    queryKey: ["/api/admin/check"],
+    enabled: isAuthenticated,
+  });
 
   const displayName = user?.firstName 
     ? `${user.firstName}${user.lastName ? ` ${user.lastName}` : ''}`
@@ -127,6 +133,28 @@ export function GameSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {adminCheck?.isAdmin && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-amber-400">Admin</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton 
+                    asChild 
+                    isActive={location === "/admin/card-art"}
+                    data-testid="nav-admin-card-art"
+                  >
+                    <Link href="/admin/card-art">
+                      <Crown className="w-4 h-4" />
+                      <span>Card Art Generator</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
 
       <SidebarFooter className="border-t border-purple-500/20 p-4">

@@ -20,10 +20,12 @@ export interface IStorage {
   getCard(id: string): Promise<Card | undefined>;
   getCardsByElement(element: string): Promise<Card[]>;
   createCard(card: InsertCard): Promise<Card>;
+  updateCard(id: string, updates: Partial<Card>): Promise<Card | undefined>;
 
   getCommanders(): Promise<Commander[]>;
   getCommander(id: string): Promise<Commander | undefined>;
   createCommander(commander: InsertCommander): Promise<Commander>;
+  updateCommander(id: string, updates: Partial<Commander>): Promise<Commander | undefined>;
 
   getDecks(): Promise<Deck[]>;
   getDecksByPlayer(playerId: string): Promise<Deck[]>;
@@ -428,6 +430,14 @@ export class MemStorage implements IStorage {
     return card;
   }
 
+  async updateCard(id: string, updates: Partial<Card>): Promise<Card | undefined> {
+    const existing = this.cards.get(id);
+    if (!existing) return undefined;
+    const updated: Card = { ...existing, ...updates };
+    this.cards.set(id, updated);
+    return updated;
+  }
+
   async getCommanders(): Promise<Commander[]> {
     return Array.from(this.commanders.values());
   }
@@ -441,6 +451,14 @@ export class MemStorage implements IStorage {
     const commander: Commander = { ...insertCommander, id };
     this.commanders.set(id, commander);
     return commander;
+  }
+
+  async updateCommander(id: string, updates: Partial<Commander>): Promise<Commander | undefined> {
+    const existing = this.commanders.get(id);
+    if (!existing) return undefined;
+    const updated: Commander = { ...existing, ...updates };
+    this.commanders.set(id, updated);
+    return updated;
   }
 
   async getDecks(): Promise<Deck[]> {

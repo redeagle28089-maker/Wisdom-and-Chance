@@ -8,6 +8,14 @@ A tactical trading card game simulator built with React, Express, and TypeScript
 **Current State:** Fully functional TCG with Google authentication, multiplayer rooms, friend system, and real-time gameplay.
 
 ## Recent Changes
+- **January 2026:** Admin Card Art Generator
+  - AI-powered card art generation using Gemini 2.5 Flash Image model
+  - Admin-only access restricted to redeagle28089@gmail.com
+  - Generate custom artwork for unit cards and commanders
+  - Element-specific art prompts (Fire, Water, Earth, Air, Nature)
+  - Save generated art directly to cards/commanders
+  - Cards now support custom imageUrl with fallback to default element art
+
 - **January 2026:** Engagement & Progression Systems
   - Achievement system with 22 unlockable achievements across 5 categories
   - Daily challenges with rotating quests and XP rewards
@@ -91,7 +99,8 @@ A tactical trading card game simulator built with React, Express, and TypeScript
 │   │   │   ├── friends.tsx       # Protected - Friend management
 │   │   │   ├── lobby.tsx         # Protected - Game room browser
 │   │   │   ├── room.tsx          # Protected - Pre-game waiting room
-│   │   │   └── game-board.tsx    # Protected - Game play
+│   │   │   ├── game-board.tsx    # Protected - Game play
+│   │   │   └── admin-card-art.tsx # Admin - Card art generator
 │   │   └── App.tsx
 ├── server/
 │   ├── replit_integrations/
@@ -156,6 +165,12 @@ A tactical trading card game simulator built with React, Express, and TypeScript
 - `game_action` - Broadcast game state changes
 - `player_ready` - Notify ready status change
 - `game_start` - Notify game start
+
+#### Admin Routes (requires admin email: redeagle28089@gmail.com)
+- `GET /api/admin/check` - Check if current user is admin
+- `POST /api/admin/generate-card-art` - Generate AI artwork with Gemini
+- `PATCH /api/admin/cards/:id` - Update card image URL
+- `PATCH /api/admin/commanders/:id` - Update commander image URL
 
 ### Data Models
 

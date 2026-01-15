@@ -1,9 +1,25 @@
 import type { Express } from "express";
 import type { Server } from "http";
+import { z } from "zod";
 import { storage } from "./storage";
-import { insertCardSchema, insertDeckSchema, insertPlayerSchema, insertGameSchema } from "@shared/schema";
-import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
+import { insertCardSchema, insertDeckSchema, insertPlayerSchema, insertGameSchema, ELEMENTS } from "@shared/schema";
+import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import { registerMultiplayerRoutes } from "./multiplayerRoutes";
+import { generateImage } from "./replit_integrations/image/client";
+
+const ADMIN_EMAIL = "redeagle28089@gmail.com";
+
+const generateArtSchema = z.object({
+  prompt: z.string().min(1, "Prompt is required").max(2000, "Prompt too long"),
+  element: z.enum(ELEMENTS).optional(),
+});
+
+const updateImageSchema = z.object({
+  imageUrl: z.string().min(1, "Image URL is required").refine(
+    (url) => url.startsWith("data:image/") || url.startsWith("http://") || url.startsWith("https://"),
+    "Invalid image URL format"
+  ),
+});
 
 export async function registerRoutes(server: Server, app: Express): Promise<void> {
   await setupAuth(app);
@@ -158,5 +174,65 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
       return res.status(404).json({ message: "Game not found" });
     }
     res.status(204).send();
+  });
+
+  // Admin middleware
+  const isAdmin = (req: any, res: any, next: any) => {
+    if (!req.user || req.user.email !== ADMIN_EMAIL) {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+    next();
+  };
+
+  // Admin routes for card art generation
+  app.get("/api/admin/check", isAuthenticated, (req: any, res) => {
+    const isAdminUser = req.user?.email === ADMIN_EMAIL;
+    res.json({ isAdmin: isAdminUser });
+  });
+
+  app.post("/api/admin/generate-card-art", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const parseResult = generateArtSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ error: parseResult.error.flatten().fieldErrors });
+      }
+
+      const { prompt, element } = parseResult.data;
+      const fullPrompt = `Create a fantasy trading card game artwork for a ${element || "magical"} themed card. ${prompt}. Style: High quality fantasy digital art, dramatic lighting, epic composition. Do not include any text or UI elements.`;
+
+      const imageDataUrl = await generateImage(fullPrompt);
+      res.json({ imageUrl: imageDataUrl });
+    } catch (error) {
+      console.error("Error generating card art:", error);
+      res.status(500).json({ error: "Failed to generate card art" });
+    }
+  });
+
+  app.patch("/api/admin/cards/:id", isAuthenticated, isAdmin, async (req, res) => {
+    const parseResult = updateImageSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({ error: parseResult.error.flatten().fieldErrors });
+    }
+
+    const { imageUrl } = parseResult.data;
+    const card = await storage.updateCard(req.params.id, { imageUrl });
+    if (!card) {
+      return res.status(404).json({ message: "Card not found" });
+    }
+    res.json(card);
+  });
+
+  app.patch("/api/admin/commanders/:id", isAuthenticated, isAdmin, async (req, res) => {
+    const parseResult = updateImageSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({ error: parseResult.error.flatten().fieldErrors });
+    }
+
+    const { imageUrl } = parseResult.data;
+    const commander = await storage.updateCommander(req.params.id, { imageUrl });
+    if (!commander) {
+      return res.status(404).json({ message: "Commander not found" });
+    }
+    res.json(commander);
   });
 }

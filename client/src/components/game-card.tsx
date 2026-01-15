@@ -128,7 +128,7 @@ export function GameCard({
     >
       {showArt ? (
         <img 
-          src={config.cardArt} 
+          src={card.imageUrl || config.cardArt} 
           alt={card.element}
           className="absolute inset-0 w-full h-full object-cover"
         />
@@ -209,7 +209,7 @@ export function CommanderCard({
       data-testid={`commander-${commander.id}`}
     >
       <img 
-        src={config.commanderArt} 
+        src={commander.imageUrl || config.commanderArt} 
         alt={commander.name}
         className="absolute inset-0 w-full h-full object-cover"
       />
