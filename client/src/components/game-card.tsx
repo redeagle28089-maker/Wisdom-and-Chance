@@ -288,43 +288,52 @@ export function CardWithPopup({ enablePopup = true, ...props }: CardWithPopupPro
         <div className="p-3 space-y-3">
           <div>
             <h3 className="text-white font-bold text-lg">{card.name}</h3>
-            <p className="text-purple-300 text-sm">Power {card.power} Unit Card</p>
+            <p className="text-purple-300 text-sm">Unit Card</p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div className="p-2 bg-purple-500/10 rounded-lg border border-purple-500/30 text-center">
+              <p className="text-purple-200/70 text-xs mb-1">Power Rank</p>
+              <span className="text-purple-300 font-bold text-xl">{card.power}</span>
+            </div>
+            <div className={`p-2 ${config.bgColor}/10 rounded-lg border ${config.bgColor.replace('bg-', 'border-')}/30 text-center`}>
+              <p className="text-slate-300/70 text-xs mb-1">Element</p>
+              <div className="flex items-center justify-center gap-1">
+                <ElementIcon className={`w-4 h-4 ${config.color}`} />
+                <span className={`${config.color} font-bold`}>{card.element}</span>
+              </div>
+            </div>
           </div>
 
           {card.trait && (
             <div className="flex items-center gap-2 p-2 bg-yellow-500/10 rounded-lg border border-yellow-500/30">
               {TraitIcon && <TraitIcon className="w-4 h-4 text-yellow-400" />}
               <div>
+                <p className="text-yellow-200/70 text-xs">Trait</p>
                 <p className="text-yellow-400 font-medium text-sm">{card.trait}</p>
-                <p className="text-yellow-200/70 text-xs">Special Ability</p>
               </div>
             </div>
           )}
 
           <div className="flex gap-2">
-            {card.buffModifier > 0 && (
-              <div className="flex-1 p-2 bg-green-500/10 rounded-lg border border-green-500/30 text-center">
-                <div className="flex items-center justify-center gap-1">
-                  <Swords className="w-4 h-4 text-green-400" />
-                  <span className="text-green-400 font-bold">+{card.buffModifier}</span>
-                </div>
-                <p className="text-green-200/70 text-xs mt-1">Buff Modifier</p>
+            <div className={`flex-1 p-2 rounded-lg border text-center ${card.buffModifier > 0 ? 'bg-green-500/10 border-green-500/30' : 'bg-slate-800/50 border-slate-700/50'}`}>
+              <p className={`text-xs mb-1 ${card.buffModifier > 0 ? 'text-green-200/70' : 'text-slate-400'}`}>Buff</p>
+              <div className="flex items-center justify-center gap-1">
+                <Swords className={`w-4 h-4 ${card.buffModifier > 0 ? 'text-green-400' : 'text-slate-500'}`} />
+                <span className={`font-bold text-lg ${card.buffModifier > 0 ? 'text-green-400' : 'text-slate-500'}`}>
+                  {card.buffModifier > 0 ? `+${card.buffModifier}` : '0'}
+                </span>
               </div>
-            )}
-            {card.debuffModifier > 0 && (
-              <div className="flex-1 p-2 bg-red-500/10 rounded-lg border border-red-500/30 text-center">
-                <div className="flex items-center justify-center gap-1">
-                  <Shield className="w-4 h-4 text-red-400" />
-                  <span className="text-red-400 font-bold">-{card.debuffModifier}</span>
-                </div>
-                <p className="text-red-200/70 text-xs mt-1">Debuff Modifier</p>
+            </div>
+            <div className={`flex-1 p-2 rounded-lg border text-center ${card.debuffModifier > 0 ? 'bg-red-500/10 border-red-500/30' : 'bg-slate-800/50 border-slate-700/50'}`}>
+              <p className={`text-xs mb-1 ${card.debuffModifier > 0 ? 'text-red-200/70' : 'text-slate-400'}`}>Debuff</p>
+              <div className="flex items-center justify-center gap-1">
+                <Shield className={`w-4 h-4 ${card.debuffModifier > 0 ? 'text-red-400' : 'text-slate-500'}`} />
+                <span className={`font-bold text-lg ${card.debuffModifier > 0 ? 'text-red-400' : 'text-slate-500'}`}>
+                  {card.debuffModifier > 0 ? `-${card.debuffModifier}` : '0'}
+                </span>
               </div>
-            )}
-            {card.buffModifier === 0 && card.debuffModifier === 0 && (
-              <div className="flex-1 p-2 bg-slate-800/50 rounded-lg border border-slate-700/50 text-center">
-                <p className="text-slate-400 text-xs">No modifiers</p>
-              </div>
-            )}
+            </div>
           </div>
         </div>
       </HoverCardContent>
