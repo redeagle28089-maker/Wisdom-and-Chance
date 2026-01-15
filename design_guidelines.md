@@ -1,156 +1,109 @@
-# Design Guidelines for Base44 + Replit Enhanced App
+# Wisdom & Chance TCG - Design Guidelines
 
 ## Design Approach
-**System Selected:** Shadcn UI + Tailwind CSS (existing foundation)
-**Rationale:** Developer-focused productivity tool requiring clarity, efficiency, and professional polish. Building on the existing Shadcn "new-york" variant ensures consistency while allowing customization.
+**Theme:** Dark fantasy card game with mystical purple/slate tones
+**Primary Colors:** Purple gradients with slate backgrounds
+**Style:** Immersive gaming experience with glass-morphism effects
 
-**Design Principles:**
-1. **Clarity over decoration** - Information hierarchy guides every decision
-2. **Professional restraint** - Clean, purposeful interfaces without unnecessary flourish
-3. **Functional excellence** - Every element serves user goals
+---
+
+## Color Palette
+
+### Base Theme (Dark Mode Primary)
+- **Background**: Slate 900 with purple gradients (`from-slate-900 via-purple-900/30 to-slate-900`)
+- **Cards/Surfaces**: Slate 800 with transparency (`bg-slate-800/50`)
+- **Borders**: Purple with low opacity (`border-purple-500/20`)
+- **Text Primary**: White (`text-white`)
+- **Text Secondary**: Purple 200-300 (`text-purple-200`, `text-purple-300`)
+- **Text Muted**: Purple 400 (`text-purple-400`)
+
+### Element Colors
+| Element | Primary Gradient | Text Color | Background |
+|---------|-----------------|------------|------------|
+| Fire | `from-red-600 to-orange-600` | `text-red-500` | `bg-red-600` |
+| Water | `from-blue-600 to-cyan-600` | `text-blue-500` | `bg-blue-600` |
+| Earth | `from-amber-700 to-yellow-600` | `text-amber-500` | `bg-amber-600` |
+| Air | `from-green-400 to-teal-400` | `text-green-400` | `bg-green-500` |
+| Nature | `from-green-700 to-emerald-600` | `text-emerald-500` | `bg-emerald-600` |
+
+### Action Colors
+- **Primary Action**: `from-purple-600 to-pink-600`
+- **Secondary Action**: `from-cyan-600 to-blue-600`
+- **Combat/Danger**: `from-red-600 to-orange-600`
+- **Success**: `bg-green-600`
+- **Warning**: `text-amber-400`
 
 ---
 
 ## Typography
 
-**Font Families:**
-- Primary: Inter (Google Fonts) - body text, UI elements
-- Monospace: JetBrains Mono (Google Fonts) - code snippets, technical data
-
 **Type Scale:**
-- Headings: text-3xl (page titles), text-2xl (section headers), text-xl (subsection headers)
-- Body: text-base (default), text-sm (secondary info, captions)
-- Technical: text-sm font-mono (API responses, entity IDs, code)
-
-**Hierarchy:**
-- Page titles: font-semibold tracking-tight
-- Section headers: font-medium
-- Body text: font-normal
-- Labels: text-sm font-medium uppercase tracking-wide
+- Page titles: `text-4xl md:text-5xl font-bold text-white`
+- Section headers: `text-xl md:text-2xl font-bold text-white`
+- Body: `text-base text-purple-200`
+- Labels: `text-sm text-purple-300`
 
 ---
 
-## Layout System
+## Layout
 
-**Spacing Primitives:** Use Tailwind units of **2, 4, 6, 8, 12, 16** for consistency
-- Component padding: p-4 to p-6
-- Section spacing: space-y-8 to space-y-12
-- Card gaps: gap-4
-- Grid gaps: gap-6
+**Spacing:**
+- Page padding: `p-4 md:p-6`
+- Card padding: `p-4` to `p-8`
+- Gaps: `gap-4`, `gap-6`
 
-**Container Strategy:**
-- Main content: max-w-7xl mx-auto px-6
-- Forms/Settings: max-w-2xl
-- Data tables: full-width with horizontal scroll on mobile
-
-**Grid Patterns:**
-- Dashboard cards: grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6
-- Settings panels: Two-column split (navigation + content)
-- Entity listings: Single column with responsive table/card switching
+**Container:**
+- Max width: `max-w-7xl mx-auto`
+- Full page: `min-h-full`
 
 ---
 
-## Component Library
+## Components
 
-**Navigation:**
-- Sidebar navigation (collapsible on mobile) using Shadcn Sidebar component
-- Breadcrumbs for deep navigation hierarchy
-- Top bar with user menu, notifications, environment indicator
+### Cards (UI)
+```jsx
+<Card className="bg-slate-800/50 border-purple-500/20">
+```
 
-**Data Display:**
-- Tables: Shadcn Table with sortable columns, row actions dropdown
-- Cards: Elevated with subtle border, hover state with slight lift
-- Stats widgets: Large number display with trend indicator and sparkline
-- Empty states: Icon + descriptive text + primary action button
+### Game Cards (TCG)
+- Aspect ratio: `aspect-[3/4]`
+- Element gradient background
+- Power number top-left
+- Element icon centered
+- Rounded: `rounded-lg`
+- Border matches element color
 
-**Forms:**
-- Shadcn Form + React Hook Form (existing)
-- Inline validation with clear error messages
-- Input groups with labels above inputs (not placeholder-only)
-- Action buttons right-aligned (primary + secondary pattern)
-
-**Feedback:**
-- Toast notifications (Sonner - existing) for async actions
-- Loading states: Skeleton screens matching content layout
-- Error boundaries with retry actions and contact support link
-- Progress indicators for multi-step operations
-
-**Modals & Overlays:**
-- Shadcn Dialog for confirmations and forms
-- Shadcn Sheet for sliding panels (entity details, settings)
-- Tooltips for icon-only buttons and technical terms
-
----
-
-## Visual Treatment
-
-**Depth & Elevation:**
-- Flat base with subtle borders (border-neutral-200)
-- Cards: Very subtle shadow (shadow-sm) + border
-- No heavy drop shadows - maintain clean aesthetic
-- Hover states: Slight background shift (hover:bg-neutral-50)
-
-**Borders & Dividers:**
-- Section dividers: border-t border-neutral-200
-- Card borders: rounded-lg border
-- Input borders: Maintain Shadcn defaults
-
-**States:**
-- Hover: Subtle background change + cursor-pointer
-- Active: Border accent or background intensity increase
-- Disabled: opacity-50 cursor-not-allowed
-- Loading: Animated skeleton or spinner, never block interaction unnecessarily
-
----
-
-## Page Structures
-
-**Dashboard:**
-- Top stats row (3-4 key metrics in cards)
-- Recent activity/entities list below
-- Quick actions panel or empty state if no data
-- Proper loading skeletons for async data
-
-**Entity Management (CRUD):**
-- Table view with search, filters, bulk actions
-- Create button (primary) top-right
-- Row actions: View/Edit/Delete in dropdown
-- Inline editing for simple fields
-
-**Settings/Configuration:**
-- Two-column: Navigation tabs left, content right
-- Form sections with clear headings
-- Save actions sticky at bottom or top-right
-- Unsaved changes warning
-
-**Error States:**
-- Full-page error: Centered icon + message + retry button
-- Inline errors: Below relevant field with icon
-- API error handling: User-friendly message + technical details in collapsible
+### Buttons
+Primary with gradient and shadow:
+```jsx
+<Button className="bg-gradient-to-r from-purple-600 to-pink-600 shadow-xl shadow-purple-500/30">
+```
 
 ---
 
 ## Icons
 
-**Library:** Lucide React (existing)
-**Usage:**
-- Navigation: 20px icons with label
-- Buttons: 16px inline with text
-- Empty states: 48px decorative
-- Status indicators: 16px with semantic meaning (check, x, alert)
+**Library:** Lucide React
+
+**Element Icons:**
+- Fire: `Flame`
+- Water: `Droplet`
+- Earth: `Mountain`
+- Air: `Wind`
+- Nature: `Leaf`
+
+**Game Icons:**
+- Combat: `Swords`
+- Defense: `Shield`
+- Victory: `Trophy`
+- Commander: `Crown`
+- Health: `Heart`
 
 ---
 
-## Images
+## Responsive
 
-**Not applicable** - This is a developer productivity tool; focus on data visualization and UI efficiency rather than imagery. Any branding assets (Base44 logo) should be minimal and appear in navigation/authentication screens only.
-
----
-
-## Responsive Behavior
-
-- Mobile: Stack all columns, hamburger menu, simplified tables (switch to cards)
-- Tablet: 2-column grids, persistent navigation
-- Desktop: Full multi-column layouts, expanded sidebar
-
-**Breakpoints:** Use Tailwind defaults (sm: 640px, md: 768px, lg: 1024px, xl: 1280px)
+- Mobile first
+- Grid: `grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6`
+- Text scaling: `text-base md:text-lg`
+- Hidden elements: `hidden md:block`

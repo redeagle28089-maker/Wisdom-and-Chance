@@ -1,0 +1,241 @@
+import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+import { Swords, Crown, Flame, Droplet, Mountain, Wind, Leaf, Play, Layers } from "lucide-react";
+import type { Deck, Commander, Element, Game, InsertGame, GameState, Card as CardType } from "@shared/schema";
+import { GAME_CONSTANTS } from "@shared/schema";
+import { Link } from "wouter";
+
+const elementConfig: Record<Element, { icon: typeof Flame; color: string; bgColor: string }> = {
+  Fire: { icon: Flame, color: "text-red-500", bgColor: "bg-red-600" },
+  Water: { icon: Droplet, color: "text-blue-500", bgColor: "bg-blue-600" },
+  Earth: { icon: Mountain, color: "text-amber-500", bgColor: "bg-amber-600" },
+  Air: { icon: Wind, color: "text-green-400", bgColor: "bg-green-500" },
+  Nature: { icon: Leaf, color: "text-emerald-500", bgColor: "bg-emerald-600" },
+};
+
+function shuffleArray<T>(array: T[]): T[] {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
+export default function PracticePage() {
+  const { toast } = useToast();
+  const [, navigate] = useLocation();
+  const [selectedDeckId, setSelectedDeckId] = useState<string | null>(null);
+
+  const { data: player } = useQuery({
+    queryKey: ["/api/guest-player"],
+  });
+
+  const { data: decks = [] } = useQuery<Deck[]>({
+    queryKey: ["/api/decks"],
+    enabled: !!player,
+  });
+
+  const { data: commanders = [] } = useQuery<Commander[]>({
+    queryKey: ["/api/commanders"],
+  });
+
+  const { data: allCards = [] } = useQuery<CardType[]>({
+    queryKey: ["/api/cards"],
+  });
+
+  const playerDecks = decks.filter((d) => d.playerId === (player as { id: string })?.id);
+
+  const startGameMutation = useMutation({
+    mutationFn: async (gameData: InsertGame) => {
+      const res = await apiRequest("POST", "/api/games", gameData);
+      return res.json() as Promise<Game>;
+    },
+    onSuccess: (game) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/games"] });
+      navigate(`/game/${game.id}`);
+    },
+    onError: () => {
+      toast({ title: "Failed to start game", variant: "destructive" });
+    },
+  });
+
+  const startPracticeGame = () => {
+    if (!selectedDeckId || !player) {
+      toast({ title: "Please select a deck first", variant: "destructive" });
+      return;
+    }
+
+    const selectedDeck = playerDecks.find((d) => d.id === selectedDeckId);
+    if (!selectedDeck) return;
+
+    const aiCommander = commanders[Math.floor(Math.random() * commanders.length)];
+    const aiDeckCards = shuffleArray(allCards.filter((c) => !c.isCommander).slice(0, 40));
+
+    const player1Deck = shuffleArray([...selectedDeck.cardIds]);
+    const player2Deck = shuffleArray(aiDeckCards.map((c) => c.id));
+
+    const player1Hand = player1Deck.splice(0, GAME_CONSTANTS.STARTING_HAND_SIZE);
+    const player2Hand = player2Deck.splice(0, GAME_CONSTANTS.STARTING_HAND_SIZE);
+
+    const initialGameState: GameState = {
+      player1Hand,
+      player2Hand,
+      player1Deck,
+      player2Deck,
+      player1Battlefield: [],
+      player2Battlefield: [],
+      player1Yard: [],
+      player2Yard: [],
+    };
+
+    const gameData: InsertGame = {
+      player1Id: (player as { id: string }).id,
+      player2Id: "player-ai",
+      player1DeckId: selectedDeckId,
+      player2DeckId: aiCommander.id,
+      player1HP: GAME_CONSTANTS.STARTING_HP,
+      player2HP: GAME_CONSTANTS.STARTING_HP,
+      player1VictoryPoints: 0,
+      player2VictoryPoints: 0,
+      player1WithdrawalPoints: 0,
+      player2WithdrawalPoints: 0,
+      currentPhase: "draw",
+      currentTurn: 1,
+      activePlayer: (player as { id: string }).id,
+      status: "in_progress",
+      gameType: "practice",
+      winnerId: null,
+      gameState: initialGameState,
+      gameHistory: [],
+    };
+
+    startGameMutation.mutate(gameData);
+  };
+
+  return (
+    <div className="min-h-full bg-gradient-to-br from-slate-900 via-purple-900/30 to-slate-900 p-4 md:p-6">
+      <div className="max-w-4xl mx-auto">
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-red-500 to-orange-500 rounded-2xl mb-4 shadow-xl">
+            <Swords className="w-8 h-8 text-white" />
+          </div>
+          <h1 className="text-4xl md:text-5xl font-bold text-white mb-2" data-testid="text-practice-title">Practice Mode</h1>
+          <p className="text-lg text-purple-200">Test your deck against an AI opponent</p>
+        </div>
+
+        {playerDecks.length === 0 ? (
+          <Card className="bg-slate-800/50 border-purple-500/20">
+            <CardContent className="p-8 text-center">
+              <Layers className="w-16 h-16 text-purple-400 mx-auto mb-4" />
+              <h2 className="text-2xl font-bold text-white mb-2">No Decks Found</h2>
+              <p className="text-purple-200 mb-6">You need to build a deck before you can practice.</p>
+              <Link href="/deck-builder">
+                <Button className="bg-gradient-to-r from-purple-600 to-pink-600" data-testid="button-go-to-deckbuilder">
+                  <Layers className="w-4 h-4 mr-2" />
+                  Build a Deck
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-6">
+            <Card className="bg-slate-800/50 border-purple-500/20">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center gap-2">
+                  <Layers className="w-5 h-5 text-purple-400" />
+                  Select Your Deck
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {playerDecks.map((deck) => {
+                    const commander = commanders.find((c) => c.id === deck.commanderId);
+                    const config = commander ? elementConfig[commander.element] : null;
+                    const Icon = config?.icon || Crown;
+
+                    return (
+                      <button
+                        key={deck.id}
+                        onClick={() => setSelectedDeckId(deck.id)}
+                        className={`p-4 rounded-lg border-2 text-left transition-all ${
+                          selectedDeckId === deck.id
+                            ? "border-purple-500 bg-purple-500/20"
+                            : "border-purple-500/30 bg-slate-900/50 hover:border-purple-500/50"
+                        }`}
+                        data-testid={`deck-${deck.id}`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`w-12 h-12 ${config?.bgColor || "bg-purple-600"} rounded-lg flex items-center justify-center`}>
+                            <Icon className="w-6 h-6 text-white" />
+                          </div>
+                          <div>
+                            <h3 className="text-white font-bold">{deck.name}</h3>
+                            <p className="text-purple-300 text-sm">
+                              {commander?.name || "Unknown Commander"}
+                            </p>
+                            <Badge variant="secondary" className="mt-1">
+                              {deck.cardIds.length} cards
+                            </Badge>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-slate-800/50 border-purple-500/20">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center gap-2">
+                  <Swords className="w-5 h-5 text-red-400" />
+                  AI Opponent
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-purple-200 mb-4">
+                  You will face a random AI commander with an auto-generated deck. 
+                  The AI will play strategically based on game state.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {commanders.map((commander) => {
+                    const config = elementConfig[commander.element];
+                    const Icon = config.icon;
+                    return (
+                      <div key={commander.id} className="flex items-center gap-1">
+                        <div className={`w-6 h-6 ${config.bgColor} rounded flex items-center justify-center`}>
+                          <Icon className="w-4 h-4 text-white" />
+                        </div>
+                        <span className="text-purple-300 text-sm">{commander.name.split(' ')[0]}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="text-center">
+              <Button
+                size="lg"
+                className="bg-gradient-to-r from-red-600 to-orange-600 text-lg px-8 py-6 shadow-xl shadow-red-500/30"
+                onClick={startPracticeGame}
+                disabled={!selectedDeckId || startGameMutation.isPending}
+                data-testid="button-start-game"
+              >
+                <Play className="w-5 h-5 mr-2" />
+                {startGameMutation.isPending ? "Starting..." : "Start Practice Game"}
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

@@ -1,156 +1,162 @@
 import type { Express } from "express";
-import { createServer, type Server } from "http";
+import type { Server } from "http";
 import { storage } from "./storage";
-import { insertProjectSchema, insertTaskSchema } from "@shared/schema";
-import { z } from "zod";
+import { insertCardSchema, insertDeckSchema, insertPlayerSchema, insertGameSchema } from "@shared/schema";
 
-export async function registerRoutes(
-  httpServer: Server,
-  app: Express
-): Promise<Server> {
-  app.get("/api/projects", async (req, res) => {
-    try {
-      const projects = await storage.getProjects();
-      res.json(projects);
-    } catch (error) {
-      console.error("Error fetching projects:", error);
-      res.status(500).json({ error: "Failed to fetch projects" });
-    }
+export async function registerRoutes(server: Server, app: Express): Promise<void> {
+  app.get("/api/cards", async (req, res) => {
+    const cards = await storage.getCards();
+    res.json(cards);
   });
 
-  app.get("/api/projects/:id", async (req, res) => {
-    try {
-      const project = await storage.getProject(req.params.id);
-      if (!project) {
-        return res.status(404).json({ error: "Project not found" });
-      }
-      res.json(project);
-    } catch (error) {
-      console.error("Error fetching project:", error);
-      res.status(500).json({ error: "Failed to fetch project" });
+  app.get("/api/cards/:id", async (req, res) => {
+    const card = await storage.getCard(req.params.id);
+    if (!card) {
+      return res.status(404).json({ message: "Card not found" });
     }
+    res.json(card);
   });
 
-  app.post("/api/projects", async (req, res) => {
-    try {
-      const data = insertProjectSchema.parse(req.body);
-      const project = await storage.createProject(data);
-      res.status(201).json(project);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: "Invalid project data", details: error.errors });
-      }
-      console.error("Error creating project:", error);
-      res.status(500).json({ error: "Failed to create project" });
-    }
+  app.get("/api/cards/element/:element", async (req, res) => {
+    const cards = await storage.getCardsByElement(req.params.element);
+    res.json(cards);
   });
 
-  app.patch("/api/projects/:id", async (req, res) => {
-    try {
-      const data = insertProjectSchema.partial().parse(req.body);
-      const project = await storage.updateProject(req.params.id, data);
-      if (!project) {
-        return res.status(404).json({ error: "Project not found" });
-      }
-      res.json(project);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: "Invalid project data", details: error.errors });
-      }
-      console.error("Error updating project:", error);
-      res.status(500).json({ error: "Failed to update project" });
-    }
+  app.get("/api/commanders", async (req, res) => {
+    const commanders = await storage.getCommanders();
+    res.json(commanders);
   });
 
-  app.delete("/api/projects/:id", async (req, res) => {
-    try {
-      const project = await storage.getProject(req.params.id);
-      if (!project) {
-        return res.status(404).json({ error: "Project not found" });
-      }
-      await storage.deleteTasksByProject(req.params.id);
-      await storage.deleteProject(req.params.id);
-      res.status(204).send();
-    } catch (error) {
-      console.error("Error deleting project:", error);
-      res.status(500).json({ error: "Failed to delete project" });
+  app.get("/api/commanders/:id", async (req, res) => {
+    const commander = await storage.getCommander(req.params.id);
+    if (!commander) {
+      return res.status(404).json({ message: "Commander not found" });
     }
+    res.json(commander);
   });
 
-  app.get("/api/tasks", async (req, res) => {
-    try {
-      const projectId = req.query.projectId as string | undefined;
-      const tasks = projectId
-        ? await storage.getTasksByProject(projectId)
-        : await storage.getTasks();
-      res.json(tasks);
-    } catch (error) {
-      console.error("Error fetching tasks:", error);
-      res.status(500).json({ error: "Failed to fetch tasks" });
+  app.get("/api/decks", async (req, res) => {
+    const playerId = req.query.playerId as string;
+    if (playerId) {
+      const decks = await storage.getDecksByPlayer(playerId);
+      return res.json(decks);
     }
+    const decks = await storage.getDecks();
+    res.json(decks);
   });
 
-  app.get("/api/tasks/:id", async (req, res) => {
-    try {
-      const task = await storage.getTask(req.params.id);
-      if (!task) {
-        return res.status(404).json({ error: "Task not found" });
-      }
-      res.json(task);
-    } catch (error) {
-      console.error("Error fetching task:", error);
-      res.status(500).json({ error: "Failed to fetch task" });
+  app.get("/api/decks/:id", async (req, res) => {
+    const deck = await storage.getDeck(req.params.id);
+    if (!deck) {
+      return res.status(404).json({ message: "Deck not found" });
     }
+    res.json(deck);
   });
 
-  app.post("/api/tasks", async (req, res) => {
-    try {
-      const data = insertTaskSchema.parse(req.body);
-      const project = await storage.getProject(data.projectId);
-      if (!project) {
-        return res.status(400).json({ error: "Project not found" });
-      }
-      const task = await storage.createTask(data);
-      res.status(201).json(task);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: "Invalid task data", details: error.errors });
-      }
-      console.error("Error creating task:", error);
-      res.status(500).json({ error: "Failed to create task" });
+  app.post("/api/decks", async (req, res) => {
+    const result = insertDeckSchema.safeParse(req.body);
+    if (!result.success) {
+      return res.status(400).json({ message: "Invalid deck data", errors: result.error.flatten() });
     }
+    const deck = await storage.createDeck(result.data);
+    res.status(201).json(deck);
   });
 
-  app.patch("/api/tasks/:id", async (req, res) => {
-    try {
-      const data = insertTaskSchema.partial().parse(req.body);
-      const task = await storage.updateTask(req.params.id, data);
-      if (!task) {
-        return res.status(404).json({ error: "Task not found" });
-      }
-      res.json(task);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: "Invalid task data", details: error.errors });
-      }
-      console.error("Error updating task:", error);
-      res.status(500).json({ error: "Failed to update task" });
+  app.patch("/api/decks/:id", async (req, res) => {
+    const deck = await storage.updateDeck(req.params.id, req.body);
+    if (!deck) {
+      return res.status(404).json({ message: "Deck not found" });
     }
+    res.json(deck);
   });
 
-  app.delete("/api/tasks/:id", async (req, res) => {
-    try {
-      const task = await storage.getTask(req.params.id);
-      if (!task) {
-        return res.status(404).json({ error: "Task not found" });
-      }
-      await storage.deleteTask(req.params.id);
-      res.status(204).send();
-    } catch (error) {
-      console.error("Error deleting task:", error);
-      res.status(500).json({ error: "Failed to delete task" });
+  app.delete("/api/decks/:id", async (req, res) => {
+    const deleted = await storage.deleteDeck(req.params.id);
+    if (!deleted) {
+      return res.status(404).json({ message: "Deck not found" });
     }
+    res.status(204).send();
   });
 
-  return httpServer;
+  app.get("/api/players", async (req, res) => {
+    const players = await storage.getPlayers();
+    res.json(players);
+  });
+
+  app.get("/api/players/:id", async (req, res) => {
+    const player = await storage.getPlayer(req.params.id);
+    if (!player) {
+      return res.status(404).json({ message: "Player not found" });
+    }
+    res.json(player);
+  });
+
+  app.post("/api/players", async (req, res) => {
+    const result = insertPlayerSchema.safeParse(req.body);
+    if (!result.success) {
+      return res.status(400).json({ message: "Invalid player data", errors: result.error.flatten() });
+    }
+    const existing = await storage.getPlayerByUsername(result.data.username);
+    if (existing) {
+      return res.json(existing);
+    }
+    const player = await storage.createPlayer(result.data);
+    res.status(201).json(player);
+  });
+
+  app.patch("/api/players/:id", async (req, res) => {
+    const player = await storage.updatePlayer(req.params.id, req.body);
+    if (!player) {
+      return res.status(404).json({ message: "Player not found" });
+    }
+    res.json(player);
+  });
+
+  app.get("/api/games", async (req, res) => {
+    const playerId = req.query.playerId as string;
+    if (playerId) {
+      const games = await storage.getGamesByPlayer(playerId);
+      return res.json(games);
+    }
+    const games = await storage.getGames();
+    res.json(games);
+  });
+
+  app.get("/api/games/:id", async (req, res) => {
+    const game = await storage.getGame(req.params.id);
+    if (!game) {
+      return res.status(404).json({ message: "Game not found" });
+    }
+    res.json(game);
+  });
+
+  app.post("/api/games", async (req, res) => {
+    const result = insertGameSchema.safeParse(req.body);
+    if (!result.success) {
+      return res.status(400).json({ message: "Invalid game data", errors: result.error.flatten() });
+    }
+    const game = await storage.createGame(result.data);
+    res.status(201).json(game);
+  });
+
+  app.patch("/api/games/:id", async (req, res) => {
+    const game = await storage.updateGame(req.params.id, req.body);
+    if (!game) {
+      return res.status(404).json({ message: "Game not found" });
+    }
+    res.json(game);
+  });
+
+  app.delete("/api/games/:id", async (req, res) => {
+    const deleted = await storage.deleteGame(req.params.id);
+    if (!deleted) {
+      return res.status(404).json({ message: "Game not found" });
+    }
+    res.status(204).send();
+  });
+
+  app.get("/api/guest-player", async (req, res) => {
+    const guest = await storage.getPlayer("player-guest");
+    res.json(guest);
+  });
 }

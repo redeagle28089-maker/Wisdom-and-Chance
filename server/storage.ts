@@ -1,259 +1,306 @@
 import {
-  type User,
-  type InsertUser,
-  type Project,
-  type InsertProject,
-  type Task,
-  type InsertTask,
+  type Card,
+  type InsertCard,
+  type Commander,
+  type InsertCommander,
+  type Deck,
+  type InsertDeck,
+  type Player,
+  type InsertPlayer,
+  type Game,
+  type InsertGame,
+  ELEMENTS,
+  TRAITS,
+  BUFF_DEBUFF_COLORS,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
-  getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  getCards(): Promise<Card[]>;
+  getCard(id: string): Promise<Card | undefined>;
+  getCardsByElement(element: string): Promise<Card[]>;
+  createCard(card: InsertCard): Promise<Card>;
 
-  getProjects(): Promise<Project[]>;
-  getProject(id: string): Promise<Project | undefined>;
-  createProject(project: InsertProject): Promise<Project>;
-  updateProject(id: string, project: Partial<InsertProject>): Promise<Project | undefined>;
-  deleteProject(id: string): Promise<boolean>;
+  getCommanders(): Promise<Commander[]>;
+  getCommander(id: string): Promise<Commander | undefined>;
+  createCommander(commander: InsertCommander): Promise<Commander>;
 
-  getTasks(): Promise<Task[]>;
-  getTasksByProject(projectId: string): Promise<Task[]>;
-  getTask(id: string): Promise<Task | undefined>;
-  createTask(task: InsertTask): Promise<Task>;
-  updateTask(id: string, task: Partial<InsertTask>): Promise<Task | undefined>;
-  deleteTask(id: string): Promise<boolean>;
-  deleteTasksByProject(projectId: string): Promise<void>;
+  getDecks(): Promise<Deck[]>;
+  getDecksByPlayer(playerId: string): Promise<Deck[]>;
+  getDeck(id: string): Promise<Deck | undefined>;
+  createDeck(deck: InsertDeck): Promise<Deck>;
+  updateDeck(id: string, deck: Partial<InsertDeck>): Promise<Deck | undefined>;
+  deleteDeck(id: string): Promise<boolean>;
+
+  getPlayers(): Promise<Player[]>;
+  getPlayer(id: string): Promise<Player | undefined>;
+  getPlayerByUsername(username: string): Promise<Player | undefined>;
+  createPlayer(player: InsertPlayer): Promise<Player>;
+  updatePlayer(id: string, updates: Partial<Player>): Promise<Player | undefined>;
+
+  getGames(): Promise<Game[]>;
+  getGame(id: string): Promise<Game | undefined>;
+  getGamesByPlayer(playerId: string): Promise<Game[]>;
+  createGame(game: InsertGame): Promise<Game>;
+  updateGame(id: string, updates: Partial<Game>): Promise<Game | undefined>;
+  deleteGame(id: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-  private projects: Map<string, Project>;
-  private tasks: Map<string, Task>;
+  private cards: Map<string, Card>;
+  private commanders: Map<string, Commander>;
+  private decks: Map<string, Deck>;
+  private players: Map<string, Player>;
+  private games: Map<string, Game>;
 
   constructor() {
-    this.users = new Map();
-    this.projects = new Map();
-    this.tasks = new Map();
-
+    this.cards = new Map();
+    this.commanders = new Map();
+    this.decks = new Map();
+    this.players = new Map();
+    this.games = new Map();
     this.seedData();
   }
 
   private seedData() {
-    const project1: Project = {
-      id: "proj-1",
-      name: "Website Redesign",
-      description: "Complete overhaul of the company website with modern design principles",
-      status: "active",
-      createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-    };
-    const project2: Project = {
-      id: "proj-2",
-      name: "Mobile App Development",
-      description: "Build a cross-platform mobile app for iOS and Android",
-      status: "active",
-      createdAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
-    };
-    const project3: Project = {
-      id: "proj-3",
-      name: "API Integration",
-      description: "Integrate third-party APIs for payment and analytics",
-      status: "completed",
-      createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+    const cardNames: Record<string, string[]> = {
+      Fire: ["Flame Warrior", "Inferno Mage", "Ember Scout", "Phoenix Guard", "Blaze Knight", "Volcano Shaman", "Fire Serpent", "Crimson Archer"],
+      Water: ["Tide Caller", "Frost Mage", "Ocean Guardian", "Aqua Assassin", "Storm Bringer", "Ice Sentinel", "Coral Defender", "Mist Walker"],
+      Earth: ["Stone Golem", "Mountain Sage", "Crystal Guard", "Terra Knight", "Boulder Crusher", "Cave Dweller", "Granite Defender", "Sandstorm Warrior"],
+      Air: ["Wind Dancer", "Cloud Strider", "Tempest Mage", "Sky Archer", "Zephyr Scout", "Thunder Caller", "Cyclone Knight", "Breeze Spirit"],
+      Nature: ["Forest Guardian", "Vine Weaver", "Bloom Priest", "Thorn Warrior", "Grove Protector", "Root Shaman", "Leaf Dancer", "Moss Giant"],
     };
 
-    this.projects.set(project1.id, project1);
-    this.projects.set(project2.id, project2);
-    this.projects.set(project3.id, project3);
+    const traits = [null, null, "Quick Strike", "Care Package", "Restoration", "Guardian"];
+    const buffDebuffColors = ["Red", "Blue", "Amber", "Green", "Black"] as const;
 
-    const tasks: Task[] = [
-      {
-        id: "task-1",
-        projectId: "proj-1",
-        title: "Design homepage mockups",
-        description: "Create initial wireframes and high-fidelity mockups for the homepage",
-        status: "done",
-        priority: "high",
-        completed: true,
-        createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-      },
-      {
-        id: "task-2",
-        projectId: "proj-1",
-        title: "Implement responsive navigation",
-        description: "Build the main navigation component with mobile responsiveness",
-        status: "in-progress",
-        priority: "high",
-        completed: false,
-        createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
-      },
-      {
-        id: "task-3",
-        projectId: "proj-1",
-        title: "Set up CI/CD pipeline",
-        description: "Configure automated testing and deployment workflows",
-        status: "todo",
-        priority: "medium",
-        completed: false,
-        createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-      },
-      {
-        id: "task-4",
-        projectId: "proj-2",
-        title: "Set up React Native project",
-        description: "Initialize the project with proper folder structure and dependencies",
-        status: "done",
-        priority: "high",
-        completed: true,
-        createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
-      },
-      {
-        id: "task-5",
-        projectId: "proj-2",
-        title: "Design authentication flow",
-        description: "Create login, signup, and password reset screens",
-        status: "in-progress",
-        priority: "high",
-        completed: false,
-        createdAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000),
-      },
-      {
-        id: "task-6",
-        projectId: "proj-3",
-        title: "Stripe payment integration",
-        description: "Implement payment processing with Stripe API",
-        status: "done",
-        priority: "high",
-        completed: true,
-        createdAt: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000),
-      },
-      {
-        id: "task-7",
-        projectId: "proj-3",
-        title: "Analytics dashboard setup",
-        description: "Integrate Google Analytics and create custom dashboards",
-        status: "done",
-        priority: "medium",
-        completed: true,
-        createdAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000),
-      },
+    let cardIndex = 0;
+    for (const element of ELEMENTS) {
+      const names = cardNames[element];
+      for (let power = 1; power <= 10; power++) {
+        for (let copy = 0; copy < 4; copy++) {
+          const nameIndex = (power + copy) % names.length;
+          const trait = power >= 7 ? traits[Math.floor(Math.random() * traits.length)] : null;
+          const hasBuff = Math.random() > 0.5;
+          const hasDebuff = Math.random() > 0.5;
+          
+          const card: Card = {
+            id: `card-${element.toLowerCase()}-${power}-${copy}`,
+            name: `${names[nameIndex]} ${power > 5 ? "Elite" : ""} ${copy > 0 ? `#${copy + 1}` : ""}`.trim(),
+            element: element as typeof ELEMENTS[number],
+            power,
+            trait: trait as typeof TRAITS[number] | null,
+            buffModifier: hasBuff ? Math.floor(Math.random() * 3) + 1 : 0,
+            buffColor: hasBuff ? buffDebuffColors[Math.floor(Math.random() * buffDebuffColors.length)] : null,
+            debuffModifier: hasDebuff ? Math.floor(Math.random() * 3) + 1 : 0,
+            debuffColor: hasDebuff ? buffDebuffColors[Math.floor(Math.random() * buffDebuffColors.length)] : null,
+            description: `A ${element} unit with power ${power}`,
+            isCommander: false,
+          };
+          this.cards.set(card.id, card);
+          cardIndex++;
+        }
+      }
+    }
+
+    const commanderData = [
+      { name: "Pyros the Eternal", element: "Fire", title: "Lord of Flames", description: "Commands the fury of ancient volcanoes" },
+      { name: "Aquara the Deep", element: "Water", title: "Queen of Tides", description: "Controls the endless oceans" },
+      { name: "Terran the Unmovable", element: "Earth", title: "Mountain King", description: "Strength of a thousand mountains" },
+      { name: "Zephyros the Swift", element: "Air", title: "Wind Lord", description: "Speed of the eternal storm" },
+      { name: "Gaia the Eternal", element: "Nature", title: "Forest Mother", description: "Life springs from her touch" },
     ];
 
-    tasks.forEach((task) => this.tasks.set(task.id, task));
+    for (const cmd of commanderData) {
+      const commander: Commander = {
+        id: `commander-${cmd.element.toLowerCase()}`,
+        name: cmd.name,
+        element: cmd.element as typeof ELEMENTS[number],
+        title: cmd.title,
+        description: cmd.description,
+        abilities: [
+          {
+            id: `ability-${cmd.element.toLowerCase()}-1`,
+            name: "Power Surge",
+            description: "Boost all allied cards by +2 power",
+            phase: "combat",
+            victoryCost: 2,
+            withdrawalCost: 0,
+            effect: { type: "buff_all", value: 2, target: "allied" },
+          },
+          {
+            id: `ability-${cmd.element.toLowerCase()}-2`,
+            name: "Defensive Stance",
+            description: "Reduce incoming damage by 5",
+            phase: "calculation",
+            victoryCost: 0,
+            withdrawalCost: 2,
+            effect: { type: "reduce_damage", value: 5, target: "self" },
+          },
+          {
+            id: `ability-${cmd.element.toLowerCase()}-3`,
+            name: "Draw Power",
+            description: "Draw 2 additional cards",
+            phase: "draw",
+            victoryCost: 1,
+            withdrawalCost: 1,
+            effect: { type: "draw_cards", value: 2, target: "self" },
+          },
+        ],
+      };
+      this.commanders.set(commander.id, commander);
+    }
+
+    const guestPlayer: Player = {
+      id: "player-guest",
+      username: "guest",
+      displayName: "Guest Player",
+      wins: 0,
+      losses: 0,
+      createdAt: new Date(),
+    };
+    this.players.set(guestPlayer.id, guestPlayer);
+
+    const aiPlayer: Player = {
+      id: "player-ai",
+      username: "AI",
+      displayName: "AI Opponent",
+      wins: 0,
+      losses: 0,
+      createdAt: new Date(),
+    };
+    this.players.set(aiPlayer.id, aiPlayer);
   }
 
-  async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+  async getCards(): Promise<Card[]> {
+    return Array.from(this.cards.values());
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username
+  async getCard(id: string): Promise<Card | undefined> {
+    return this.cards.get(id);
+  }
+
+  async getCardsByElement(element: string): Promise<Card[]> {
+    return Array.from(this.cards.values()).filter(c => c.element === element);
+  }
+
+  async createCard(insertCard: InsertCard): Promise<Card> {
+    const id = randomUUID();
+    const card: Card = { ...insertCard, id };
+    this.cards.set(id, card);
+    return card;
+  }
+
+  async getCommanders(): Promise<Commander[]> {
+    return Array.from(this.commanders.values());
+  }
+
+  async getCommander(id: string): Promise<Commander | undefined> {
+    return this.commanders.get(id);
+  }
+
+  async createCommander(insertCommander: InsertCommander): Promise<Commander> {
+    const id = randomUUID();
+    const commander: Commander = { ...insertCommander, id };
+    this.commanders.set(id, commander);
+    return commander;
+  }
+
+  async getDecks(): Promise<Deck[]> {
+    return Array.from(this.decks.values()).sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
+  async getDecksByPlayer(playerId: string): Promise<Deck[]> {
+    return Array.from(this.decks.values())
+      .filter(d => d.playerId === playerId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async getDeck(id: string): Promise<Deck | undefined> {
+    return this.decks.get(id);
+  }
+
+  async createDeck(insertDeck: InsertDeck): Promise<Deck> {
     const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
+    const deck: Deck = { ...insertDeck, id, createdAt: new Date() };
+    this.decks.set(id, deck);
+    return deck;
   }
 
-  async getProjects(): Promise<Project[]> {
-    return Array.from(this.projects.values()).sort((a, b) => {
-      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-      return dateB - dateA;
-    });
-  }
-
-  async getProject(id: string): Promise<Project | undefined> {
-    return this.projects.get(id);
-  }
-
-  async createProject(insertProject: InsertProject): Promise<Project> {
-    const id = randomUUID();
-    const project: Project = {
-      ...insertProject,
-      id,
-      createdAt: new Date(),
-    };
-    this.projects.set(id, project);
-    return project;
-  }
-
-  async updateProject(
-    id: string,
-    updates: Partial<InsertProject>
-  ): Promise<Project | undefined> {
-    const existing = this.projects.get(id);
+  async updateDeck(id: string, updates: Partial<InsertDeck>): Promise<Deck | undefined> {
+    const existing = this.decks.get(id);
     if (!existing) return undefined;
-
-    const updated: Project = { ...existing, ...updates };
-    this.projects.set(id, updated);
+    const updated: Deck = { ...existing, ...updates };
+    this.decks.set(id, updated);
     return updated;
   }
 
-  async deleteProject(id: string): Promise<boolean> {
-    return this.projects.delete(id);
+  async deleteDeck(id: string): Promise<boolean> {
+    return this.decks.delete(id);
   }
 
-  async getTasks(): Promise<Task[]> {
-    return Array.from(this.tasks.values()).sort((a, b) => {
-      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-      return dateB - dateA;
-    });
+  async getPlayers(): Promise<Player[]> {
+    return Array.from(this.players.values());
   }
 
-  async getTasksByProject(projectId: string): Promise<Task[]> {
-    return Array.from(this.tasks.values())
-      .filter((task) => task.projectId === projectId)
-      .sort((a, b) => {
-        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-        return dateB - dateA;
-      });
+  async getPlayer(id: string): Promise<Player | undefined> {
+    return this.players.get(id);
   }
 
-  async getTask(id: string): Promise<Task | undefined> {
-    return this.tasks.get(id);
+  async getPlayerByUsername(username: string): Promise<Player | undefined> {
+    return Array.from(this.players.values()).find(p => p.username === username);
   }
 
-  async createTask(insertTask: InsertTask): Promise<Task> {
+  async createPlayer(insertPlayer: InsertPlayer): Promise<Player> {
     const id = randomUUID();
-    const task: Task = {
-      ...insertTask,
-      id,
-      createdAt: new Date(),
-    };
-    this.tasks.set(id, task);
-    return task;
+    const player: Player = { ...insertPlayer, id, wins: 0, losses: 0, createdAt: new Date() };
+    this.players.set(id, player);
+    return player;
   }
 
-  async updateTask(
-    id: string,
-    updates: Partial<InsertTask>
-  ): Promise<Task | undefined> {
-    const existing = this.tasks.get(id);
+  async updatePlayer(id: string, updates: Partial<Player>): Promise<Player | undefined> {
+    const existing = this.players.get(id);
     if (!existing) return undefined;
-
-    const updated: Task = { ...existing, ...updates };
-    this.tasks.set(id, updated);
+    const updated: Player = { ...existing, ...updates };
+    this.players.set(id, updated);
     return updated;
   }
 
-  async deleteTask(id: string): Promise<boolean> {
-    return this.tasks.delete(id);
-  }
-
-  async deleteTasksByProject(projectId: string): Promise<void> {
-    const tasksToDelete = Array.from(this.tasks.values()).filter(
-      (task) => task.projectId === projectId
+  async getGames(): Promise<Game[]> {
+    return Array.from(this.games.values()).sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
-    tasksToDelete.forEach((task) => this.tasks.delete(task.id));
+  }
+
+  async getGame(id: string): Promise<Game | undefined> {
+    return this.games.get(id);
+  }
+
+  async getGamesByPlayer(playerId: string): Promise<Game[]> {
+    return Array.from(this.games.values())
+      .filter(g => g.player1Id === playerId || g.player2Id === playerId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async createGame(insertGame: InsertGame): Promise<Game> {
+    const id = randomUUID();
+    const game: Game = { ...insertGame, id, createdAt: new Date() };
+    this.games.set(id, game);
+    return game;
+  }
+
+  async updateGame(id: string, updates: Partial<Game>): Promise<Game | undefined> {
+    const existing = this.games.get(id);
+    if (!existing) return undefined;
+    const updated: Game = { ...existing, ...updates };
+    this.games.set(id, updated);
+    return updated;
+  }
+
+  async deleteGame(id: string): Promise<boolean> {
+    return this.games.delete(id);
   }
 }
 
