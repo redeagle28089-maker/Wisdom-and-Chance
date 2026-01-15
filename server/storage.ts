@@ -92,6 +92,7 @@ export class MemStorage implements IStorage {
             element: element as typeof ELEMENTS[number],
             power,
             trait: trait as typeof TRAITS[number] | null,
+            traitValue: trait ? 1 : null,
             buffModifier: hasBuff ? Math.floor(Math.random() * 3) + 1 : 0,
             buffColor: hasBuff ? buffDebuffColors[Math.floor(Math.random() * buffDebuffColors.length)] : null,
             debuffModifier: hasDebuff ? Math.floor(Math.random() * 3) + 1 : 0,

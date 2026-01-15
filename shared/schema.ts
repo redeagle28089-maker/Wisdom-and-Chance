@@ -28,6 +28,7 @@ export const cardSchema = z.object({
   element: z.enum(ELEMENTS),
   power: z.number().min(1).max(10),
   trait: z.enum(TRAITS).nullable(),
+  traitValue: z.number().nullable().default(null),
   buffModifier: z.number().default(0),
   buffColor: z.enum(BUFF_DEBUFF_COLORS).nullable(),
   debuffModifier: z.number().default(0),

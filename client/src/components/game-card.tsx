@@ -153,11 +153,13 @@ export function GameCard({
         {card.power}
       </div>
       
-      {/* Trait value badge - top right */}
-      <div className="absolute top-1.5 right-1.5 min-w-7 h-7 px-1.5 bg-white/95 rounded flex items-center justify-center text-slate-900 font-bold text-xs shadow-lg gap-0.5">
-        <span>{card.power}</span>
-        {TraitIcon && <TraitIcon className="w-3 h-3" />}
-      </div>
+      {/* Trait value badge - top right (shows traitValue + trait icon when card has a trait) */}
+      {card.trait && card.traitValue !== null && (
+        <div className="absolute top-1.5 right-1.5 min-w-7 h-7 px-1.5 bg-white/95 rounded flex items-center justify-center text-slate-900 font-bold text-xs shadow-lg gap-0.5">
+          <span>{card.traitValue}</span>
+          {TraitIcon && <TraitIcon className="w-3 h-3" />}
+        </div>
+      )}
       
       {/* Buff badge - bottom left */}
       <div className="absolute bottom-7 left-1.5 min-w-7 h-6 px-1.5 bg-green-500 rounded flex items-center justify-center text-white font-bold text-xs shadow-lg">
@@ -275,82 +277,77 @@ export function CardWithPopup({ enablePopup = true, ...props }: CardWithPopupPro
         </div>
       </HoverCardTrigger>
       <HoverCardContent 
-        className="w-72 p-0 bg-slate-900 border-2 border-purple-500/50 shadow-2xl z-50 animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95"
+        className="w-80 p-0 bg-slate-800 border-0 shadow-2xl z-50 rounded-xl overflow-hidden animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95"
         side="top"
         align="center"
         sideOffset={8}
         collisionPadding={16}
         avoidCollisions={true}
       >
-        <div className="relative">
-          <img 
-            src={card.imageUrl || config.cardArt} 
-            alt={card.name}
-            className="w-full h-36 object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent" />
-          <div className="absolute top-2 left-2 flex items-center gap-2">
-            <div className={`w-10 h-10 ${config.bgColor} rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg border-2 border-white/30`}>
-              {card.power}
+        {/* Header with card name and power */}
+        <div className="flex items-start justify-between p-4 pb-2">
+          <div>
+            <h3 className="text-white font-bold text-lg">{card.name}</h3>
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              <Badge className={`${config.headerBg} text-white text-xs px-2 py-0.5`}>
+                {card.element.toUpperCase()}
+              </Badge>
+              <Badge className="bg-purple-600 text-white text-xs px-2 py-0.5">
+                WARRIOR
+              </Badge>
+              <Badge className="bg-orange-500 text-white text-xs px-2 py-0.5">
+                Rank {card.power}
+              </Badge>
             </div>
           </div>
-          <div className="absolute top-2 right-2 flex gap-1">
-            <div className={`px-2 py-1 ${config.bgColor} rounded text-xs font-bold text-white flex items-center gap-1`}>
-              <ElementIcon className="w-3 h-3" />
-              {card.element}
-            </div>
+          <div className="bg-slate-700 rounded-lg px-4 py-2 text-center min-w-16">
+            <span className="text-white font-bold text-2xl">{card.power}</span>
+            <p className="text-slate-400 text-xs">Power</p>
           </div>
         </div>
         
-        <div className="p-3 space-y-3">
-          <div>
-            <h3 className="text-white font-bold text-lg">{card.name}</h3>
-            <p className="text-purple-300 text-sm">Unit Card</p>
+        {/* Artwork */}
+        <div className="px-4 py-2">
+          <div className="rounded-lg overflow-hidden">
+            <img 
+              src={card.imageUrl || config.cardArt} 
+              alt={card.name}
+              className="w-full h-44 object-cover"
+            />
           </div>
+        </div>
+        
+        {/* Description */}
+        <div className="px-4 py-2">
+          <p className="text-slate-300 text-sm leading-relaxed">
+            {card.description || `A powerful ${card.element} unit wielding elemental forces. Each strike is a testament to mastery over ${card.element.toLowerCase()}, inflicting both physical and magical damage.`}
+          </p>
+        </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            <div className="p-2 bg-purple-500/10 rounded-lg border border-purple-500/30 text-center">
-              <p className="text-purple-200/70 text-xs mb-1">Power Rank</p>
-              <span className="text-purple-300 font-bold text-xl">{card.power}</span>
-            </div>
-            <div className={`p-2 ${config.bgColor}/10 rounded-lg border ${config.bgColor.replace('bg-', 'border-')}/30 text-center`}>
-              <p className="text-slate-300/70 text-xs mb-1">Element</p>
-              <div className="flex items-center justify-center gap-1">
-                <ElementIcon className={`w-4 h-4 ${config.color}`} />
-                <span className={`${config.color} font-bold`}>{card.element}</span>
-              </div>
-            </div>
-          </div>
-
-          {card.trait && (
-            <div className="flex items-center gap-2 p-2 bg-yellow-500/10 rounded-lg border border-yellow-500/30">
-              {TraitIcon && <TraitIcon className="w-4 h-4 text-yellow-400" />}
+        {/* Trait section */}
+        {card.trait && (
+          <div className="mx-4 my-2 p-3 bg-slate-700/50 rounded-lg">
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-yellow-200/70 text-xs">Trait</p>
-                <p className="text-yellow-400 font-medium text-sm">{card.trait}</p>
+                <h4 className="text-white font-bold text-sm uppercase tracking-wide">{card.trait}</h4>
+                <p className="text-slate-400 text-xs">Special Trait Ability</p>
               </div>
+              <Badge className="bg-slate-600 text-white text-sm px-3 py-1 rounded-full">
+                {card.traitValue || 1}
+              </Badge>
             </div>
-          )}
+          </div>
+        )}
 
-          <div className="flex gap-2">
-            <div className={`flex-1 p-2 rounded-lg border text-center ${card.buffModifier > 0 ? 'bg-green-500/10 border-green-500/30' : 'bg-slate-800/50 border-slate-700/50'}`}>
-              <p className={`text-xs mb-1 ${card.buffModifier > 0 ? 'text-green-200/70' : 'text-slate-400'}`}>Buff</p>
-              <div className="flex items-center justify-center gap-1">
-                <Swords className={`w-4 h-4 ${card.buffModifier > 0 ? 'text-green-400' : 'text-slate-500'}`} />
-                <span className={`font-bold text-lg ${card.buffModifier > 0 ? 'text-green-400' : 'text-slate-500'}`}>
-                  +{card.buffModifier}
-                </span>
-              </div>
-            </div>
-            <div className={`flex-1 p-2 rounded-lg border text-center ${card.debuffModifier > 0 ? 'bg-red-500/10 border-red-500/30' : 'bg-slate-800/50 border-slate-700/50'}`}>
-              <p className={`text-xs mb-1 ${card.debuffModifier > 0 ? 'text-red-200/70' : 'text-slate-400'}`}>Debuff</p>
-              <div className="flex items-center justify-center gap-1">
-                <Shield className={`w-4 h-4 ${card.debuffModifier > 0 ? 'text-red-400' : 'text-slate-500'}`} />
-                <span className={`font-bold text-lg ${card.debuffModifier > 0 ? 'text-red-400' : 'text-slate-500'}`}>
-                  -{card.debuffModifier}
-                </span>
-              </div>
-            </div>
+        {/* Buff/Debuff boxes at bottom */}
+        <div className="flex gap-2 p-4 pt-2">
+          <div className={`flex-1 p-3 rounded-lg ${config.headerBg}`}>
+            <span className="text-white font-bold text-lg">+{card.buffModifier}</span>
+            <p className="text-white/80 text-xs">Buff: {card.element.toLowerCase()}</p>
+          </div>
+          <div className="flex-1 p-3 rounded-lg bg-red-800">
+            <span className="text-white font-bold text-lg">-{card.debuffModifier}</span>
+            <p className="text-white/80 text-xs">Debuff: {card.element.toLowerCase()}</p>
           </div>
         </div>
       </HoverCardContent>
