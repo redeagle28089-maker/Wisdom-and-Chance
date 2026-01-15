@@ -8,6 +8,13 @@ A tactical trading card game simulator built with React, Express, and TypeScript
 **Current State:** Fully functional TCG with Google authentication, multiplayer rooms, friend system, and real-time gameplay.
 
 ## Recent Changes
+- **January 2026:** New Pages & Card Database Enhancement
+  - Card tiles now display unique fantasy names above UNIT label
+  - Analytics Dashboard with stats, element performance, charts
+  - Live Matches Browser for spectating ongoing games
+  - Lore Archives with World History, Elements, and Commander backstories
+  - Sidebar updated with Analytics, Live Matches, and Lore sections
+
 - **January 2026:** User Deck Persistence
   - Save decks to your account (persists in PostgreSQL database)
   - "My Decks" button shows all saved decks with load/delete options

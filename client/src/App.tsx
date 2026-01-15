@@ -21,6 +21,9 @@ import RoomPage from "@/pages/room";
 import AchievementsPage from "@/pages/achievements";
 import LeaderboardPage from "@/pages/leaderboard";
 import DailyChallengesPage from "@/pages/daily-challenges";
+import AnalyticsPage from "@/pages/analytics";
+import LiveMatchesPage from "@/pages/live-matches";
+import LoreArchivesPage from "@/pages/lore-archives";
 import AdminCardArtPage from "@/pages/admin-card-art";
 import NotFound from "@/pages/not-found";
 
@@ -58,6 +61,9 @@ function AppContent() {
               <Route path="/achievements" component={AchievementsPage} />
               <Route path="/leaderboard" component={LeaderboardPage} />
               <Route path="/challenges" component={DailyChallengesPage} />
+              <Route path="/analytics" component={AnalyticsPage} />
+              <Route path="/live-matches" component={LiveMatchesPage} />
+              <Route path="/lore" component={LoreArchivesPage} />
               <Route path="/admin/card-art" component={AdminCardArtPage} />
               <Route component={NotFound} />
             </Switch>

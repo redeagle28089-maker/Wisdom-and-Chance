@@ -65,45 +65,302 @@ export class MemStorage implements IStorage {
   }
 
   private seedData() {
-    const cardNames: Record<string, string[]> = {
-      Fire: ["Flame Warrior", "Inferno Mage", "Ember Scout", "Phoenix Guard", "Blaze Knight", "Volcano Shaman", "Fire Serpent", "Crimson Archer"],
-      Water: ["Tide Caller", "Frost Mage", "Ocean Guardian", "Aqua Assassin", "Storm Bringer", "Ice Sentinel", "Coral Defender", "Mist Walker"],
-      Earth: ["Stone Golem", "Mountain Sage", "Crystal Guard", "Terra Knight", "Boulder Crusher", "Cave Dweller", "Granite Defender", "Sandstorm Warrior"],
-      Air: ["Wind Dancer", "Cloud Strider", "Tempest Mage", "Sky Archer", "Zephyr Scout", "Thunder Caller", "Cyclone Knight", "Breeze Spirit"],
-      Nature: ["Forest Guardian", "Vine Weaver", "Bloom Priest", "Thorn Warrior", "Grove Protector", "Root Shaman", "Leaf Dancer", "Moss Giant"],
+    // Comprehensive card database with unique names per element
+    const fireCards = [
+      // Power 1
+      { name: "Ember Sprite", desc: "A tiny flame spirit that flickers with mischievous energy.", trait: null, traitValue: null, buff: 1, buffColor: "Red", debuff: 0, debuffColor: null },
+      { name: "Spark Wisp", desc: "Born from the first spark of a campfire, quick but fragile.", trait: null, traitValue: null, buff: 0, buffColor: null, debuff: 1, debuffColor: "Blue" },
+      { name: "Candleflame Imp", desc: "Dances atop candles, feeding on melted wax.", trait: null, traitValue: null, buff: 1, buffColor: "Red", debuff: 1, debuffColor: "Blue" },
+      { name: "Cinder Mote", desc: "A floating ember that refuses to die out.", trait: null, traitValue: null, buff: 0, buffColor: null, debuff: 0, debuffColor: null },
+      // Power 2
+      { name: "Flame Acolyte", desc: "A young devotee learning the ways of fire magic.", trait: null, traitValue: null, buff: 1, buffColor: "Red", debuff: 0, debuffColor: null },
+      { name: "Torch Bearer", desc: "Carries sacred flames through the darkest nights.", trait: null, traitValue: null, buff: 0, buffColor: null, debuff: 1, debuffColor: "Blue" },
+      { name: "Salamander Scout", desc: "A fire lizard that thrives in volcanic vents.", trait: null, traitValue: null, buff: 2, buffColor: "Red", debuff: 0, debuffColor: null },
+      { name: "Hearth Guardian", desc: "Protects the home fires from being extinguished.", trait: null, traitValue: null, buff: 1, buffColor: "Black", debuff: 1, debuffColor: "Black" },
+      // Power 3
+      { name: "Blaze Dancer", desc: "Performs ritual dances that summon flames.", trait: "Quick Strike", traitValue: 1, buff: 1, buffColor: "Red", debuff: 1, debuffColor: "Blue" },
+      { name: "Magma Crawler", desc: "Emerges from cooling lava flows to hunt.", trait: null, traitValue: null, buff: 2, buffColor: "Red", debuff: 0, debuffColor: null },
+      { name: "Searing Bladefighter", desc: "Wields a sword of burning energy that slices through foes.", trait: "Quick Strike", traitValue: 1, buff: 1, buffColor: "Red", debuff: 1, debuffColor: "Red" },
+      { name: "Ash Stalker", desc: "Hunts through smoke and cinders unseen.", trait: null, traitValue: null, buff: 0, buffColor: null, debuff: 2, debuffColor: "Blue" },
+      // Power 4
+      { name: "Inferno Mage", desc: "Commands flames with arcane precision.", trait: "Care Package", traitValue: 1, buff: 2, buffColor: "Red", debuff: 1, debuffColor: "Blue" },
+      { name: "Pyroclast Shaman", desc: "Channels the rage of volcanic spirits.", trait: null, traitValue: null, buff: 1, buffColor: "Red", debuff: 2, debuffColor: "Amber" },
+      { name: "Crimson Archer", desc: "Fires arrows that ignite upon release.", trait: "Quick Strike", traitValue: 2, buff: 1, buffColor: "Red", debuff: 1, debuffColor: "Blue" },
+      { name: "Flame Sentinel", desc: "Guards the borders of the Fire Kingdom.", trait: "Guardian", traitValue: 1, buff: 2, buffColor: "Red", debuff: 0, debuffColor: null },
+      // Power 5
+      { name: "Ember Knight", desc: "Armored in living flame, fearless in battle.", trait: "Guardian", traitValue: 2, buff: 2, buffColor: "Red", debuff: 1, debuffColor: "Blue" },
+      { name: "Wildfire Berserker", desc: "Fights with uncontrolled fury, leaving destruction.", trait: "Quick Strike", traitValue: 2, buff: 3, buffColor: "Red", debuff: 2, debuffColor: "Red" },
+      { name: "Volcanic Priestess", desc: "Communes with the volcano gods for power.", trait: "Restoration", traitValue: 2, buff: 2, buffColor: "Red", debuff: 1, debuffColor: "Blue" },
+      { name: "Molten Core Golem", desc: "A construct of living magma and stone.", trait: null, traitValue: null, buff: 2, buffColor: "Black", debuff: 2, debuffColor: "Black" },
+      // Power 6
+      { name: "Firestorm Invoker", desc: "Calls down devastating storms of flame.", trait: "Quick Strike", traitValue: 2, buff: 2, buffColor: "Red", debuff: 2, debuffColor: "Blue" },
+      { name: "Phoenix Initiate", desc: "Training to achieve the legendary rebirth.", trait: "Restoration", traitValue: 2, buff: 3, buffColor: "Red", debuff: 1, debuffColor: "Blue" },
+      { name: "Blazing Cavalier", desc: "Rides a steed made of pure flame.", trait: null, traitValue: null, buff: 2, buffColor: "Red", debuff: 2, debuffColor: "Amber" },
+      { name: "Lava Titan Spawn", desc: "Offspring of the great Lava Titans.", trait: "Guardian", traitValue: 2, buff: 3, buffColor: "Red", debuff: 2, debuffColor: "Blue" },
+      // Power 7
+      { name: "Pyromancer Supreme", desc: "Masters of the most destructive fire arts.", trait: "Quick Strike", traitValue: 2, buff: 3, buffColor: "Red", debuff: 2, debuffColor: "Blue" },
+      { name: "Ashbringer Champion", desc: "Leaves only ash in their wake.", trait: "Care Package", traitValue: 2, buff: 2, buffColor: "Red", debuff: 3, debuffColor: "Blue" },
+      { name: "Hellfire Warden", desc: "Guards the gates between realms.", trait: "Guardian", traitValue: 3, buff: 3, buffColor: "Red", debuff: 2, debuffColor: "Amber" },
+      { name: "Crimson Dragon Rider", desc: "Bonded with young fire dragons.", trait: "Quick Strike", traitValue: 3, buff: 3, buffColor: "Red", debuff: 2, debuffColor: "Blue" },
+      // Power 8
+      { name: "Infernal General", desc: "Commands legions of fire warriors.", trait: "Care Package", traitValue: 2, buff: 3, buffColor: "Black", debuff: 2, debuffColor: "Black" },
+      { name: "Phoenix Guardian", desc: "Blessed with partial rebirth abilities.", trait: "Restoration", traitValue: 3, buff: 3, buffColor: "Red", debuff: 2, debuffColor: "Blue" },
+      { name: "Volcanic Overlord", desc: "Rules from atop an active volcano.", trait: "Guardian", traitValue: 3, buff: 3, buffColor: "Red", debuff: 3, debuffColor: "Amber" },
+      { name: "Flame Archon", desc: "An angelic being of pure fire.", trait: "Quick Strike", traitValue: 3, buff: 3, buffColor: "Red", debuff: 2, debuffColor: "Blue" },
+      // Power 9
+      { name: "Pyros Elite Guard", desc: "Personal guards of the Fire Commander.", trait: "Guardian", traitValue: 3, buff: 3, buffColor: "Red", debuff: 3, debuffColor: "Blue" },
+      { name: "Ancient Flamewyrm", desc: "A dragon older than most kingdoms.", trait: "Quick Strike", traitValue: 3, buff: 3, buffColor: "Red", debuff: 3, debuffColor: "Amber" },
+      { name: "Solar Flare Mage", desc: "Channels the power of the sun itself.", trait: "Care Package", traitValue: 3, buff: 3, buffColor: "Black", debuff: 3, debuffColor: "Black" },
+      { name: "Magma Lord", desc: "Born from the planet's molten core.", trait: "Restoration", traitValue: 3, buff: 3, buffColor: "Red", debuff: 3, debuffColor: "Blue" },
+      // Power 10
+      { name: "Phoenix Ascendant", desc: "Has achieved true immortal rebirth.", trait: "Restoration", traitValue: 3, buff: 3, buffColor: "Red", debuff: 3, debuffColor: "Blue" },
+      { name: "Inferno Avatar", desc: "Physical manifestation of fire itself.", trait: "Quick Strike", traitValue: 3, buff: 3, buffColor: "Black", debuff: 3, debuffColor: "Black" },
+      { name: "Eternal Flame Dragon", desc: "A legendary dragon that never stops burning.", trait: "Guardian", traitValue: 3, buff: 3, buffColor: "Red", debuff: 3, debuffColor: "Blue" },
+      { name: "Primordial Fire Elemental", desc: "One of the first flames ever created.", trait: "Care Package", traitValue: 3, buff: 3, buffColor: "Red", debuff: 3, debuffColor: "Amber" },
+    ];
+
+    const waterCards = [
+      // Power 1
+      { name: "Dewdrop Sprite", desc: "A tiny spirit born from morning dew.", trait: null, traitValue: null, buff: 1, buffColor: "Blue", debuff: 0, debuffColor: null },
+      { name: "Puddle Lurker", desc: "Hides in shallow water waiting to surprise.", trait: null, traitValue: null, buff: 0, buffColor: null, debuff: 1, debuffColor: "Red" },
+      { name: "Mist Wisp", desc: "Floats through fog banks unseen.", trait: null, traitValue: null, buff: 1, buffColor: "Blue", debuff: 1, debuffColor: "Red" },
+      { name: "Tide Pool Watcher", desc: "Guards the smallest seas.", trait: null, traitValue: null, buff: 0, buffColor: null, debuff: 0, debuffColor: null },
+      // Power 2
+      { name: "Wave Acolyte", desc: "Studies the ancient arts of water.", trait: null, traitValue: null, buff: 1, buffColor: "Blue", debuff: 0, debuffColor: null },
+      { name: "Ice Shard Imp", desc: "Throws frozen projectiles at foes.", trait: null, traitValue: null, buff: 0, buffColor: null, debuff: 1, debuffColor: "Red" },
+      { name: "Stream Runner", desc: "Swift as a mountain brook.", trait: null, traitValue: null, buff: 2, buffColor: "Blue", debuff: 0, debuffColor: null },
+      { name: "Coral Sprite", desc: "Lives among the reef formations.", trait: null, traitValue: null, buff: 1, buffColor: "Black", debuff: 1, debuffColor: "Black" },
+      // Power 3
+      { name: "Frost Mage", desc: "Commands ice and cold with precision.", trait: "Quick Strike", traitValue: 1, buff: 1, buffColor: "Blue", debuff: 1, debuffColor: "Red" },
+      { name: "Riptide Warrior", desc: "Uses currents to overwhelm enemies.", trait: null, traitValue: null, buff: 2, buffColor: "Blue", debuff: 0, debuffColor: null },
+      { name: "Abyssal Scout", desc: "Explores the darkest ocean depths.", trait: "Care Package", traitValue: 1, buff: 1, buffColor: "Blue", debuff: 1, debuffColor: "Red" },
+      { name: "Ice Fisher", desc: "Pulls enemies into frozen waters.", trait: null, traitValue: null, buff: 0, buffColor: null, debuff: 2, debuffColor: "Red" },
+      // Power 4
+      { name: "Tide Caller", desc: "Summons waves to do their bidding.", trait: "Care Package", traitValue: 1, buff: 2, buffColor: "Blue", debuff: 1, debuffColor: "Red" },
+      { name: "Glacial Knight", desc: "Armored in unmelting ice.", trait: "Guardian", traitValue: 1, buff: 1, buffColor: "Blue", debuff: 2, debuffColor: "Red" },
+      { name: "Storm Bringer", desc: "Conjures tempests from calm seas.", trait: "Quick Strike", traitValue: 2, buff: 1, buffColor: "Blue", debuff: 1, debuffColor: "Amber" },
+      { name: "Whirlpool Sentinel", desc: "Guards dangerous sea passages.", trait: "Guardian", traitValue: 1, buff: 2, buffColor: "Blue", debuff: 0, debuffColor: null },
+      // Power 5
+      { name: "Ocean Guardian", desc: "Protector of all marine life.", trait: "Guardian", traitValue: 2, buff: 2, buffColor: "Blue", debuff: 1, debuffColor: "Red" },
+      { name: "Blizzard Shaman", desc: "Channels the fury of winter storms.", trait: "Quick Strike", traitValue: 2, buff: 3, buffColor: "Blue", debuff: 2, debuffColor: "Red" },
+      { name: "Deep Sea Priestess", desc: "Communes with ancient sea gods.", trait: "Restoration", traitValue: 2, buff: 2, buffColor: "Blue", debuff: 1, debuffColor: "Red" },
+      { name: "Maelstrom Golem", desc: "A construct of churning water.", trait: null, traitValue: null, buff: 2, buffColor: "Black", debuff: 2, debuffColor: "Black" },
+      // Power 6
+      { name: "Tsunami Invoker", desc: "Calls forth devastating waves.", trait: "Quick Strike", traitValue: 2, buff: 2, buffColor: "Blue", debuff: 2, debuffColor: "Red" },
+      { name: "Ice Phoenix Initiate", desc: "Training in frost and rebirth.", trait: "Restoration", traitValue: 2, buff: 3, buffColor: "Blue", debuff: 1, debuffColor: "Red" },
+      { name: "Kraken Spawn", desc: "Offspring of the legendary sea beast.", trait: null, traitValue: null, buff: 2, buffColor: "Blue", debuff: 2, debuffColor: "Amber" },
+      { name: "Frozen Champion", desc: "Undefeated in the northern wars.", trait: "Guardian", traitValue: 2, buff: 3, buffColor: "Blue", debuff: 2, debuffColor: "Red" },
+      // Power 7
+      { name: "Hydromancer Supreme", desc: "Ultimate master of water magic.", trait: "Care Package", traitValue: 2, buff: 3, buffColor: "Blue", debuff: 2, debuffColor: "Red" },
+      { name: "Leviathan Rider", desc: "Bonded with a sea serpent.", trait: "Quick Strike", traitValue: 2, buff: 2, buffColor: "Blue", debuff: 3, debuffColor: "Red" },
+      { name: "Glacier Warden", desc: "Guards the ancient ice fields.", trait: "Guardian", traitValue: 3, buff: 3, buffColor: "Blue", debuff: 2, debuffColor: "Amber" },
+      { name: "Tempest Commander", desc: "Leads fleets through any storm.", trait: "Care Package", traitValue: 3, buff: 3, buffColor: "Blue", debuff: 2, debuffColor: "Red" },
+      // Power 8
+      { name: "Tidal General", desc: "Commands armies of the deep.", trait: "Care Package", traitValue: 2, buff: 3, buffColor: "Black", debuff: 2, debuffColor: "Black" },
+      { name: "Frost Giant", desc: "A titan of the frozen wastes.", trait: "Guardian", traitValue: 3, buff: 3, buffColor: "Blue", debuff: 2, debuffColor: "Red" },
+      { name: "Abyssal Overlord", desc: "Rules the darkest ocean trenches.", trait: "Quick Strike", traitValue: 3, buff: 3, buffColor: "Blue", debuff: 3, debuffColor: "Amber" },
+      { name: "Ice Archon", desc: "An angelic being of eternal winter.", trait: "Restoration", traitValue: 3, buff: 3, buffColor: "Blue", debuff: 2, debuffColor: "Red" },
+      // Power 9
+      { name: "Aquara Elite Guard", desc: "Personal guards of the Water Commander.", trait: "Guardian", traitValue: 3, buff: 3, buffColor: "Blue", debuff: 3, debuffColor: "Red" },
+      { name: "Elder Kraken", desc: "Ancient terror of the seas.", trait: "Quick Strike", traitValue: 3, buff: 3, buffColor: "Blue", debuff: 3, debuffColor: "Amber" },
+      { name: "Polar Vortex Mage", desc: "Commands the coldest winds.", trait: "Care Package", traitValue: 3, buff: 3, buffColor: "Black", debuff: 3, debuffColor: "Black" },
+      { name: "Ocean Emperor", desc: "Sovereign of all waters.", trait: "Restoration", traitValue: 3, buff: 3, buffColor: "Blue", debuff: 3, debuffColor: "Red" },
+      // Power 10
+      { name: "Leviathan Awakened", desc: "The legendary sea monster rises.", trait: "Quick Strike", traitValue: 3, buff: 3, buffColor: "Blue", debuff: 3, debuffColor: "Red" },
+      { name: "Glacial Avatar", desc: "Physical manifestation of ice.", trait: "Guardian", traitValue: 3, buff: 3, buffColor: "Black", debuff: 3, debuffColor: "Black" },
+      { name: "Primordial Tide Dragon", desc: "First dragon born from the sea.", trait: "Restoration", traitValue: 3, buff: 3, buffColor: "Blue", debuff: 3, debuffColor: "Red" },
+      { name: "Eternal Storm Elemental", desc: "One of the first tempests created.", trait: "Care Package", traitValue: 3, buff: 3, buffColor: "Blue", debuff: 3, debuffColor: "Amber" },
+    ];
+
+    const earthCards = [
+      // Power 1
+      { name: "Pebble Sprite", desc: "A tiny spirit living in stones.", trait: null, traitValue: null, buff: 1, buffColor: "Amber", debuff: 0, debuffColor: null },
+      { name: "Dust Devil Imp", desc: "Kicks up small sandstorms.", trait: null, traitValue: null, buff: 0, buffColor: null, debuff: 1, debuffColor: "Green" },
+      { name: "Crystal Mote", desc: "A floating shard of living crystal.", trait: null, traitValue: null, buff: 1, buffColor: "Amber", debuff: 1, debuffColor: "Green" },
+      { name: "Sandpit Watcher", desc: "Guards the desert's edge.", trait: null, traitValue: null, buff: 0, buffColor: null, debuff: 0, debuffColor: null },
+      // Power 2
+      { name: "Stone Acolyte", desc: "Studies the ancient earth magics.", trait: null, traitValue: null, buff: 1, buffColor: "Amber", debuff: 0, debuffColor: null },
+      { name: "Clay Golem", desc: "A simple construct of mud.", trait: null, traitValue: null, buff: 0, buffColor: null, debuff: 1, debuffColor: "Green" },
+      { name: "Boulder Roller", desc: "Pushes rocks down mountainsides.", trait: null, traitValue: null, buff: 2, buffColor: "Amber", debuff: 0, debuffColor: null },
+      { name: "Cavern Scout", desc: "Explores underground tunnels.", trait: null, traitValue: null, buff: 1, buffColor: "Black", debuff: 1, debuffColor: "Black" },
+      // Power 3
+      { name: "Mountain Sage", desc: "Wise in the ways of stone.", trait: "Restoration", traitValue: 1, buff: 1, buffColor: "Amber", debuff: 1, debuffColor: "Green" },
+      { name: "Quake Warrior", desc: "Fights with earthshaking power.", trait: null, traitValue: null, buff: 2, buffColor: "Amber", debuff: 0, debuffColor: null },
+      { name: "Crystal Guard", desc: "Armored in gemstone plates.", trait: "Guardian", traitValue: 1, buff: 1, buffColor: "Amber", debuff: 1, debuffColor: "Blue" },
+      { name: "Sand Stalker", desc: "Hunts through desert dunes.", trait: null, traitValue: null, buff: 0, buffColor: null, debuff: 2, debuffColor: "Green" },
+      // Power 4
+      { name: "Terra Knight", desc: "A noble warrior of stone.", trait: "Guardian", traitValue: 1, buff: 2, buffColor: "Amber", debuff: 1, debuffColor: "Green" },
+      { name: "Lava Forge Shaman", desc: "Works with molten rock.", trait: null, traitValue: null, buff: 1, buffColor: "Amber", debuff: 2, debuffColor: "Blue" },
+      { name: "Granite Archer", desc: "Fires arrows of sharpened stone.", trait: "Quick Strike", traitValue: 2, buff: 1, buffColor: "Amber", debuff: 1, debuffColor: "Green" },
+      { name: "Cave Sentinel", desc: "Guards underground passages.", trait: "Guardian", traitValue: 1, buff: 2, buffColor: "Amber", debuff: 0, debuffColor: null },
+      // Power 5
+      { name: "Boulder Crusher", desc: "Smashes through any obstacle.", trait: "Quick Strike", traitValue: 2, buff: 2, buffColor: "Amber", debuff: 1, debuffColor: "Green" },
+      { name: "Earthquake Berserker", desc: "Fights with seismic fury.", trait: "Quick Strike", traitValue: 2, buff: 3, buffColor: "Amber", debuff: 2, debuffColor: "Blue" },
+      { name: "Gemstone Priestess", desc: "Communes with crystal spirits.", trait: "Restoration", traitValue: 2, buff: 2, buffColor: "Amber", debuff: 1, debuffColor: "Green" },
+      { name: "Iron Core Golem", desc: "A construct of metal and stone.", trait: null, traitValue: null, buff: 2, buffColor: "Black", debuff: 2, debuffColor: "Black" },
+      // Power 6
+      { name: "Landslide Invoker", desc: "Calls down avalanches of rock.", trait: "Quick Strike", traitValue: 2, buff: 2, buffColor: "Amber", debuff: 2, debuffColor: "Green" },
+      { name: "Diamond Guardian", desc: "Protected by unbreakable gems.", trait: "Guardian", traitValue: 2, buff: 3, buffColor: "Amber", debuff: 1, debuffColor: "Green" },
+      { name: "Sandstorm Warrior", desc: "Commands the desert winds.", trait: null, traitValue: null, buff: 2, buffColor: "Amber", debuff: 2, debuffColor: "Blue" },
+      { name: "Stone Titan Spawn", desc: "Offspring of the Stone Titans.", trait: "Guardian", traitValue: 2, buff: 3, buffColor: "Amber", debuff: 2, debuffColor: "Green" },
+      // Power 7
+      { name: "Geomancer Supreme", desc: "Master of all earth magic.", trait: "Restoration", traitValue: 2, buff: 3, buffColor: "Amber", debuff: 2, debuffColor: "Green" },
+      { name: "Obsidian Champion", desc: "Clad in volcanic glass armor.", trait: "Guardian", traitValue: 2, buff: 2, buffColor: "Amber", debuff: 3, debuffColor: "Green" },
+      { name: "Mountain Warden", desc: "Guards the highest peaks.", trait: "Guardian", traitValue: 3, buff: 3, buffColor: "Amber", debuff: 2, debuffColor: "Blue" },
+      { name: "Crystal Dragon Rider", desc: "Bonded with gem dragons.", trait: "Quick Strike", traitValue: 3, buff: 3, buffColor: "Amber", debuff: 2, debuffColor: "Green" },
+      // Power 8
+      { name: "Tectonic General", desc: "Commands armies underground.", trait: "Care Package", traitValue: 2, buff: 3, buffColor: "Black", debuff: 2, debuffColor: "Black" },
+      { name: "Stone Giant", desc: "A titan of the mountains.", trait: "Guardian", traitValue: 3, buff: 3, buffColor: "Amber", debuff: 2, debuffColor: "Green" },
+      { name: "Cavern Overlord", desc: "Rules the deep places.", trait: "Restoration", traitValue: 3, buff: 3, buffColor: "Amber", debuff: 3, debuffColor: "Blue" },
+      { name: "Earth Archon", desc: "An angelic being of stone.", trait: "Guardian", traitValue: 3, buff: 3, buffColor: "Amber", debuff: 2, debuffColor: "Green" },
+      // Power 9
+      { name: "Terran Elite Guard", desc: "Personal guards of the Earth Commander.", trait: "Guardian", traitValue: 3, buff: 3, buffColor: "Amber", debuff: 3, debuffColor: "Green" },
+      { name: "Ancient Wyrm", desc: "A dragon older than the mountains.", trait: "Quick Strike", traitValue: 3, buff: 3, buffColor: "Amber", debuff: 3, debuffColor: "Blue" },
+      { name: "Continental Mage", desc: "Can reshape the very land.", trait: "Restoration", traitValue: 3, buff: 3, buffColor: "Black", debuff: 3, debuffColor: "Black" },
+      { name: "Mountain King", desc: "Sovereign of all peaks.", trait: "Guardian", traitValue: 3, buff: 3, buffColor: "Amber", debuff: 3, debuffColor: "Green" },
+      // Power 10
+      { name: "World Serpent", desc: "The legendary earth dragon.", trait: "Guardian", traitValue: 3, buff: 3, buffColor: "Amber", debuff: 3, debuffColor: "Green" },
+      { name: "Tectonic Avatar", desc: "Physical manifestation of earth.", trait: "Quick Strike", traitValue: 3, buff: 3, buffColor: "Black", debuff: 3, debuffColor: "Black" },
+      { name: "Primordial Stone Dragon", desc: "First dragon born from rock.", trait: "Restoration", traitValue: 3, buff: 3, buffColor: "Amber", debuff: 3, debuffColor: "Green" },
+      { name: "Eternal Mountain Elemental", desc: "One of the first peaks created.", trait: "Guardian", traitValue: 3, buff: 3, buffColor: "Amber", debuff: 3, debuffColor: "Blue" },
+    ];
+
+    const airCards = [
+      // Power 1
+      { name: "Breeze Sprite", desc: "A tiny spirit of gentle winds.", trait: null, traitValue: null, buff: 1, buffColor: "Green", debuff: 0, debuffColor: null },
+      { name: "Cloud Wisp", desc: "Floats through the sky unseen.", trait: null, traitValue: null, buff: 0, buffColor: null, debuff: 1, debuffColor: "Amber" },
+      { name: "Zephyr Mote", desc: "A floating breath of air.", trait: null, traitValue: null, buff: 1, buffColor: "Green", debuff: 1, debuffColor: "Amber" },
+      { name: "Sky Watcher", desc: "Observes from the clouds.", trait: null, traitValue: null, buff: 0, buffColor: null, debuff: 0, debuffColor: null },
+      // Power 2
+      { name: "Wind Acolyte", desc: "Studies the ancient air arts.", trait: null, traitValue: null, buff: 1, buffColor: "Green", debuff: 0, debuffColor: null },
+      { name: "Thunder Imp", desc: "Crackles with electrical energy.", trait: null, traitValue: null, buff: 0, buffColor: null, debuff: 1, debuffColor: "Amber" },
+      { name: "Cloud Strider", desc: "Walks upon the clouds themselves.", trait: null, traitValue: null, buff: 2, buffColor: "Green", debuff: 0, debuffColor: null },
+      { name: "Mist Scout", desc: "Scouts through fog banks.", trait: null, traitValue: null, buff: 1, buffColor: "Black", debuff: 1, debuffColor: "Black" },
+      // Power 3
+      { name: "Wind Dancer", desc: "Moves with graceful air currents.", trait: "Quick Strike", traitValue: 1, buff: 1, buffColor: "Green", debuff: 1, debuffColor: "Amber" },
+      { name: "Gale Warrior", desc: "Fights with howling winds.", trait: null, traitValue: null, buff: 2, buffColor: "Green", debuff: 0, debuffColor: null },
+      { name: "Sky Archer", desc: "Fires arrows from the clouds.", trait: "Quick Strike", traitValue: 1, buff: 1, buffColor: "Green", debuff: 1, debuffColor: "Red" },
+      { name: "Storm Stalker", desc: "Hunts through tempests.", trait: null, traitValue: null, buff: 0, buffColor: null, debuff: 2, debuffColor: "Amber" },
+      // Power 4
+      { name: "Tempest Mage", desc: "Commands storms with precision.", trait: "Quick Strike", traitValue: 1, buff: 2, buffColor: "Green", debuff: 1, debuffColor: "Amber" },
+      { name: "Lightning Shaman", desc: "Channels electrical spirits.", trait: null, traitValue: null, buff: 1, buffColor: "Green", debuff: 2, debuffColor: "Red" },
+      { name: "Cyclone Knight", desc: "Armored in swirling winds.", trait: "Quick Strike", traitValue: 2, buff: 1, buffColor: "Green", debuff: 1, debuffColor: "Amber" },
+      { name: "Cloud Sentinel", desc: "Guards the sky passages.", trait: "Guardian", traitValue: 1, buff: 2, buffColor: "Green", debuff: 0, debuffColor: null },
+      // Power 5
+      { name: "Thunder Caller", desc: "Summons lightning at will.", trait: "Quick Strike", traitValue: 2, buff: 2, buffColor: "Green", debuff: 1, debuffColor: "Amber" },
+      { name: "Tornado Berserker", desc: "Fights with chaotic fury.", trait: "Quick Strike", traitValue: 2, buff: 3, buffColor: "Green", debuff: 2, debuffColor: "Red" },
+      { name: "Sky Priestess", desc: "Communes with cloud spirits.", trait: "Care Package", traitValue: 2, buff: 2, buffColor: "Green", debuff: 1, debuffColor: "Amber" },
+      { name: "Storm Core Golem", desc: "A construct of living lightning.", trait: null, traitValue: null, buff: 2, buffColor: "Black", debuff: 2, debuffColor: "Black" },
+      // Power 6
+      { name: "Hurricane Invoker", desc: "Calls devastating wind storms.", trait: "Quick Strike", traitValue: 2, buff: 2, buffColor: "Green", debuff: 2, debuffColor: "Amber" },
+      { name: "Phoenix Windrunner", desc: "Flies faster than thought.", trait: "Quick Strike", traitValue: 2, buff: 3, buffColor: "Green", debuff: 1, debuffColor: "Amber" },
+      { name: "Storm Cavalry", desc: "Rides the lightning itself.", trait: null, traitValue: null, buff: 2, buffColor: "Green", debuff: 2, debuffColor: "Red" },
+      { name: "Cloud Titan Spawn", desc: "Offspring of the Sky Titans.", trait: "Quick Strike", traitValue: 2, buff: 3, buffColor: "Green", debuff: 2, debuffColor: "Amber" },
+      // Power 7
+      { name: "Aeromancer Supreme", desc: "Master of all air magic.", trait: "Quick Strike", traitValue: 2, buff: 3, buffColor: "Green", debuff: 2, debuffColor: "Amber" },
+      { name: "Lightning Champion", desc: "Undefeated in aerial combat.", trait: "Quick Strike", traitValue: 2, buff: 2, buffColor: "Green", debuff: 3, debuffColor: "Amber" },
+      { name: "Storm Warden", desc: "Guards the thunder peaks.", trait: "Guardian", traitValue: 3, buff: 3, buffColor: "Green", debuff: 2, debuffColor: "Red" },
+      { name: "Thunder Dragon Rider", desc: "Bonded with storm dragons.", trait: "Quick Strike", traitValue: 3, buff: 3, buffColor: "Green", debuff: 2, debuffColor: "Amber" },
+      // Power 8
+      { name: "Gale General", desc: "Commands aerial legions.", trait: "Care Package", traitValue: 2, buff: 3, buffColor: "Black", debuff: 2, debuffColor: "Black" },
+      { name: "Sky Giant", desc: "A titan of the upper clouds.", trait: "Quick Strike", traitValue: 3, buff: 3, buffColor: "Green", debuff: 2, debuffColor: "Amber" },
+      { name: "Tempest Overlord", desc: "Rules all storm systems.", trait: "Quick Strike", traitValue: 3, buff: 3, buffColor: "Green", debuff: 3, debuffColor: "Red" },
+      { name: "Air Archon", desc: "An angelic being of wind.", trait: "Care Package", traitValue: 3, buff: 3, buffColor: "Green", debuff: 2, debuffColor: "Amber" },
+      // Power 9
+      { name: "Zephyros Elite Guard", desc: "Personal guards of the Air Commander.", trait: "Quick Strike", traitValue: 3, buff: 3, buffColor: "Green", debuff: 3, debuffColor: "Amber" },
+      { name: "Elder Storm Dragon", desc: "Ancient terror of the skies.", trait: "Quick Strike", traitValue: 3, buff: 3, buffColor: "Green", debuff: 3, debuffColor: "Red" },
+      { name: "Supercell Mage", desc: "Commands the mightiest storms.", trait: "Care Package", traitValue: 3, buff: 3, buffColor: "Black", debuff: 3, debuffColor: "Black" },
+      { name: "Sky Emperor", desc: "Sovereign of all winds.", trait: "Quick Strike", traitValue: 3, buff: 3, buffColor: "Green", debuff: 3, debuffColor: "Amber" },
+      // Power 10
+      { name: "Thunderbird Awakened", desc: "The legendary storm creature.", trait: "Quick Strike", traitValue: 3, buff: 3, buffColor: "Green", debuff: 3, debuffColor: "Amber" },
+      { name: "Tempest Avatar", desc: "Physical manifestation of wind.", trait: "Quick Strike", traitValue: 3, buff: 3, buffColor: "Black", debuff: 3, debuffColor: "Black" },
+      { name: "Primordial Storm Dragon", desc: "First dragon born from lightning.", trait: "Care Package", traitValue: 3, buff: 3, buffColor: "Green", debuff: 3, debuffColor: "Amber" },
+      { name: "Eternal Hurricane Elemental", desc: "One of the first winds created.", trait: "Quick Strike", traitValue: 3, buff: 3, buffColor: "Green", debuff: 3, debuffColor: "Red" },
+    ];
+
+    const natureCards = [
+      // Power 1
+      { name: "Seedling Sprite", desc: "A tiny spirit of new growth.", trait: null, traitValue: null, buff: 1, buffColor: "Green", debuff: 0, debuffColor: null },
+      { name: "Moss Wisp", desc: "Floats through ancient forests.", trait: null, traitValue: null, buff: 0, buffColor: null, debuff: 1, debuffColor: "Red" },
+      { name: "Flower Mote", desc: "A floating blossom spirit.", trait: null, traitValue: null, buff: 1, buffColor: "Green", debuff: 1, debuffColor: "Red" },
+      { name: "Grove Watcher", desc: "Guards the sacred trees.", trait: null, traitValue: null, buff: 0, buffColor: null, debuff: 0, debuffColor: null },
+      // Power 2
+      { name: "Vine Acolyte", desc: "Studies the ancient plant arts.", trait: null, traitValue: null, buff: 1, buffColor: "Green", debuff: 0, debuffColor: null },
+      { name: "Thorn Imp", desc: "Throws poisonous barbs.", trait: null, traitValue: null, buff: 0, buffColor: null, debuff: 1, debuffColor: "Red" },
+      { name: "Forest Runner", desc: "Swift through the underbrush.", trait: null, traitValue: null, buff: 2, buffColor: "Green", debuff: 0, debuffColor: null },
+      { name: "Mushroom Scout", desc: "Explores the fungal networks.", trait: null, traitValue: null, buff: 1, buffColor: "Black", debuff: 1, debuffColor: "Black" },
+      // Power 3
+      { name: "Bloom Priest", desc: "Heals with flower magic.", trait: "Restoration", traitValue: 1, buff: 1, buffColor: "Green", debuff: 1, debuffColor: "Red" },
+      { name: "Vine Warrior", desc: "Fights with living plants.", trait: null, traitValue: null, buff: 2, buffColor: "Green", debuff: 0, debuffColor: null },
+      { name: "Thorn Warrior", desc: "Armored in natural spikes.", trait: "Guardian", traitValue: 1, buff: 1, buffColor: "Green", debuff: 1, debuffColor: "Blue" },
+      { name: "Root Stalker", desc: "Hunts through underground tunnels.", trait: null, traitValue: null, buff: 0, buffColor: null, debuff: 2, debuffColor: "Red" },
+      // Power 4
+      { name: "Forest Guardian", desc: "Protects all woodland creatures.", trait: "Guardian", traitValue: 1, buff: 2, buffColor: "Green", debuff: 1, debuffColor: "Red" },
+      { name: "Grove Shaman", desc: "Channels nature spirits.", trait: "Restoration", traitValue: 1, buff: 1, buffColor: "Green", debuff: 2, debuffColor: "Blue" },
+      { name: "Leaf Dancer", desc: "Moves like falling leaves.", trait: "Quick Strike", traitValue: 2, buff: 1, buffColor: "Green", debuff: 1, debuffColor: "Red" },
+      { name: "Tree Sentinel", desc: "Guards the ancient forests.", trait: "Guardian", traitValue: 1, buff: 2, buffColor: "Green", debuff: 0, debuffColor: null },
+      // Power 5
+      { name: "Grove Protector", desc: "Ultimate defender of nature.", trait: "Guardian", traitValue: 2, buff: 2, buffColor: "Green", debuff: 1, debuffColor: "Red" },
+      { name: "Wild Hunt Berserker", desc: "Fights with primal fury.", trait: "Quick Strike", traitValue: 2, buff: 3, buffColor: "Green", debuff: 2, debuffColor: "Red" },
+      { name: "Druid Priestess", desc: "Communes with ancient spirits.", trait: "Restoration", traitValue: 2, buff: 2, buffColor: "Green", debuff: 1, debuffColor: "Red" },
+      { name: "Living Oak Golem", desc: "A construct of ancient wood.", trait: null, traitValue: null, buff: 2, buffColor: "Black", debuff: 2, debuffColor: "Black" },
+      // Power 6
+      { name: "Overgrowth Invoker", desc: "Calls forth explosive growth.", trait: "Restoration", traitValue: 2, buff: 2, buffColor: "Green", debuff: 2, debuffColor: "Red" },
+      { name: "Phoenix Blossom", desc: "Blooms from ashes.", trait: "Restoration", traitValue: 2, buff: 3, buffColor: "Green", debuff: 1, debuffColor: "Red" },
+      { name: "Beast Master", desc: "Commands forest creatures.", trait: "Care Package", traitValue: 2, buff: 2, buffColor: "Green", debuff: 2, debuffColor: "Blue" },
+      { name: "Treant Spawn", desc: "Offspring of the Great Treants.", trait: "Guardian", traitValue: 2, buff: 3, buffColor: "Green", debuff: 2, debuffColor: "Red" },
+      // Power 7
+      { name: "Druid Supreme", desc: "Master of all nature magic.", trait: "Restoration", traitValue: 2, buff: 3, buffColor: "Green", debuff: 2, debuffColor: "Red" },
+      { name: "Wolf Pack Alpha", desc: "Leads the wild hunt.", trait: "Quick Strike", traitValue: 2, buff: 2, buffColor: "Green", debuff: 3, debuffColor: "Red" },
+      { name: "Ancient Oak Warden", desc: "Guards the world tree.", trait: "Guardian", traitValue: 3, buff: 3, buffColor: "Green", debuff: 2, debuffColor: "Blue" },
+      { name: "Forest Dragon Rider", desc: "Bonded with nature dragons.", trait: "Restoration", traitValue: 3, buff: 3, buffColor: "Green", debuff: 2, debuffColor: "Red" },
+      // Power 8
+      { name: "Wild General", desc: "Commands nature's armies.", trait: "Care Package", traitValue: 2, buff: 3, buffColor: "Black", debuff: 2, debuffColor: "Black" },
+      { name: "Forest Giant", desc: "A titan of the deep woods.", trait: "Guardian", traitValue: 3, buff: 3, buffColor: "Green", debuff: 2, debuffColor: "Red" },
+      { name: "Nature Overlord", desc: "Rules all living things.", trait: "Restoration", traitValue: 3, buff: 3, buffColor: "Green", debuff: 3, debuffColor: "Blue" },
+      { name: "Life Archon", desc: "An angelic being of nature.", trait: "Restoration", traitValue: 3, buff: 3, buffColor: "Green", debuff: 2, debuffColor: "Red" },
+      // Power 9
+      { name: "Gaia Elite Guard", desc: "Personal guards of the Nature Commander.", trait: "Guardian", traitValue: 3, buff: 3, buffColor: "Green", debuff: 3, debuffColor: "Red" },
+      { name: "Elder Treant", desc: "Ancient protector of forests.", trait: "Guardian", traitValue: 3, buff: 3, buffColor: "Green", debuff: 3, debuffColor: "Blue" },
+      { name: "Life Force Mage", desc: "Commands the essence of life.", trait: "Restoration", traitValue: 3, buff: 3, buffColor: "Black", debuff: 3, debuffColor: "Black" },
+      { name: "Forest Emperor", desc: "Sovereign of all nature.", trait: "Restoration", traitValue: 3, buff: 3, buffColor: "Green", debuff: 3, debuffColor: "Red" },
+      // Power 10
+      { name: "World Tree Spirit", desc: "Spirit of the great tree.", trait: "Restoration", traitValue: 3, buff: 3, buffColor: "Green", debuff: 3, debuffColor: "Red" },
+      { name: "Nature Avatar", desc: "Physical manifestation of life.", trait: "Guardian", traitValue: 3, buff: 3, buffColor: "Black", debuff: 3, debuffColor: "Black" },
+      { name: "Primordial Forest Dragon", desc: "First dragon born from life.", trait: "Restoration", traitValue: 3, buff: 3, buffColor: "Green", debuff: 3, debuffColor: "Red" },
+      { name: "Eternal Life Elemental", desc: "One of the first living things.", trait: "Care Package", traitValue: 3, buff: 3, buffColor: "Green", debuff: 3, debuffColor: "Blue" },
+    ];
+
+    // Map element to cards
+    const allCards: Record<string, typeof fireCards> = {
+      Fire: fireCards,
+      Water: waterCards,
+      Earth: earthCards,
+      Air: airCards,
+      Nature: natureCards,
     };
 
-    const traits = [null, null, "Quick Strike", "Care Package", "Restoration", "Guardian"];
-    const buffDebuffColors = ["Red", "Blue", "Amber", "Green", "Black"] as const;
-
-    let cardIndex = 0;
+    // Seed all cards
     for (const element of ELEMENTS) {
-      const names = cardNames[element];
-      for (let power = 1; power <= 10; power++) {
-        for (let copy = 0; copy < 4; copy++) {
-          const nameIndex = (power + copy) % names.length;
-          const trait = power >= 7 ? traits[Math.floor(Math.random() * traits.length)] : null;
-          const hasBuff = Math.random() > 0.5;
-          const hasDebuff = Math.random() > 0.5;
-          
-          const card: Card = {
-            id: `card-${element.toLowerCase()}-${power}-${copy}`,
-            name: `${names[nameIndex]} ${power > 5 ? "Elite" : ""} ${copy > 0 ? `#${copy + 1}` : ""}`.trim(),
-            element: element as typeof ELEMENTS[number],
-            power,
-            trait: trait as typeof TRAITS[number] | null,
-            traitValue: trait ? 1 : null,
-            buffModifier: hasBuff ? Math.floor(Math.random() * 3) + 1 : 0,
-            buffColor: hasBuff ? buffDebuffColors[Math.floor(Math.random() * buffDebuffColors.length)] : null,
-            debuffModifier: hasDebuff ? Math.floor(Math.random() * 3) + 1 : 0,
-            debuffColor: hasDebuff ? buffDebuffColors[Math.floor(Math.random() * buffDebuffColors.length)] : null,
-            description: `A ${element} unit with power ${power}`,
-            isCommander: false,
-          };
-          this.cards.set(card.id, card);
-          cardIndex++;
-        }
-      }
+      const cards = allCards[element];
+      cards.forEach((cardData, index) => {
+        const power = Math.floor(index / 4) + 1; // 4 cards per power level
+        const card: Card = {
+          id: `card-${element.toLowerCase()}-${power}-${index % 4}`,
+          name: cardData.name,
+          element: element as typeof ELEMENTS[number],
+          power,
+          trait: cardData.trait as typeof TRAITS[number] | null,
+          traitValue: cardData.traitValue,
+          buffModifier: cardData.buff,
+          buffColor: cardData.buffColor as typeof BUFF_DEBUFF_COLORS[number] | null,
+          debuffModifier: cardData.debuff,
+          debuffColor: cardData.debuffColor as typeof BUFF_DEBUFF_COLORS[number] | null,
+          description: cardData.desc,
+          isCommander: false,
+        };
+        this.cards.set(card.id, card);
+      });
     }
 
     // Fire General

@@ -84,6 +84,14 @@ export const traitIcons: Record<string, typeof Zap> = {
   "Guardian": Shield,
 };
 
+export const buffDebuffColorMap: Record<string, { bg: string; text: string }> = {
+  Red: { bg: "bg-white/95", text: "text-red-600" },
+  Blue: { bg: "bg-white/95", text: "text-blue-600" },
+  Amber: { bg: "bg-white/95", text: "text-amber-600" },
+  Green: { bg: "bg-white/95", text: "text-green-600" },
+  Black: { bg: "bg-white/95", text: "text-slate-900" },
+};
+
 interface GameCardProps {
   card: CardType;
   size?: "sm" | "md" | "lg";
@@ -161,19 +169,24 @@ export function GameCard({
         </div>
       )}
       
-      {/* Buff badge - bottom left */}
-      <div className="absolute bottom-7 left-1.5 min-w-7 h-6 px-1.5 bg-green-500 rounded flex items-center justify-center text-white font-bold text-xs shadow-lg">
-        +{card.buffModifier}
-      </div>
+      {/* Buff badge - bottom left (white box with element-colored number) */}
+      {card.buffModifier > 0 && (
+        <div className={`absolute bottom-7 left-1.5 min-w-7 h-6 px-1.5 bg-white/95 rounded flex items-center justify-center font-bold text-xs shadow-lg ${card.buffColor ? buffDebuffColorMap[card.buffColor]?.text || 'text-green-600' : 'text-green-600'}`}>
+          +{card.buffModifier}
+        </div>
+      )}
       
-      {/* Debuff badge - bottom right */}
-      <div className="absolute bottom-7 right-1.5 min-w-7 h-6 px-1.5 bg-red-500 rounded flex items-center justify-center text-white font-bold text-xs shadow-lg">
-        -{card.debuffModifier}
-      </div>
+      {/* Debuff badge - bottom right (white box with element-colored number) */}
+      {card.debuffModifier > 0 && (
+        <div className={`absolute bottom-7 right-1.5 min-w-7 h-6 px-1.5 bg-white/95 rounded flex items-center justify-center font-bold text-xs shadow-lg ${card.debuffColor ? buffDebuffColorMap[card.debuffColor]?.text || 'text-red-600' : 'text-red-600'}`}>
+          -{card.debuffModifier}
+        </div>
+      )}
       
-      {/* UNIT label at bottom center */}
-      <div className="absolute bottom-0 left-0 right-0 bg-slate-900/95 py-1.5 text-center">
-        <span className="text-white font-bold text-xs tracking-wider">UNIT</span>
+      {/* Card name and UNIT label at bottom */}
+      <div className="absolute bottom-0 left-0 right-0 bg-slate-900/95 py-1 text-center">
+        <p className="text-white font-semibold text-[10px] leading-tight truncate px-1">{card.name}</p>
+        <span className="text-purple-300 font-bold text-[8px] tracking-wider">UNIT</span>
       </div>
     </div>
   );

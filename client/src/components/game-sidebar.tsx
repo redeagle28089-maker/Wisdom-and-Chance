@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { Home, BookOpen, Database, Layers, Swords, Trophy, User, GraduationCap, LogIn, LogOut, Users, Gamepad2, Medal, Calendar, Crown } from "lucide-react";
+import { Home, BookOpen, Database, Layers, Swords, Trophy, User, GraduationCap, LogIn, LogOut, Users, Gamepad2, Medal, Calendar, Crown, BarChart3, Eye, BookMarked } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -28,6 +28,7 @@ const menuItems = [
 const playItems = [
   { title: "Practice", url: "/practice", icon: Swords },
   { title: "Multiplayer", url: "/lobby", icon: Gamepad2 },
+  { title: "Live Matches", url: "/live-matches", icon: Eye },
   { title: "Friends", url: "/friends", icon: Users },
 ];
 
@@ -35,7 +36,12 @@ const progressItems = [
   { title: "Achievements", url: "/achievements", icon: Trophy },
   { title: "Leaderboard", url: "/leaderboard", icon: Medal },
   { title: "Daily Challenges", url: "/challenges", icon: Calendar },
+  { title: "Analytics", url: "/analytics", icon: BarChart3 },
   { title: "Profile", url: "/profile", icon: User },
+];
+
+const loreItems = [
+  { title: "Lore Archives", url: "/lore", icon: BookMarked },
 ];
 
 export function GameSidebar() {
@@ -117,6 +123,28 @@ export function GameSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {progressItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton 
+                    asChild 
+                    isActive={location === item.url}
+                    data-testid={`nav-${item.title.toLowerCase().replace(/\s+/g, '-')}`}
+                  >
+                    <Link href={item.url}>
+                      <item.icon className="w-4 h-4" />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-purple-400">Lore</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {loreItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton 
                     asChild 
