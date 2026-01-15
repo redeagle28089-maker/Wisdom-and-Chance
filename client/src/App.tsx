@@ -13,6 +13,8 @@ import CardDatabasePage from "@/pages/card-database";
 import DeckBuilderPage from "@/pages/deck-builder";
 import PracticePage from "@/pages/practice";
 import GameBoardPage from "@/pages/game-board";
+import TutorialPage from "@/pages/tutorial";
+import ProfilePage from "@/pages/profile";
 import NotFound from "@/pages/not-found";
 
 function AppContent() {
@@ -37,10 +39,12 @@ function AppContent() {
             <Switch>
               <Route path="/" component={HomePage} />
               <Route path="/rules" component={RulesPage} />
+              <Route path="/tutorial" component={TutorialPage} />
               <Route path="/cards" component={CardDatabasePage} />
               <Route path="/deck-builder" component={DeckBuilderPage} />
               <Route path="/practice" component={PracticePage} />
               <Route path="/game/:id" component={GameBoardPage} />
+              <Route path="/profile" component={ProfilePage} />
               <Route component={NotFound} />
             </Switch>
           </main>

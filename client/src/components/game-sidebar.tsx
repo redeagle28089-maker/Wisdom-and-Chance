@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Home, BookOpen, Database, Layers, Swords, Trophy, Users, Settings } from "lucide-react";
+import { Home, BookOpen, Database, Layers, Swords, Trophy, User, GraduationCap } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -16,12 +16,14 @@ import {
 const menuItems = [
   { title: "Home", url: "/", icon: Home },
   { title: "Rules", url: "/rules", icon: BookOpen },
+  { title: "Tutorial", url: "/tutorial", icon: GraduationCap },
   { title: "Card Database", url: "/cards", icon: Database },
   { title: "Deck Builder", url: "/deck-builder", icon: Layers },
 ];
 
 const playItems = [
   { title: "Practice", url: "/practice", icon: Swords },
+  { title: "Profile", url: "/profile", icon: User },
 ];
 
 export function GameSidebar() {
