@@ -8,11 +8,21 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { Plus, Minus, Save, Trash2, Crown, LogIn, Share2, Download, Copy, Check } from "lucide-react";
+import { Plus, Minus, Save, Trash2, Crown, LogIn, Share2, Download, Copy, Check, Sparkles, Loader2 } from "lucide-react";
 import { elementConfig, CommanderCard } from "@/components/game-card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import type { Card as CardType, Commander, Deck, Element, InsertDeck } from "@shared/schema";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import type { Card as CardType, Commander, Element, InsertDeck } from "@shared/schema";
 import { GAME_CONSTANTS } from "@shared/schema";
+
+type Playstyle = "aggressive" | "defensive" | "balanced";
+
+interface DeckSuggestion {
+  deckName: string;
+  strategy: string;
+  commanderId: string;
+  cards: { id: string; count: number }[];
+}
 
 export default function DeckBuilderPage() {
   const { toast } = useToast();
@@ -24,6 +34,9 @@ export default function DeckBuilderPage() {
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [playstyle, setPlaystyle] = useState<Playstyle>("balanced");
+  const [aiSuggestion, setAiSuggestion] = useState<DeckSuggestion | null>(null);
+  const [aiDialogOpen, setAiDialogOpen] = useState(false);
 
   const { data: cards = [] } = useQuery<CardType[]>({
     queryKey: ["/api/cards"],
@@ -48,6 +61,38 @@ export default function DeckBuilderPage() {
       toast({ title: "Failed to save deck", variant: "destructive" });
     },
   });
+
+  const aiSuggestionMutation = useMutation({
+    mutationFn: async ({ commanderId, playstyle }: { commanderId: string; playstyle: Playstyle }) => {
+      const res = await apiRequest("POST", "/api/deck-suggestions", { commanderId, playstyle });
+      return res.json() as Promise<DeckSuggestion>;
+    },
+    onSuccess: (data) => {
+      setAiSuggestion(data);
+      toast({ title: "AI deck suggestion generated!" });
+    },
+    onError: () => {
+      toast({ title: "Failed to generate suggestion. Please try again.", variant: "destructive" });
+    },
+  });
+
+  const applySuggestion = () => {
+    if (!aiSuggestion) return;
+
+    // Set commander
+    setSelectedCommander(aiSuggestion.commanderId);
+    setDeckName(aiSuggestion.deckName);
+
+    // Set cards
+    const newDeck = new Map<string, number>();
+    aiSuggestion.cards.forEach(({ id, count }) => {
+      newDeck.set(id, count);
+    });
+    setDeckCards(newDeck);
+    setAiDialogOpen(false);
+    setAiSuggestion(null);
+    toast({ title: "Deck applied! Review and save when ready." });
+  };
 
   const uniqueCards = useMemo(() => {
     const seen = new Map<string, CardType>();
@@ -518,6 +563,131 @@ export default function DeckBuilderPage() {
                           <Download className="w-4 h-4 mr-2" />
                           Import Deck
                         </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+
+                <div className="pt-2 border-t border-purple-500/20">
+                  <Dialog open={aiDialogOpen} onOpenChange={setAiDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button 
+                        className="w-full bg-gradient-to-r from-indigo-600 to-purple-600"
+                        data-testid="button-ai-suggest"
+                      >
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        AI Deck Suggestion
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="bg-slate-800 border-purple-500/30 max-w-md">
+                      <DialogHeader>
+                        <DialogTitle className="text-white flex items-center gap-2">
+                          <Sparkles className="w-5 h-5 text-purple-400" />
+                          AI Deck Builder
+                        </DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <p className="text-purple-200 text-sm">
+                          Let AI suggest a complete deck based on your selected commander and playstyle!
+                        </p>
+                        
+                        <div className="space-y-2">
+                          <label className="text-sm text-purple-300">Commander</label>
+                          <Select 
+                            value={selectedCommander || ""} 
+                            onValueChange={setSelectedCommander}
+                          >
+                            <SelectTrigger 
+                              className="bg-slate-900/50 border-purple-500/30 text-white"
+                              data-testid="select-ai-commander"
+                            >
+                              <SelectValue placeholder="Select a commander" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-slate-800 border-purple-500/30">
+                              {commanders.map((cmd) => (
+                                <SelectItem key={cmd.id} value={cmd.id} className="text-white">
+                                  {cmd.name} ({cmd.element})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-sm text-purple-300">Playstyle</label>
+                          <Select 
+                            value={playstyle} 
+                            onValueChange={(v) => setPlaystyle(v as Playstyle)}
+                          >
+                            <SelectTrigger 
+                              className="bg-slate-900/50 border-purple-500/30 text-white"
+                              data-testid="select-ai-playstyle"
+                            >
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="bg-slate-800 border-purple-500/30">
+                              <SelectItem value="aggressive" className="text-white">
+                                Aggressive - High damage, fast wins
+                              </SelectItem>
+                              <SelectItem value="defensive" className="text-white">
+                                Defensive - Survival, outlast opponents
+                              </SelectItem>
+                              <SelectItem value="balanced" className="text-white">
+                                Balanced - Adaptable strategy
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <Button 
+                          onClick={() => {
+                            if (selectedCommander) {
+                              aiSuggestionMutation.mutate({ commanderId: selectedCommander, playstyle });
+                            } else {
+                              toast({ title: "Please select a commander first", variant: "destructive" });
+                            }
+                          }}
+                          className="w-full bg-gradient-to-r from-indigo-600 to-purple-600"
+                          disabled={!selectedCommander || aiSuggestionMutation.isPending}
+                          data-testid="button-generate-suggestion"
+                        >
+                          {aiSuggestionMutation.isPending ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Generating...
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="w-4 h-4 mr-2" />
+                              Generate Suggestion
+                            </>
+                          )}
+                        </Button>
+
+                        {aiSuggestion && (
+                          <div className="p-4 bg-slate-900/50 rounded-lg border border-purple-500/30 space-y-3">
+                            <div>
+                              <h4 className="text-white font-semibold">{aiSuggestion.deckName}</h4>
+                              <p className="text-purple-200 text-sm mt-1">{aiSuggestion.strategy}</p>
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-purple-300">
+                                {aiSuggestion.cards.reduce((sum, c) => sum + c.count, 0)} cards suggested
+                              </span>
+                              <Badge variant="secondary">
+                                {commanders.find(c => c.id === aiSuggestion.commanderId)?.element}
+                              </Badge>
+                            </div>
+                            <Button 
+                              onClick={applySuggestion}
+                              className="w-full bg-gradient-to-r from-green-600 to-teal-600"
+                              data-testid="button-apply-suggestion"
+                            >
+                              <Check className="w-4 h-4 mr-2" />
+                              Apply This Deck
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </DialogContent>
                   </Dialog>

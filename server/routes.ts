@@ -5,9 +5,14 @@ import { storage } from "./storage";
 import { insertCardSchema, insertDeckSchema, insertPlayerSchema, insertGameSchema, ELEMENTS } from "@shared/schema";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import { registerMultiplayerRoutes } from "./multiplayerRoutes";
-import { generateImage } from "./replit_integrations/image/client";
+import { generateImage, generateText } from "./replit_integrations/image/client";
 
 const ADMIN_EMAIL = "redeagle28089@gmail.com";
+
+const deckSuggestionSchema = z.object({
+  commanderId: z.string().min(1, "Commander is required"),
+  playstyle: z.enum(["aggressive", "defensive", "balanced"]),
+});
 
 const generateArtSchema = z.object({
   prompt: z.string().min(1, "Prompt is required").max(2000, "Prompt too long"),
@@ -174,6 +179,147 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
       return res.status(404).json({ message: "Game not found" });
     }
     res.status(204).send();
+  });
+
+  // AI Deck Suggestion endpoint
+  app.post("/api/deck-suggestions", isAuthenticated, async (req: any, res) => {
+    try {
+      const parseResult = deckSuggestionSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ error: parseResult.error.flatten().fieldErrors });
+      }
+
+      const { commanderId, playstyle } = parseResult.data;
+      
+      // Get commander and cards data
+      const commander = await storage.getCommander(commanderId);
+      if (!commander) {
+        return res.status(404).json({ error: "Commander not found" });
+      }
+
+      const allCards = await storage.getCards();
+      
+      // Get unique cards by element and power
+      const uniqueCards = new Map<string, typeof allCards[0]>();
+      allCards.forEach((card) => {
+        const key = `${card.element}-${card.power}`;
+        if (!uniqueCards.has(key)) {
+          uniqueCards.set(key, card);
+        }
+      });
+
+      const cardList = Array.from(uniqueCards.values()).map(c => ({
+        id: c.id,
+        name: c.name,
+        element: c.element,
+        power: c.power,
+        trait: c.trait || "None",
+      }));
+
+      const playstyleDescriptions: Record<string, string> = {
+        aggressive: "Focus on high-power cards (7-10), Fire and Air elements, offensive traits. Prioritize damage output.",
+        defensive: "Focus on mid-power cards (4-7), Earth and Water elements, defensive traits. Prioritize survival.",
+        balanced: "Mix of all power levels, diverse elements matching the commander's element. Adaptable strategy.",
+      };
+
+      const prompt = `You are a deck building AI for the Wisdom & Chance TCG. Build a 40-card deck with these EXACT requirements:
+- Exactly 4 cards of each power rank (1-10) = 40 cards total
+- Maximum 3 copies of any single card
+- Commander: ${commander.name} (${commander.element} element)
+- Playstyle: ${playstyle} - ${playstyleDescriptions[playstyle]}
+
+Available cards (format: id|name|element|power|trait):
+${cardList.map(c => `${c.id}|${c.name}|${c.element}|${c.power}|${c.trait}`).join("\n")}
+
+Return ONLY a JSON object with this exact structure, no other text:
+{
+  "deckName": "Creative deck name based on strategy",
+  "strategy": "Brief 1-2 sentence explanation of the deck strategy",
+  "cards": [{"id": "card-id", "count": 1-3}]
+}
+
+IMPORTANT: 
+- cards array must result in exactly 40 total cards
+- Each power rank (1-10) must have exactly 4 cards total
+- Favor cards matching the commander's ${commander.element} element for synergy`;
+
+      const aiResponse = await generateText(prompt);
+      
+      // Parse the JSON from AI response
+      let suggestion;
+      try {
+        // Extract JSON from response (may have markdown code blocks)
+        const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+          throw new Error("No JSON found in response");
+        }
+        suggestion = JSON.parse(jsonMatch[0]);
+      } catch {
+        console.error("Failed to parse AI response:", aiResponse);
+        return res.status(500).json({ error: "Failed to parse deck suggestion" });
+      }
+
+      // Validate the suggestion structure
+      if (!suggestion.cards || !Array.isArray(suggestion.cards)) {
+        return res.status(500).json({ error: "Invalid deck suggestion format" });
+      }
+
+      // Validate each card exists and count totals
+      const validatedCards: { id: string; count: number }[] = [];
+      const powerCounts: Record<number, number> = {};
+      for (let i = 1; i <= 10; i++) powerCounts[i] = 0;
+      
+      for (const cardEntry of suggestion.cards) {
+        const card = allCards.find(c => c.id === cardEntry.id);
+        if (!card) continue;
+        
+        const count = Math.min(cardEntry.count || 1, 3);
+        const availableForPower = 4 - powerCounts[card.power];
+        const actualCount = Math.min(count, availableForPower);
+        
+        if (actualCount > 0) {
+          validatedCards.push({ id: card.id, count: actualCount });
+          powerCounts[card.power] += actualCount;
+        }
+      }
+
+      // Fill any missing power ranks if AI didn't provide enough cards
+      for (let power = 1; power <= 10; power++) {
+        while (powerCounts[power] < 4) {
+          const availableCards = Array.from(uniqueCards.values())
+            .filter(c => c.power === power)
+            .filter(c => {
+              const existing = validatedCards.find(v => v.id === c.id);
+              return !existing || existing.count < 3;
+            });
+          
+          if (availableCards.length === 0) break;
+          
+          const randomCard = availableCards[Math.floor(Math.random() * availableCards.length)];
+          const existing = validatedCards.find(v => v.id === randomCard.id);
+          
+          if (existing) {
+            const toAdd = Math.min(3 - existing.count, 4 - powerCounts[power]);
+            existing.count += toAdd;
+            powerCounts[power] += toAdd;
+          } else {
+            const toAdd = Math.min(3, 4 - powerCounts[power]);
+            validatedCards.push({ id: randomCard.id, count: toAdd });
+            powerCounts[power] += toAdd;
+          }
+        }
+      }
+
+      res.json({
+        deckName: suggestion.deckName || `${commander.name}'s ${playstyle} Deck`,
+        strategy: suggestion.strategy || `A ${playstyle} deck built around ${commander.name}'s abilities.`,
+        commanderId,
+        cards: validatedCards,
+      });
+    } catch (error) {
+      console.error("Error generating deck suggestion:", error);
+      res.status(500).json({ error: "Failed to generate deck suggestion" });
+    }
   });
 
   // Admin middleware

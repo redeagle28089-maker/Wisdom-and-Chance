@@ -10,6 +10,28 @@ export const ai = new GoogleGenAI({
 });
 
 /**
+ * Generate text content using Gemini Flash model.
+ * Uses gemini-2.5-flash via Replit AI Integrations.
+ */
+export async function generateText(prompt: string): Promise<string> {
+  const response = await ai.models.generateContent({
+    model: "gemini-2.5-flash",
+    contents: [{ role: "user", parts: [{ text: prompt }] }],
+  });
+
+  const candidate = response.candidates?.[0];
+  const textPart = candidate?.content?.parts?.find(
+    (part: { text?: string }) => part.text
+  );
+
+  if (!textPart?.text) {
+    throw new Error("No text in response");
+  }
+
+  return textPart.text;
+}
+
+/**
  * Generate an image and return as base64 data URL.
  * Uses gemini-2.5-flash-image model via Replit AI Integrations.
  */

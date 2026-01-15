@@ -8,6 +8,13 @@ A tactical trading card game simulator built with React, Express, and TypeScript
 **Current State:** Fully functional TCG with Google authentication, multiplayer rooms, friend system, and real-time gameplay.
 
 ## Recent Changes
+- **January 2026:** AI Deck Suggestion System
+  - AI-powered deck builder using Gemini 2.5 Flash model
+  - Select commander and playstyle (Aggressive/Defensive/Balanced)
+  - AI generates complete 40-card deck recommendations
+  - One-click apply to populate deck with AI suggestions
+  - Validates deck constraints (4 cards per power rank, max 3 copies)
+
 - **January 2026:** Admin Card Art Generator
   - AI-powered card art generation using Gemini 2.5 Flash Image model
   - Admin-only access restricted to redeagle28089@gmail.com
@@ -133,6 +140,7 @@ A tactical trading card game simulator built with React, Express, and TypeScript
 - `GET /api/commanders` - List all commanders
 - `GET /api/decks` - List all decks
 - `POST /api/decks` - Create deck (requires auth)
+- `POST /api/deck-suggestions` - AI deck suggestion (requires auth, uses Gemini)
 - `GET /api/games` - List all games
 - `POST /api/games` - Create game (requires auth)
 - `PATCH /api/games/:id` - Update game state
