@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, Flame, Droplet, Mountain, Wind, Leaf } from "lucide-react";
-import { GameCard, elementConfig } from "@/components/game-card";
+import { CardWithPopup, elementConfig } from "@/components/game-card";
 import type { Card as CardType, Element } from "@shared/schema";
 
 export default function CardDatabasePage() {
@@ -120,7 +120,7 @@ export default function CardDatabasePage() {
             </p>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
               {displayCards.map((card) => (
-                <GameCard key={card.id} card={card} />
+                <CardWithPopup key={card.id} card={card} />
               ))}
             </div>
           </>

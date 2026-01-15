@@ -9,7 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Plus, Minus, Save, Trash2, Crown, LogIn, Share2, Download, Copy, Check, Sparkles, Loader2 } from "lucide-react";
-import { elementConfig, CommanderCard } from "@/components/game-card";
+import { elementConfig, CommanderWithPopup, CardWithPopup } from "@/components/game-card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Card as CardType, Commander, Element, InsertDeck } from "@shared/schema";
@@ -325,7 +325,7 @@ export default function DeckBuilderPage() {
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                   {commanders.map((commander) => (
-                    <CommanderCard
+                    <CommanderWithPopup
                       key={commander.id}
                       commander={commander}
                       size="sm"

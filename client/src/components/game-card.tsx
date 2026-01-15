@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
-import { Flame, Droplet, Mountain, Wind, Leaf, Zap, Plus, Heart, Shield } from "lucide-react";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
+import { Flame, Droplet, Mountain, Wind, Leaf, Zap, Plus, Heart, Shield, Swords, Crown } from "lucide-react";
 import type { Card as CardType, Element, Commander } from "@shared/schema";
 
 import fireCardArt from "@assets/generated_images/fire_element_card_art.png";
@@ -232,5 +233,182 @@ export function CommanderCard({
         </div>
       </div>
     </div>
+  );
+}
+
+interface CardWithPopupProps extends GameCardProps {
+  enablePopup?: boolean;
+}
+
+export function CardWithPopup({ enablePopup = true, ...props }: CardWithPopupProps) {
+  const { card } = props;
+  const config = elementConfig[card.element];
+  const ElementIcon = config.icon;
+  const TraitIcon = card.trait ? traitIcons[card.trait] : null;
+
+  if (!enablePopup) {
+    return <GameCard {...props} />;
+  }
+
+  return (
+    <HoverCard openDelay={200} closeDelay={100}>
+      <HoverCardTrigger asChild>
+        <div>
+          <GameCard {...props} />
+        </div>
+      </HoverCardTrigger>
+      <HoverCardContent 
+        className="w-72 p-0 bg-slate-900 border-2 border-purple-500/50 shadow-2xl z-50 animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95"
+        side="top"
+        align="center"
+        sideOffset={8}
+        collisionPadding={16}
+        avoidCollisions={true}
+      >
+        <div className="relative">
+          <img 
+            src={card.imageUrl || config.cardArt} 
+            alt={card.name}
+            className="w-full h-36 object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent" />
+          <div className="absolute top-2 left-2 flex items-center gap-2">
+            <div className={`w-10 h-10 ${config.bgColor} rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg border-2 border-white/30`}>
+              {card.power}
+            </div>
+          </div>
+          <div className="absolute top-2 right-2 flex gap-1">
+            <div className={`px-2 py-1 ${config.bgColor} rounded text-xs font-bold text-white flex items-center gap-1`}>
+              <ElementIcon className="w-3 h-3" />
+              {card.element}
+            </div>
+          </div>
+        </div>
+        
+        <div className="p-3 space-y-3">
+          <div>
+            <h3 className="text-white font-bold text-lg">{card.name}</h3>
+            <p className="text-purple-300 text-sm">Power {card.power} Unit Card</p>
+          </div>
+
+          {card.trait && (
+            <div className="flex items-center gap-2 p-2 bg-yellow-500/10 rounded-lg border border-yellow-500/30">
+              {TraitIcon && <TraitIcon className="w-4 h-4 text-yellow-400" />}
+              <div>
+                <p className="text-yellow-400 font-medium text-sm">{card.trait}</p>
+                <p className="text-yellow-200/70 text-xs">Special Ability</p>
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-2">
+            {card.buffModifier > 0 && (
+              <div className="flex-1 p-2 bg-green-500/10 rounded-lg border border-green-500/30 text-center">
+                <div className="flex items-center justify-center gap-1">
+                  <Swords className="w-4 h-4 text-green-400" />
+                  <span className="text-green-400 font-bold">+{card.buffModifier}</span>
+                </div>
+                <p className="text-green-200/70 text-xs mt-1">Buff Modifier</p>
+              </div>
+            )}
+            {card.debuffModifier > 0 && (
+              <div className="flex-1 p-2 bg-red-500/10 rounded-lg border border-red-500/30 text-center">
+                <div className="flex items-center justify-center gap-1">
+                  <Shield className="w-4 h-4 text-red-400" />
+                  <span className="text-red-400 font-bold">-{card.debuffModifier}</span>
+                </div>
+                <p className="text-red-200/70 text-xs mt-1">Debuff Modifier</p>
+              </div>
+            )}
+            {card.buffModifier === 0 && card.debuffModifier === 0 && (
+              <div className="flex-1 p-2 bg-slate-800/50 rounded-lg border border-slate-700/50 text-center">
+                <p className="text-slate-400 text-xs">No modifiers</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </HoverCardContent>
+    </HoverCard>
+  );
+}
+
+interface CommanderWithPopupProps extends CommanderCardProps {
+  enablePopup?: boolean;
+}
+
+export function CommanderWithPopup({ enablePopup = true, ...props }: CommanderWithPopupProps) {
+  const { commander } = props;
+  const config = elementConfig[commander.element];
+  const ElementIcon = config.icon;
+
+  if (!enablePopup) {
+    return <CommanderCard {...props} />;
+  }
+
+  return (
+    <HoverCard openDelay={200} closeDelay={100}>
+      <HoverCardTrigger asChild>
+        <div>
+          <CommanderCard {...props} />
+        </div>
+      </HoverCardTrigger>
+      <HoverCardContent 
+        className="w-80 p-0 bg-slate-900 border-2 border-yellow-500/50 shadow-2xl z-50 animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95"
+        side="top"
+        align="center"
+        sideOffset={8}
+        collisionPadding={16}
+        avoidCollisions={true}
+      >
+        <div className="relative">
+          <img 
+            src={commander.imageUrl || config.commanderArt} 
+            alt={commander.name}
+            className="w-full h-44 object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/50 to-transparent" />
+          <div className="absolute top-2 left-2">
+            <Badge className="bg-yellow-500 text-black font-bold border border-yellow-300">
+              <Crown className="w-3 h-3 mr-1" />
+              COMMANDER
+            </Badge>
+          </div>
+          <div className="absolute top-2 right-2">
+            <div className={`px-2 py-1 ${config.bgColor} rounded text-xs font-bold text-white flex items-center gap-1`}>
+              <ElementIcon className="w-3 h-3" />
+              {commander.element}
+            </div>
+          </div>
+          <div className="absolute bottom-2 left-3 right-3">
+            <h3 className="text-white font-bold text-xl drop-shadow-lg">{commander.name}</h3>
+            <p className="text-purple-300 text-sm italic drop-shadow-lg">{commander.title}</p>
+          </div>
+        </div>
+        
+        <div className="p-3 space-y-3">
+          <div>
+            <h4 className="text-purple-300 text-xs uppercase tracking-wider font-semibold mb-2">Commander Abilities</h4>
+            <div className="space-y-2">
+              {commander.abilities.map((ability, index) => (
+                <div key={index} className="p-2 bg-purple-500/10 rounded-lg border border-purple-500/30">
+                  <p className="text-yellow-400 font-medium text-sm">{ability.name}</p>
+                  <p className="text-purple-200 text-xs mt-1">{ability.description}</p>
+                  {(ability.victoryCost > 0 || ability.withdrawalCost > 0) && (
+                    <div className="flex gap-2 mt-1">
+                      {ability.victoryCost > 0 && (
+                        <span className="text-green-400 text-xs">Victory: {ability.victoryCost}</span>
+                      )}
+                      {ability.withdrawalCost > 0 && (
+                        <span className="text-red-400 text-xs">Defeat: {ability.withdrawalCost}</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </HoverCardContent>
+    </HoverCard>
   );
 }
