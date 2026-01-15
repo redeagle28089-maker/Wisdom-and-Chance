@@ -12,6 +12,9 @@ export type GamePhase = typeof GAME_PHASES[number];
 export const GAME_STATUS = ["waiting", "in_progress", "completed"] as const;
 export type GameStatus = typeof GAME_STATUS[number];
 
+export const AI_DIFFICULTY = ["easy", "medium", "hard"] as const;
+export type AIDifficulty = typeof AI_DIFFICULTY[number];
+
 export const BUFF_DEBUFF_COLORS = ["Red", "Blue", "Amber", "Green", "Black"] as const;
 export type BuffDebuffColor = typeof BUFF_DEBUFF_COLORS[number];
 
@@ -128,6 +131,7 @@ export const gameSchema = z.object({
   activePlayer: z.string(),
   status: z.enum(GAME_STATUS).default("waiting"),
   gameType: z.enum(["solo", "practice", "multiplayer"]).default("practice"),
+  aiDifficulty: z.enum(AI_DIFFICULTY).nullable().default(null),
   winnerId: z.string().nullable(),
   gameState: gameStateSchema,
   gameHistory: z.array(z.object({
