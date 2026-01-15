@@ -5,16 +5,19 @@ A tactical trading card game simulator built with React, Express, and TypeScript
 
 **Purpose:** Card game simulator with deck building and practice battles.
 
-**Current State:** Core gameplay implemented with Home, Rules, Card Database, Deck Builder, Practice mode, and GameBoard.
+**Current State:** Fully functional TCG with all core features implemented.
 
 ## Recent Changes
-- **January 2026:** Complete rebuild from project management app to TCG game
+- **January 2026:** Complete TCG implementation
   - 5 elements: Fire, Water, Earth, Air, Nature
   - 200 seeded cards (40 per element, powers 1-10)
   - 5 commanders with unique abilities
   - Full deck building with 40-card validation
-  - Practice mode with AI opponent
+  - Practice mode with AI opponent (Easy/Medium/Hard difficulty)
   - Turn-based battle system with 5 phases
+  - Game history and replay viewing
+  - Tutorial page for new players
+  - Player profile with stats tracking
 
 ## Game Rules
 
@@ -53,9 +56,11 @@ A tactical trading card game simulator built with React, Express, and TypeScript
 │   │   ├── pages/
 │   │   │   ├── home.tsx
 │   │   │   ├── rules.tsx
+│   │   │   ├── tutorial.tsx
 │   │   │   ├── card-database.tsx
 │   │   │   ├── deck-builder.tsx
 │   │   │   ├── practice.tsx
+│   │   │   ├── profile.tsx
 │   │   │   └── game-board.tsx
 │   │   └── App.tsx
 ├── server/
@@ -82,8 +87,24 @@ A tactical trading card game simulator built with React, Express, and TypeScript
 - **Card**: id, name, element, power (1-10), trait, buff/debuff modifiers
 - **Commander**: id, name, element, title, abilities
 - **Deck**: id, name, playerId, commanderId, cardIds[]
-- **Game**: id, players, HP, phase, turn, gameState, status
+- **Game**: id, players, HP, phase, turn, gameState, status, aiDifficulty
 - **Player**: id, username, displayName, wins, losses
 
 ## Running the App
 `npm run dev` starts Express backend + Vite frontend on port 5000.
+
+## Features
+
+### Implemented
+- Home page with hero section and feature highlights
+- Rules page with complete game mechanics
+- Tutorial page with 5-step learning guide
+- Card Database with element filtering
+- Deck Builder with validation (40 cards, power distribution, max 3 copies)
+- Commander selection for decks
+- Practice mode with AI opponent
+- AI difficulty selection (Easy, Medium, Hard)
+- Game history viewing
+- Player profile with stats (wins, losses, win rate)
+- Turn-based gameplay with 5 phases
+- Dark fantasy themed UI with element colors
