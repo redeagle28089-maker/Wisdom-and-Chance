@@ -15,6 +15,9 @@ import PracticePage from "@/pages/practice";
 import GameBoardPage from "@/pages/game-board";
 import TutorialPage from "@/pages/tutorial";
 import ProfilePage from "@/pages/profile";
+import FriendsPage from "@/pages/friends";
+import LobbyPage from "@/pages/lobby";
+import RoomPage from "@/pages/room";
 import NotFound from "@/pages/not-found";
 
 function AppContent() {
@@ -45,6 +48,9 @@ function AppContent() {
               <Route path="/practice" component={PracticePage} />
               <Route path="/game/:id" component={GameBoardPage} />
               <Route path="/profile" component={ProfilePage} />
+              <Route path="/friends" component={FriendsPage} />
+              <Route path="/lobby" component={LobbyPage} />
+              <Route path="/room/:id" component={RoomPage} />
               <Route component={NotFound} />
             </Switch>
           </main>

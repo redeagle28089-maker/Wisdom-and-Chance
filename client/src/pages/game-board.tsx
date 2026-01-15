@@ -1,15 +1,26 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute, useLocation } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { Heart, Swords, Trophy, Flag, ArrowRight, Shield, Flame, Droplet, Mountain, Wind, Leaf, RotateCcw, LogIn } from "lucide-react";
+import { useWebSocket } from "@/hooks/use-websocket";
+import { Heart, Swords, Trophy, Flag, ArrowRight, Shield, Flame, Droplet, Mountain, Wind, Leaf, RotateCcw, LogIn, MessageSquare, Eye, Send, X } from "lucide-react";
 import type { Game, Card as CardType, Element, BattlefieldCard } from "@shared/schema";
 import { GAME_CONSTANTS } from "@shared/schema";
+
+interface ChatMessage {
+  id: string;
+  message: string;
+  senderId: string;
+  senderName: string;
+  createdAt: string;
+}
 
 const elementConfig: Record<Element, { icon: typeof Flame; color: string; bgColor: string }> = {
   Fire: { icon: Flame, color: "text-red-500", bgColor: "bg-gradient-to-br from-red-600 to-orange-600" },
@@ -77,18 +88,90 @@ export default function GameBoardPage() {
   const gameId = params?.id;
 
   const [selectedCards, setSelectedCards] = useState<string[]>([]);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatMessage, setChatMessage] = useState("");
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [spectatorCount, setSpectatorCount] = useState(0);
+  const chatScrollRef = useRef<HTMLDivElement>(null);
 
-  const { data: game, isLoading } = useQuery<Game>({
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { joinGame, leaveGame, subscribe, sendGameMessage, sendGameAction } = useWebSocket();
+
+  const { data: game, isLoading, refetch: refetchGame } = useQuery<Game>({
     queryKey: ["/api/games", gameId],
     enabled: !!gameId,
-    refetchInterval: 2000,
+    refetchInterval: 3000,
   });
 
   const { data: allCards = [] } = useQuery<CardType[]>({
     queryKey: ["/api/cards"],
   });
 
-  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  useEffect(() => {
+    if (gameId) {
+      joinGame(gameId);
+    }
+    return () => {
+      if (gameId) {
+        leaveGame(gameId);
+      }
+    };
+  }, [gameId, joinGame, leaveGame]);
+
+  useEffect(() => {
+    const unsubscribe = subscribe("game_update", (msg) => {
+      if (msg.payload?.gameId === gameId) {
+        refetchGame();
+      }
+    });
+    return unsubscribe;
+  }, [subscribe, gameId, refetchGame]);
+
+  useEffect(() => {
+    const unsubscribe = subscribe("game_message", (msg) => {
+      if (msg.payload?.gameId === gameId) {
+        const newMessage: ChatMessage = {
+          id: Date.now().toString(),
+          message: msg.payload.message,
+          senderId: msg.payload.senderId,
+          senderName: msg.payload.senderName || "Player",
+          createdAt: new Date().toISOString(),
+        };
+        setChatMessages((prev) => [...prev, newMessage]);
+      }
+    });
+    return unsubscribe;
+  }, [subscribe, gameId]);
+
+  useEffect(() => {
+    const unsubscribe = subscribe("spectator_count", (msg) => {
+      if (msg.payload?.gameId === gameId) {
+        setSpectatorCount(msg.payload.count);
+      }
+    });
+    return unsubscribe;
+  }, [subscribe, gameId]);
+
+  useEffect(() => {
+    if (chatScrollRef.current) {
+      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+    }
+  }, [chatMessages]);
+
+  const handleSendChat = () => {
+    if (chatMessage.trim() && gameId) {
+      sendGameMessage(gameId, chatMessage.trim());
+      const myName = user?.firstName ? `${user.firstName}` : "You";
+      setChatMessages((prev) => [...prev, {
+        id: Date.now().toString(),
+        message: chatMessage.trim(),
+        senderId: user?.id || "",
+        senderName: myName,
+        createdAt: new Date().toISOString(),
+      }]);
+      setChatMessage("");
+    }
+  };
 
   const updateGameMutation = useMutation({
     mutationFn: async (updates: Partial<Game>) => {
@@ -97,8 +180,13 @@ export default function GameBoardPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/games", gameId] });
+      if (gameId) {
+        sendGameAction(gameId, "state_update", {});
+      }
     },
   });
+
+  const isMultiplayer = game?.gameType === "multiplayer";
 
   const getCardById = (cardId: string) => allCards.find((c) => c.id === cardId);
 
@@ -322,10 +410,28 @@ export default function GameBoardPage() {
             <Badge variant="secondary" className="text-sm">Turn {game.currentTurn}</Badge>
             <Badge className="bg-purple-600">{phaseNames[game.currentPhase]}</Badge>
             {isMyTurn && <Badge className="bg-green-600">Your Turn</Badge>}
+            {isMultiplayer && spectatorCount > 0 && (
+              <Badge variant="secondary" className="flex items-center gap-1">
+                <Eye className="w-3 h-3" />
+                {spectatorCount}
+              </Badge>
+            )}
           </div>
-          <Button variant="outline" size="sm" onClick={() => navigate("/practice")}>
-            Leave Game
-          </Button>
+          <div className="flex items-center gap-2">
+            {isMultiplayer && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setChatOpen(!chatOpen)}
+                data-testid="button-toggle-chat"
+              >
+                <MessageSquare className="w-4 h-4" />
+              </Button>
+            )}
+            <Button variant="outline" size="sm" onClick={() => navigate(isMultiplayer ? "/lobby" : "/practice")}>
+              Leave Game
+            </Button>
+          </div>
         </div>
 
         <div className="flex justify-center gap-8">
@@ -453,6 +559,61 @@ export default function GameBoardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {chatOpen && isMultiplayer && (
+        <div className="fixed bottom-4 right-4 w-80 h-96 bg-slate-800 border border-purple-500/30 rounded-lg shadow-xl flex flex-col z-50">
+          <div className="flex items-center justify-between p-3 border-b border-purple-500/20">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="w-4 h-4 text-purple-400" />
+              <span className="text-white font-medium">Game Chat</span>
+            </div>
+            <Button 
+              size="icon" 
+              variant="ghost" 
+              className="h-6 w-6"
+              onClick={() => setChatOpen(false)}
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+          <ScrollArea className="flex-1 p-3" ref={chatScrollRef}>
+            <div className="space-y-2">
+              {chatMessages.length === 0 ? (
+                <p className="text-purple-400 text-sm text-center">No messages yet</p>
+              ) : (
+                chatMessages.map((msg) => (
+                  <div key={msg.id} className="text-sm">
+                    <span className={`font-medium ${msg.senderId === user?.id ? 'text-green-400' : 'text-purple-400'}`}>
+                      {msg.senderName}:
+                    </span>{" "}
+                    <span className="text-white">{msg.message}</span>
+                  </div>
+                ))
+              )}
+            </div>
+          </ScrollArea>
+          <div className="p-3 border-t border-purple-500/20">
+            <div className="flex gap-2">
+              <Input
+                placeholder="Type a message..."
+                value={chatMessage}
+                onChange={(e) => setChatMessage(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSendChat()}
+                className="bg-slate-900/50 border-purple-500/30 text-white"
+                data-testid="input-game-chat"
+              />
+              <Button 
+                size="icon" 
+                onClick={handleSendChat}
+                disabled={!chatMessage.trim()}
+                data-testid="button-send-game-chat"
+              >
+                <Send className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

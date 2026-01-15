@@ -1,13 +1,21 @@
 # Wisdom & Chance TCG
 
 ## Overview
-A tactical trading card game simulator built with React, Express, and TypeScript. Master elemental powers, build strategic decks, and battle against AI opponents.
+A tactical trading card game simulator built with React, Express, and TypeScript. Master elemental powers, build strategic decks, and battle against AI opponents or other players online.
 
-**Purpose:** Card game simulator with deck building and practice battles.
+**Purpose:** Card game simulator with deck building, practice battles, and real-time multiplayer.
 
-**Current State:** Fully functional TCG with Google authentication and all core features implemented.
+**Current State:** Fully functional TCG with Google authentication, multiplayer rooms, friend system, and real-time gameplay.
 
 ## Recent Changes
+- **January 2026:** Full Multiplayer System
+  - Game lobby to browse and create rooms
+  - Real-time WebSocket communication (/ws endpoint)
+  - Room waiting area with deck selection and ready system
+  - In-game chat for player communication
+  - Spectator mode for watching matches
+  - Friend system with requests, online status tracking
+
 - **January 2026:** Google Authentication Integration
   - Replit Auth with Google/GitHub/email login via OIDC
   - PostgreSQL database for user accounts and sessions
@@ -63,7 +71,8 @@ A tactical trading card game simulator built with React, Express, and TypeScript
 │   │   │   ├── game-sidebar.tsx
 │   │   │   └── theme-*.tsx
 │   │   ├── hooks/
-│   │   │   └── use-auth.ts # Authentication hook
+│   │   │   ├── use-auth.ts     # Authentication hook
+│   │   │   └── use-websocket.ts # WebSocket hook for real-time
 │   │   ├── pages/
 │   │   │   ├── home.tsx
 │   │   │   ├── rules.tsx
@@ -72,7 +81,10 @@ A tactical trading card game simulator built with React, Express, and TypeScript
 │   │   │   ├── deck-builder.tsx  # Protected
 │   │   │   ├── practice.tsx      # Protected
 │   │   │   ├── profile.tsx       # Protected
-│   │   │   └── game-board.tsx    # Protected
+│   │   │   ├── friends.tsx       # Protected - Friend management
+│   │   │   ├── lobby.tsx         # Protected - Game room browser
+│   │   │   ├── room.tsx          # Protected - Pre-game waiting room
+│   │   │   └── game-board.tsx    # Protected - Game play
 │   │   └── App.tsx
 ├── server/
 │   ├── replit_integrations/
@@ -80,7 +92,9 @@ A tactical trading card game simulator built with React, Express, and TypeScript
 │   │       ├── index.ts
 │   │       ├── replitAuth.ts
 │   │       └── storage.ts
-│   ├── routes.ts           # API endpoints
+│   ├── routes.ts           # Core API endpoints
+│   ├── multiplayerRoutes.ts # Friends, rooms, matchmaking API
+│   ├── websocket.ts        # WebSocket server for real-time
 │   ├── storage.ts          # In-memory data + seed
 │   └── index.ts            # Express server
 ├── shared/
@@ -106,6 +120,35 @@ A tactical trading card game simulator built with React, Express, and TypeScript
 - `GET /api/games` - List all games
 - `POST /api/games` - Create game (requires auth)
 - `PATCH /api/games/:id` - Update game state
+
+#### Friend System (requires auth)
+- `GET /api/friends` - List friends with online status
+- `GET /api/friend-requests` - List pending requests (incoming + outgoing)
+- `POST /api/friend-requests` - Send friend request by email
+- `POST /api/friend-requests/:id/accept` - Accept request
+- `POST /api/friend-requests/:id/decline` - Decline request
+- `DELETE /api/friends/:friendId` - Remove friend
+
+#### Room System (requires auth)
+- `GET /api/rooms` - List public waiting rooms
+- `GET /api/rooms/:id` - Get room details with players/spectators
+- `POST /api/rooms` - Create room
+- `POST /api/rooms/:id/join` - Join as player (with optional password)
+- `POST /api/rooms/:id/leave` - Leave room
+- `POST /api/rooms/:id/ready` - Set ready status with deck selection
+- `POST /api/rooms/:id/spectate` - Join as spectator
+- `DELETE /api/rooms/:id/spectate` - Stop spectating
+- `GET /api/rooms/:id/messages` - Get room chat history
+- `POST /api/rooms/:id/messages` - Send chat message
+
+#### WebSocket Events (/ws)
+- `auth` - Authenticate connection with userId
+- `join_room/leave_room` - Join/leave room for updates
+- `join_game/leave_game` - Join/leave game for real-time sync
+- `room_message/game_message` - Chat in room or game
+- `game_action` - Broadcast game state changes
+- `player_ready` - Notify ready status change
+- `game_start` - Notify game start
 
 ### Data Models
 
@@ -144,7 +187,22 @@ A tactical trading card game simulator built with React, Express, and TypeScript
 - Player profile with stats (wins, losses, win rate)
 - Turn-based gameplay with 5 phases
 - Dark fantasy themed UI with element colors
+- **Multiplayer Features:**
+  - Game lobby with room browser and creation
+  - Public and private (password-protected) rooms
+  - Pre-game waiting room with deck selection
+  - Ready system for both players
+  - Real-time game synchronization via WebSocket
+  - In-game chat during matches
+  - Spectator mode for watching games
+  - Friend system with requests and online status
+  - Room chat for pre-game communication
 
 ### Page Access
 - **Public:** Home, Rules, Tutorial, Card Database
-- **Protected (requires login):** Deck Builder, Practice, Profile, Game Board
+- **Protected (requires login):** Deck Builder, Practice, Profile, Game Board, Lobby, Friends, Room
+
+### Known Limitations (Development Environment)
+- WebSocket authentication relies on client-sent userId; for production, implement session-based auth on WS upgrade
+- Game state updates use optimistic client PATCHes; production should add server-side move validation
+- Room membership checks exist but not fully enforced in all WS handlers; add before production deployment

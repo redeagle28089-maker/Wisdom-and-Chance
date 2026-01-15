@@ -3,10 +3,12 @@ import type { Server } from "http";
 import { storage } from "./storage";
 import { insertCardSchema, insertDeckSchema, insertPlayerSchema, insertGameSchema } from "@shared/schema";
 import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
+import { registerMultiplayerRoutes } from "./multiplayerRoutes";
 
 export async function registerRoutes(server: Server, app: Express): Promise<void> {
   await setupAuth(app);
   registerAuthRoutes(app);
+  registerMultiplayerRoutes(app);
   app.get("/api/cards", async (req, res) => {
     const cards = await storage.getCards();
     res.json(cards);

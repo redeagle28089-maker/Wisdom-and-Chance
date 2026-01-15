@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Home, BookOpen, Database, Layers, Swords, Trophy, User, GraduationCap, LogIn, LogOut } from "lucide-react";
+import { Home, BookOpen, Database, Layers, Swords, Trophy, User, GraduationCap, LogIn, LogOut, Users, Gamepad2 } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -26,6 +26,8 @@ const menuItems = [
 
 const playItems = [
   { title: "Practice", url: "/practice", icon: Swords },
+  { title: "Multiplayer", url: "/lobby", icon: Gamepad2 },
+  { title: "Friends", url: "/friends", icon: Users },
   { title: "Profile", url: "/profile", icon: User },
 ];
 
