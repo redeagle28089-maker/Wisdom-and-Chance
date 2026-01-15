@@ -8,6 +8,13 @@ A tactical trading card game simulator built with React, Express, and TypeScript
 **Current State:** Fully functional TCG with Google authentication, multiplayer rooms, friend system, and real-time gameplay.
 
 ## Recent Changes
+- **January 2026:** Engagement & Progression Systems
+  - Achievement system with 22 unlockable achievements across 5 categories
+  - Daily challenges with rotating quests and XP rewards
+  - Global leaderboard with ELO rating tiers (Bronze/Silver/Gold/Platinum/Diamond/Master)
+  - Quick emotes in game chat (GG, Nice!, Thanks, Thinking, Hurry!, Sorry)
+  - Deck sharing with import/export codes
+
 - **January 2026:** Full Multiplayer System
   - Game lobby to browse and create rooms
   - Real-time WebSocket communication (/ws endpoint)
