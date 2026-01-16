@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
+import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Flame, Droplet, Mountain, Wind, Leaf, Zap, Plus, Heart, Shield, Swords, Crown } from "lucide-react";
 import type { Card as CardType, Element, Commander } from "@shared/schema";
 
@@ -273,98 +273,98 @@ interface CardWithPopupProps extends GameCardProps {
 }
 
 export function CardWithPopup({ enablePopup = true, ...props }: CardWithPopupProps) {
-  const { card } = props;
+  const { card, onClick, disabled } = props;
   const config = elementConfig[card.element];
-  const ElementIcon = config.icon;
   const TraitIcon = card.trait ? traitIcons[card.trait] : null;
 
-  if (!enablePopup) {
+  if (!enablePopup || disabled) {
     return <GameCard {...props} />;
   }
 
   return (
-    <HoverCard openDelay={200} closeDelay={100}>
-      <HoverCardTrigger asChild>
-        <div>
-          <GameCard {...props} />
+    <Dialog>
+      <DialogTrigger asChild>
+        <div data-testid={`card-popup-trigger-${card.id}`}>
+          <GameCard {...props} onClick={onClick ?? (() => {})} />
         </div>
-      </HoverCardTrigger>
-      <HoverCardContent 
-        className="w-80 p-0 bg-slate-800 border-0 shadow-2xl z-50 rounded-xl overflow-hidden animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95"
-        side="top"
-        align="center"
-        sideOffset={8}
-        collisionPadding={16}
-        avoidCollisions={true}
-      >
-        {/* Header with card name and power */}
-        <div className="flex items-start justify-between p-4 pb-2">
-          <div>
-            <h3 className="text-white font-bold text-lg">{card.name}</h3>
-            <div className="flex flex-wrap gap-1.5 mt-2">
-              <Badge className={`${config.headerBg} text-white text-xs px-2 py-0.5`}>
-                {card.element.toUpperCase()}
-              </Badge>
-              <Badge className="bg-purple-600 text-white text-xs px-2 py-0.5">
-                WARRIOR
-              </Badge>
-              <Badge className="bg-orange-500 text-white text-xs px-2 py-0.5">
-                Rank {card.power}
-              </Badge>
-            </div>
-          </div>
-          <div className="bg-slate-700 rounded-lg px-4 py-2 text-center min-w-16">
-            <span className="text-white font-bold text-2xl">{card.power}</span>
-            <p className="text-slate-400 text-xs">Power</p>
-          </div>
-        </div>
-        
-        {/* Artwork */}
-        <div className="px-4 py-2">
-          <div className="rounded-lg overflow-hidden">
-            <img 
-              src={card.imageUrl || config.cardArt} 
-              alt={card.name}
-              className="w-full h-44 object-cover"
-            />
-          </div>
-        </div>
-        
-        {/* Description */}
-        <div className="px-4 py-2">
-          <p className="text-slate-300 text-sm leading-relaxed">
-            {card.description || `A powerful ${card.element} unit wielding elemental forces. Each strike is a testament to mastery over ${card.element.toLowerCase()}, inflicting both physical and magical damage.`}
-          </p>
-        </div>
-
-        {/* Trait section */}
-        {card.trait && (
-          <div className="mx-4 my-2 p-3 bg-slate-700/50 rounded-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <h4 className="text-white font-bold text-sm uppercase tracking-wide">{card.trait}</h4>
-                <p className="text-slate-400 text-xs">Special Trait Ability</p>
+      </DialogTrigger>
+        <DialogContent 
+          className="max-w-lg w-[95vw] p-0 bg-slate-800 border-2 border-slate-600 shadow-2xl rounded-xl overflow-hidden"
+          data-testid="card-popup-dialog"
+        >
+          <DialogTitle className="sr-only">{card.name} Card Details</DialogTitle>
+          
+          {/* Header with card name and power */}
+          <div className="flex items-start justify-between p-6 pb-4">
+            <div className="flex-1">
+              <h3 className="text-white font-bold text-2xl" data-testid="card-popup-name">{card.name}</h3>
+              <div className="flex flex-wrap gap-2 mt-3">
+                <Badge className={`${config.headerBg} text-white text-sm px-3 py-1`} data-testid="card-popup-element">
+                  {card.element.toUpperCase()}
+                </Badge>
+                <Badge className="bg-purple-600 text-white text-sm px-3 py-1">
+                  WARRIOR
+                </Badge>
+                <Badge className="bg-orange-500 text-white text-sm px-3 py-1" data-testid="card-popup-rank">
+                  Rank {card.power}
+                </Badge>
               </div>
-              <Badge className="bg-slate-600 text-white text-sm px-3 py-1 rounded-full">
-                {card.traitValue || 1}
-              </Badge>
+            </div>
+            <div className="bg-slate-700 rounded-xl px-6 py-3 text-center min-w-20" data-testid="card-popup-power">
+              <span className="text-white font-bold text-4xl">{card.power}</span>
+              <p className="text-slate-400 text-sm mt-1">Power</p>
             </div>
           </div>
-        )}
+          
+          {/* Artwork - larger for web */}
+          <div className="px-6 py-2">
+            <div className="rounded-xl overflow-hidden border-2 border-slate-600">
+              <img 
+                src={card.imageUrl || config.cardArt} 
+                alt={card.name}
+                className="w-full h-56 object-cover"
+              />
+            </div>
+          </div>
+          
+          {/* Description */}
+          <div className="px-6 py-3" data-testid="card-popup-description">
+            <p className="text-slate-300 text-base leading-relaxed">
+              {card.description || `A powerful ${card.element} unit wielding elemental forces. Each strike is a testament to mastery over ${card.element.toLowerCase()}, inflicting both physical and magical damage.`}
+            </p>
+          </div>
 
-        {/* Buff/Debuff boxes at bottom */}
-        <div className="flex gap-2 p-4 pt-2">
-          <div className={`flex-1 p-3 rounded-lg ${config.headerBg}`}>
-            <span className="text-white font-bold text-lg">+{card.buffModifier}</span>
-            <p className="text-white/80 text-xs">Buff: {card.element.toLowerCase()}</p>
+          {/* Trait section */}
+          {card.trait && (
+            <div className="mx-6 my-2 p-4 bg-slate-700/50 rounded-xl border border-slate-600" data-testid="card-popup-trait">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  {TraitIcon && <TraitIcon className="w-6 h-6 text-yellow-400" />}
+                  <div>
+                    <h4 className="text-white font-bold text-lg" data-testid="card-popup-trait-name">{card.trait}</h4>
+                    <p className="text-slate-400 text-sm">Special Trait Ability</p>
+                  </div>
+                </div>
+                <Badge className="bg-yellow-600 text-white text-lg px-4 py-2 rounded-full" data-testid="card-popup-trait-value">
+                  {card.traitValue || 1}
+                </Badge>
+              </div>
+            </div>
+          )}
+
+          {/* Buff/Debuff boxes at bottom */}
+          <div className="flex gap-4 p-6 pt-3">
+            <div className={`flex-1 p-4 rounded-xl ${config.headerBg}`} data-testid="card-popup-buff">
+              <span className="text-white font-bold text-2xl">+{card.buffModifier}</span>
+              <p className="text-white/80 text-sm mt-1">Buff: {card.element.toLowerCase()}</p>
+            </div>
+            <div className="flex-1 p-4 rounded-xl bg-red-800" data-testid="card-popup-debuff">
+              <span className="text-white font-bold text-2xl">-{card.debuffModifier}</span>
+              <p className="text-white/80 text-sm mt-1">Debuff: {card.element.toLowerCase()}</p>
+            </div>
           </div>
-          <div className="flex-1 p-3 rounded-lg bg-red-800">
-            <span className="text-white font-bold text-lg">-{card.debuffModifier}</span>
-            <p className="text-white/80 text-xs">Debuff: {card.element.toLowerCase()}</p>
-          </div>
-        </div>
-      </HoverCardContent>
-    </HoverCard>
+        </DialogContent>
+    </Dialog>
   );
 }
 
@@ -373,7 +373,7 @@ interface CommanderWithPopupProps extends CommanderCardProps {
 }
 
 export function CommanderWithPopup({ enablePopup = true, ...props }: CommanderWithPopupProps) {
-  const { commander } = props;
+  const { commander, onClick } = props;
   const config = elementConfig[commander.element];
   const ElementIcon = config.icon;
 
@@ -382,69 +382,74 @@ export function CommanderWithPopup({ enablePopup = true, ...props }: CommanderWi
   }
 
   return (
-    <HoverCard openDelay={200} closeDelay={100}>
-      <HoverCardTrigger asChild>
-        <div>
-          <CommanderCard {...props} />
+    <Dialog>
+      <DialogTrigger asChild>
+        <div data-testid={`commander-popup-trigger-${commander.id}`}>
+          <CommanderCard {...props} onClick={onClick ?? (() => {})} />
         </div>
-      </HoverCardTrigger>
-      <HoverCardContent 
-        className="w-80 p-0 bg-slate-800 border-2 border-yellow-500/50 shadow-2xl z-50 animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95"
-        side="top"
-        align="center"
-        sideOffset={8}
-        collisionPadding={16}
-        avoidCollisions={true}
+      </DialogTrigger>
+      <DialogContent 
+        className="max-w-lg w-[95vw] p-0 bg-slate-800 border-2 border-yellow-500/50 shadow-2xl rounded-xl overflow-hidden"
+        data-testid="commander-popup-dialog"
       >
-        {/* Header with element color */}
-        <div className={`${config.headerBg} px-4 py-2 flex items-center gap-2`}>
-          <ElementIcon className="w-5 h-5 text-white" />
-          <div>
-            <h3 className="text-white font-bold text-lg">{commander.name}</h3>
-            <span className="text-white/80 text-xs uppercase tracking-wide">
-              {commander.element} Commander
-            </span>
-          </div>
-        </div>
-
-        {/* Artwork */}
-        <div className="relative">
-          <img 
-            src={commander.imageUrl || config.commanderArt} 
-            alt={commander.name}
-            className="w-full h-40 object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-800 via-transparent to-transparent" />
-        </div>
-
-        {/* Description */}
-        <div className="px-4 py-3 bg-slate-800">
-          <p className="text-slate-300 text-sm leading-relaxed">
-            {commander.description}
-          </p>
-        </div>
-        
-        {/* Abilities */}
-        <div className="px-4 py-3 bg-slate-900/50 space-y-2">
-          <h4 className="text-purple-300 text-xs uppercase tracking-wider font-semibold">Commander Abilities</h4>
-          {commander.abilities.map((ability, index) => (
-            <div key={index} className="p-2 bg-slate-800/50 rounded-lg border border-slate-700/50">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-yellow-400 font-medium text-sm">{ability.name}</span>
-                <Badge className="bg-purple-600 text-white text-[10px] px-1.5 py-0 h-4">
-                  P {ability.victoryCost || ability.withdrawalCost || 1}
-                </Badge>
-                {ability.phase === "deployment" && (
-                  <Badge className="bg-green-600 text-white text-[10px] px-1.5 py-0 h-4">
-                    deployment
-                  </Badge>
-                )}
-              </div>
-              <p className="text-slate-400 text-xs">{ability.description}</p>
+        <DialogTitle className="sr-only">{commander.name} Commander Details</DialogTitle>
+          
+          {/* Header with element color */}
+          <div className={`${config.headerBg} px-6 py-4 flex items-center gap-4`}>
+            <ElementIcon className="w-8 h-8 text-white" />
+            <div>
+              <h3 className="text-white font-bold text-2xl" data-testid="commander-popup-name">{commander.name}</h3>
+              <span className="text-white/80 text-sm uppercase tracking-wide" data-testid="commander-popup-element">
+                {commander.element} Commander
+              </span>
             </div>
-          ))}
-        </div>
-      </HoverCardContent>
-    </HoverCard>
+          </div>
+
+          {/* Artwork - larger for web */}
+          <div className="relative">
+            <img 
+              src={commander.imageUrl || config.commanderArt} 
+              alt={commander.name}
+              className="w-full h-56 object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-800 via-transparent to-transparent" />
+          </div>
+
+          {/* Title */}
+          <div className="px-6 py-2 -mt-8 relative z-10">
+            <Badge className="bg-yellow-600 text-white text-sm px-4 py-1" data-testid="commander-popup-title">
+              {commander.title}
+            </Badge>
+          </div>
+
+          {/* Description */}
+          <div className="px-6 py-3 bg-slate-800" data-testid="commander-popup-description">
+            <p className="text-slate-300 text-base leading-relaxed">
+              {commander.description}
+            </p>
+          </div>
+          
+          {/* Abilities */}
+          <div className="px-6 py-4 bg-slate-900/50 space-y-3" data-testid="commander-popup-abilities">
+            <h4 className="text-purple-300 text-sm uppercase tracking-wider font-semibold">Commander Abilities</h4>
+            {commander.abilities.map((ability, index) => (
+              <div key={index} className="p-4 bg-slate-800/50 rounded-xl border border-slate-600" data-testid={`commander-popup-ability-${index}`}>
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
+                  <span className="text-yellow-400 font-bold text-base" data-testid={`commander-popup-ability-name-${index}`}>{ability.name}</span>
+                  <Badge className="bg-purple-600 text-white text-xs px-2 py-0.5" data-testid={`commander-popup-ability-cost-${index}`}>
+                    Cost: {ability.victoryCost || ability.withdrawalCost || 1}
+                  </Badge>
+                  {ability.phase === "deployment" && (
+                    <Badge className="bg-green-600 text-white text-xs px-2 py-0.5">
+                      Deployment Phase
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-slate-300 text-sm leading-relaxed" data-testid={`commander-popup-ability-desc-${index}`}>{ability.description}</p>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+    </Dialog>
   );
 }
