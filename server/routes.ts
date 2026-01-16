@@ -579,6 +579,14 @@ IMPORTANT:
     res.json(card);
   });
 
+  app.delete("/api/admin/cards/:id", isAuthenticated, isAdmin, async (req, res) => {
+    const deleted = await storage.deleteCard(req.params.id);
+    if (!deleted) {
+      return res.status(404).json({ message: "Card not found" });
+    }
+    res.json({ success: true, message: "Card deleted" });
+  });
+
   app.patch("/api/admin/commanders/:id", isAuthenticated, isAdmin, async (req, res) => {
     const parseResult = updateImageSchema.safeParse(req.body);
     if (!parseResult.success) {

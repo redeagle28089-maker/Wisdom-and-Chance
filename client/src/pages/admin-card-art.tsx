@@ -24,8 +24,20 @@ import {
   Wind,
   Leaf,
   Crown,
-  Download
+  Download,
+  Trash2
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import type { Card as CardType, Commander, Element } from "@shared/schema";
 
 const elementConfig: Record<Element, { icon: typeof Flame; color: string; bg: string }> = {
@@ -129,6 +141,28 @@ export default function AdminCardArtPage() {
       toast({
         title: "Update Failed",
         description: error.message || "Failed to update commander",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteCardMutation = useMutation({
+    mutationFn: async (cardId: string) => {
+      const res = await apiRequest(`/api/admin/cards/${cardId}`, "DELETE");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Card Deleted",
+        description: "Card has been removed from the database.",
+      });
+      setSelectedCardId(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/cards"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Delete Failed",
+        description: error.message || "Failed to delete card",
         variant: "destructive",
       });
     },
@@ -345,19 +379,54 @@ export default function AdminCardArtPage() {
                           filteredCards.slice(0, 40).map((card) => (
                             <div
                               key={card.id}
-                              onClick={() => setSelectedCardId(card.id)}
-                              className={`p-3 rounded-lg cursor-pointer transition-all ${
+                              className={`p-3 rounded-lg transition-all ${
                                 selectedCardId === card.id
                                   ? "bg-purple-600/30 border border-purple-500"
                                   : "bg-slate-700/30 hover:bg-slate-700/50 border border-transparent"
                               }`}
                               data-testid={`card-select-${card.id}`}
                             >
-                              <div className="flex items-center justify-between">
-                                <span className="text-white font-medium text-sm truncate">{card.name}</span>
-                                <Badge variant="outline" className="text-xs">
+                              <div className="flex items-center justify-between gap-2">
+                                <div 
+                                  className="flex-1 cursor-pointer" 
+                                  onClick={() => setSelectedCardId(card.id)}
+                                >
+                                  <span className="text-white font-medium text-sm truncate block">{card.name}</span>
+                                </div>
+                                <Badge variant="outline" className="text-xs shrink-0">
                                   Power {card.power}
                                 </Badge>
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button 
+                                      size="icon" 
+                                      variant="ghost" 
+                                      className="h-7 w-7 shrink-0 text-red-400 hover:text-red-300 hover:bg-red-500/20"
+                                      data-testid={`button-delete-${card.id}`}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent className="bg-slate-800 border-purple-500/30">
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle className="text-white">Delete Card</AlertDialogTitle>
+                                      <AlertDialogDescription className="text-slate-300">
+                                        Are you sure you want to delete "{card.name}"? This action cannot be undone.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel className="bg-slate-700 text-white border-slate-600 hover:bg-slate-600">
+                                        Cancel
+                                      </AlertDialogCancel>
+                                      <AlertDialogAction 
+                                        className="bg-red-600 hover:bg-red-700"
+                                        onClick={() => deleteCardMutation.mutate(card.id)}
+                                      >
+                                        Delete
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
                               </div>
                               {card.imageUrl && (
                                 <Badge className="mt-1 text-xs bg-green-600/50">Has Custom Art</Badge>

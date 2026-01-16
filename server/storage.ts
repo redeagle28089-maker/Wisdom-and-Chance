@@ -21,6 +21,7 @@ export interface IStorage {
   getCardsByElement(element: string): Promise<Card[]>;
   createCard(card: InsertCard): Promise<Card>;
   updateCard(id: string, updates: Partial<Card>): Promise<Card | undefined>;
+  deleteCard(id: string): Promise<boolean>;
 
   getCommanders(): Promise<Commander[]>;
   getCommander(id: string): Promise<Commander | undefined>;
@@ -694,6 +695,10 @@ export class MemStorage implements IStorage {
     const updated: Card = { ...existing, ...updates };
     this.cards.set(id, updated);
     return updated;
+  }
+
+  async deleteCard(id: string): Promise<boolean> {
+    return this.cards.delete(id);
   }
 
   async getCommanders(): Promise<Commander[]> {
