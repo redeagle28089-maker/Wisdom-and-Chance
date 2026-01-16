@@ -76,7 +76,7 @@ export default function AdminCardArtPage() {
 
   const generateMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("/api/admin/generate-card-art", "POST", {
+      const res = await apiRequest("POST", "/api/admin/generate-card-art", {
         prompt,
         element: selectedElement,
       });
@@ -101,7 +101,7 @@ export default function AdminCardArtPage() {
   const updateCardMutation = useMutation({
     mutationFn: async (cardId: string) => {
       if (!generatedImage) throw new Error("No image to save");
-      const res = await apiRequest(`/api/admin/cards/${cardId}`, "PATCH", {
+      const res = await apiRequest("PATCH", `/api/admin/cards/${cardId}`, {
         imageUrl: generatedImage,
       });
       return res.json();
@@ -125,7 +125,7 @@ export default function AdminCardArtPage() {
   const updateCommanderMutation = useMutation({
     mutationFn: async (commanderId: string) => {
       if (!generatedImage) throw new Error("No image to save");
-      const res = await apiRequest(`/api/admin/commanders/${commanderId}`, "PATCH", {
+      const res = await apiRequest("PATCH", `/api/admin/commanders/${commanderId}`, {
         imageUrl: generatedImage,
       });
       return res.json();
@@ -148,7 +148,7 @@ export default function AdminCardArtPage() {
 
   const deleteCardMutation = useMutation({
     mutationFn: async (cardId: string) => {
-      const res = await apiRequest(`/api/admin/cards/${cardId}`, "DELETE");
+      const res = await apiRequest("DELETE", `/api/admin/cards/${cardId}`);
       return res.json();
     },
     onSuccess: () => {
