@@ -186,7 +186,7 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
   // User Decks - Saved deck endpoints (database-backed)
   app.get("/api/user-decks", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.id;
+      const userId = req.user?.claims?.sub;
       if (!userId) {
         return res.status(401).json({ error: "User not authenticated" });
       }
@@ -200,7 +200,7 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
 
   app.get("/api/user-decks/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.id;
+      const userId = req.user?.claims?.sub;
       if (!userId) {
         return res.status(401).json({ error: "User not authenticated" });
       }
@@ -269,7 +269,7 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
 
   app.post("/api/user-decks", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.id;
+      const userId = req.user?.claims?.sub;
       if (!userId) {
         return res.status(401).json({ error: "User not authenticated" });
       }
@@ -309,7 +309,7 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
 
   app.patch("/api/user-decks/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.id;
+      const userId = req.user?.claims?.sub;
       if (!userId) {
         return res.status(401).json({ error: "User not authenticated" });
       }
@@ -368,7 +368,7 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
 
   app.delete("/api/user-decks/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.id;
+      const userId = req.user?.claims?.sub;
       if (!userId) {
         return res.status(401).json({ error: "User not authenticated" });
       }
@@ -535,7 +535,8 @@ IMPORTANT:
 
   // Admin middleware
   const isAdmin = (req: any, res: any, next: any) => {
-    if (!req.user || req.user.email !== ADMIN_EMAIL) {
+    const userEmail = req.user?.claims?.email;
+    if (!req.user || userEmail !== ADMIN_EMAIL) {
       return res.status(403).json({ message: "Admin access required" });
     }
     next();
@@ -543,7 +544,8 @@ IMPORTANT:
 
   // Admin routes for card art generation
   app.get("/api/admin/check", isAuthenticated, (req: any, res) => {
-    const isAdminUser = req.user?.email === ADMIN_EMAIL;
+    const userEmail = req.user?.claims?.email;
+    const isAdminUser = userEmail === ADMIN_EMAIL;
     res.json({ isAdmin: isAdminUser });
   });
 
