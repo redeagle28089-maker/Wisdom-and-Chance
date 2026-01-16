@@ -289,7 +289,7 @@ export function CardWithPopup({ enablePopup = true, ...props }: CardWithPopupPro
         </div>
       </DialogTrigger>
         <DialogContent 
-          className="max-w-lg w-[95vw] p-0 bg-slate-800 border-2 border-slate-600 shadow-2xl rounded-xl overflow-hidden"
+          className="max-w-lg w-[95vw] max-h-[90vh] overflow-y-auto p-0 bg-slate-800 border-2 border-slate-600 shadow-2xl rounded-xl"
           data-testid="card-popup-dialog"
         >
           <DialogTitle className="sr-only">{card.name} Card Details</DialogTitle>
@@ -389,7 +389,7 @@ export function CommanderWithPopup({ enablePopup = true, ...props }: CommanderWi
         </div>
       </DialogTrigger>
       <DialogContent 
-        className="max-w-lg w-[95vw] p-0 bg-slate-800 border-2 border-yellow-500/50 shadow-2xl rounded-xl overflow-hidden"
+        className="max-w-lg w-[95vw] max-h-[90vh] overflow-y-auto p-0 bg-slate-800 border-2 border-yellow-500/50 shadow-2xl rounded-xl"
         data-testid="commander-popup-dialog"
       >
         <DialogTitle className="sr-only">{commander.name} Commander Details</DialogTitle>
