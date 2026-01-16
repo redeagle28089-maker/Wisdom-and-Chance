@@ -25,7 +25,7 @@ export function registerMultiplayerRoutes(app: Express) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const userId = (req.user as any).id;
+    const userId = (req.user as any).claims.sub;
 
     const friendshipsList = await db
       .select({
@@ -58,7 +58,7 @@ export function registerMultiplayerRoutes(app: Express) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const userId = (req.user as any).id;
+    const userId = (req.user as any).claims.sub;
 
     const [incoming, outgoing] = await Promise.all([
       db
@@ -105,7 +105,7 @@ export function registerMultiplayerRoutes(app: Express) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const userId = (req.user as any).id;
+    const userId = (req.user as any).claims.sub;
     const { email } = req.body;
 
     if (!email) {
@@ -175,7 +175,7 @@ export function registerMultiplayerRoutes(app: Express) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const userId = (req.user as any).id;
+    const userId = (req.user as any).claims.sub;
     const { id } = req.params;
 
     const [request] = await db
@@ -208,7 +208,7 @@ export function registerMultiplayerRoutes(app: Express) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const userId = (req.user as any).id;
+    const userId = (req.user as any).claims.sub;
     const { id } = req.params;
 
     const result = await db
@@ -224,7 +224,7 @@ export function registerMultiplayerRoutes(app: Express) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const userId = (req.user as any).id;
+    const userId = (req.user as any).claims.sub;
     const { friendId } = req.params;
 
     await db.delete(friendships).where(
@@ -302,7 +302,7 @@ export function registerMultiplayerRoutes(app: Express) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const userId = (req.user as any).id;
+    const userId = (req.user as any).claims.sub;
     const { name, isPrivate, password } = req.body;
 
     if (!name) {
@@ -328,7 +328,7 @@ export function registerMultiplayerRoutes(app: Express) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const userId = (req.user as any).id;
+    const userId = (req.user as any).claims.sub;
     const { id } = req.params;
     const { password } = req.body;
 
@@ -370,7 +370,7 @@ export function registerMultiplayerRoutes(app: Express) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const userId = (req.user as any).id;
+    const userId = (req.user as any).claims.sub;
     const { id } = req.params;
 
     const [room] = await db.select().from(gameRooms).where(eq(gameRooms.id, id));
@@ -409,7 +409,7 @@ export function registerMultiplayerRoutes(app: Express) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const userId = (req.user as any).id;
+    const userId = (req.user as any).claims.sub;
     const { id } = req.params;
     const { ready, deckId } = req.body;
 
@@ -447,7 +447,7 @@ export function registerMultiplayerRoutes(app: Express) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const userId = (req.user as any).id;
+    const userId = (req.user as any).claims.sub;
     const { id } = req.params;
 
     const [room] = await db.select().from(gameRooms).where(eq(gameRooms.id, id));
@@ -484,7 +484,7 @@ export function registerMultiplayerRoutes(app: Express) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const userId = (req.user as any).id;
+    const userId = (req.user as any).claims.sub;
     const { id } = req.params;
 
     await db
@@ -529,7 +529,7 @@ export function registerMultiplayerRoutes(app: Express) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const userId = (req.user as any).id;
+    const userId = (req.user as any).claims.sub;
     const { id } = req.params;
     const { message } = req.body;
 
@@ -556,7 +556,7 @@ export function registerMultiplayerRoutes(app: Express) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const userId = (req.user as any).id;
+    const userId = (req.user as any).claims.sub;
 
     let [rating] = await db.select().from(playerRatings).where(eq(playerRatings.userId, userId));
 
@@ -629,7 +629,7 @@ export function registerMultiplayerRoutes(app: Express) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const userId = (req.user as any).id;
+    const userId = (req.user as any).claims.sub;
     const playerAchs = await db
       .select()
       .from(playerAchievements)
@@ -662,7 +662,7 @@ export function registerMultiplayerRoutes(app: Express) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const userId = (req.user as any).id;
+    const userId = (req.user as any).claims.sub;
     const playerChs = await db
       .select()
       .from(playerChallenges)
@@ -676,7 +676,7 @@ export function registerMultiplayerRoutes(app: Express) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const userId = (req.user as any).id;
+    const userId = (req.user as any).claims.sub;
     const challengeId = req.params.id;
 
     const [playerCh] = await db
@@ -707,7 +707,7 @@ export function registerMultiplayerRoutes(app: Express) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const userId = (req.user as any).id;
+    const userId = (req.user as any).claims.sub;
     let [stats] = await db.select().from(playerStats).where(eq(playerStats.userId, userId));
 
     if (!stats) {
