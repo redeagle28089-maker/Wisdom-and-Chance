@@ -203,12 +203,16 @@ export function GameSidebar() {
                 <p className="text-xs text-purple-400 truncate">{user.email}</p>
               </div>
             </div>
-            <a href="/api/logout" data-testid="button-logout">
-              <Button variant="outline" size="sm" className="w-full border-purple-500/30 text-purple-200 hover:bg-purple-500/20">
-                <LogOut className="w-4 h-4 mr-2" />
-                Sign Out
-              </Button>
-            </a>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="w-full border-purple-500/30 text-purple-200 hover:bg-purple-500/20"
+              data-testid="button-logout"
+              onClick={() => { window.location.href = "/api/logout"; }}
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Sign Out
+            </Button>
           </div>
         ) : (
           <div className="space-y-3">
@@ -216,12 +220,14 @@ export function GameSidebar() {
               <User className="w-4 h-4" />
               <span>Guest Player</span>
             </div>
-            <a href="/api/login" data-testid="button-login">
-              <Button className="w-full bg-gradient-to-r from-purple-600 to-pink-600">
-                <LogIn className="w-4 h-4 mr-2" />
-                Sign In with Google
-              </Button>
-            </a>
+            <Button 
+              className="w-full bg-gradient-to-r from-purple-600 to-pink-600"
+              data-testid="button-login"
+              onClick={() => { window.location.href = "/api/login"; }}
+            >
+              <LogIn className="w-4 h-4 mr-2" />
+              Sign In with Google
+            </Button>
           </div>
         )}
       </SidebarFooter>
