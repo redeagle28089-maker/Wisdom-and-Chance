@@ -3,6 +3,7 @@ import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { initializeWebSocket } from "./websocket";
+import { preWarmOidc } from "./replit_integrations/auth/replitAuth";
 
 const app = express();
 const httpServer = createServer(app);
@@ -96,6 +97,10 @@ app.use((req, res, next) => {
     },
     () => {
       log(`serving on port ${port}`);
+      // Pre-warm OIDC discovery in background to improve login reliability
+      preWarmOidc().catch(() => {
+        // Error already logged in preWarmOidc
+      });
     },
   );
 })();

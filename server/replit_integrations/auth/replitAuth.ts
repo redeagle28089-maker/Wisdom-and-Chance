@@ -21,17 +21,30 @@ async function discoverOidcWithRetry() {
       return config;
     },
     {
-      retries: 5,
-      minTimeout: 1000,
-      maxTimeout: 10000,
+      retries: 10,
+      minTimeout: 2000,
+      maxTimeout: 30000,
+      factor: 2,
       onFailedAttempt: (error: any) => {
         console.log(
-          `[auth] OIDC discovery attempt ${error.attemptNumber} failed. ` +
+          `[auth] OIDC discovery attempt ${error.attemptNumber} failed: ${error.message}. ` +
           `${error.retriesLeft} retries left.`
         );
       },
     }
   );
+}
+
+// Pre-warm OIDC discovery at startup
+export async function preWarmOidc() {
+  try {
+    console.log("[auth] Pre-warming OIDC discovery...");
+    await getOidcConfig();
+    console.log("[auth] OIDC pre-warming complete");
+  } catch (error: any) {
+    console.error("[auth] OIDC pre-warming failed:", error.message);
+    // Don't throw - auth will retry on first request
+  }
 }
 
 const getOidcConfig = memoize(
