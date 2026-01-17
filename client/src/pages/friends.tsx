@@ -194,12 +194,14 @@ export default function FriendsPage() {
             </div>
             <h2 className="text-2xl font-bold text-white mb-2">Sign In to View Friends</h2>
             <p className="text-purple-200 mb-6">Sign in to add friends and see who's online.</p>
-            <a href="/api/login">
-              <Button className="bg-gradient-to-r from-purple-600 to-pink-600" data-testid="button-login">
-                <LogIn className="w-4 h-4 mr-2" />
-                Sign In
-              </Button>
-            </a>
+            <Button 
+              className="bg-gradient-to-r from-purple-600 to-pink-600" 
+              data-testid="button-login"
+              onClick={() => { window.location.href = "/api/login"; }}
+            >
+              <LogIn className="w-4 h-4 mr-2" />
+              Sign In
+            </Button>
           </CardContent>
         </Card>
       </div>

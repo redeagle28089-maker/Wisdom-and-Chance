@@ -199,12 +199,14 @@ export default function DailyChallengesPage() {
             </div>
             <h2 className="text-2xl font-bold text-white mb-2">Sign In for Daily Challenges</h2>
             <p className="text-purple-200 mb-6">Complete daily quests and earn XP rewards!</p>
-            <a href="/api/login">
-              <Button className="bg-gradient-to-r from-purple-600 to-pink-600" data-testid="button-login">
-                <LogIn className="w-4 h-4 mr-2" />
-                Sign In with Google
-              </Button>
-            </a>
+            <Button 
+              className="bg-gradient-to-r from-purple-600 to-pink-600" 
+              data-testid="button-login"
+              onClick={() => { window.location.href = "/api/login"; }}
+            >
+              <LogIn className="w-4 h-4 mr-2" />
+              Sign In with Google
+            </Button>
           </CardContent>
         </Card>
       </div>

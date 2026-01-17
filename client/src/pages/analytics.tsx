@@ -46,8 +46,11 @@ export default function AnalyticsPage() {
             <LogIn className="w-16 h-16 mx-auto mb-4 text-purple-400" />
             <h2 className="text-2xl font-bold text-white mb-2">Sign In Required</h2>
             <p className="text-purple-200 mb-6">View your game analytics and performance stats</p>
-            <Button asChild>
-              <a href="/api/login">Sign In with Google</a>
+            <Button 
+              data-testid="button-login"
+              onClick={() => { window.location.href = "/api/login"; }}
+            >
+              Sign In with Google
             </Button>
           </CardContent>
         </Card>

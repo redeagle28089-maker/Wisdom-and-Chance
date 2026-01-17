@@ -190,12 +190,14 @@ export default function AdminCardArtPage() {
             <LogIn className="w-16 h-16 text-purple-400 mx-auto mb-4" />
             <h2 className="text-xl font-bold text-white mb-2">Login Required</h2>
             <p className="text-purple-200 mb-6">Please sign in to access this page.</p>
-            <Link href="/api/login">
-              <Button className="gap-2" data-testid="button-login">
-                <LogIn className="w-4 h-4" />
-                Sign In
-              </Button>
-            </Link>
+            <Button 
+              className="gap-2" 
+              data-testid="button-login"
+              onClick={() => { window.location.href = "/api/login"; }}
+            >
+              <LogIn className="w-4 h-4" />
+              Sign In
+            </Button>
           </CardContent>
         </Card>
       </div>
