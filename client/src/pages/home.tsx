@@ -1,7 +1,8 @@
-import { Link } from "wouter";
+import { Link, useSearch } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Swords, BookOpen, Layers, Database, Flame, Droplet, Mountain, Wind, Leaf } from "lucide-react";
+import { Swords, BookOpen, Layers, Database, Flame, Droplet, Mountain, Wind, Leaf, AlertTriangle, X } from "lucide-react";
+import { useState, useEffect } from "react";
 
 const features = [
   {
@@ -43,8 +44,41 @@ const elements = [
 ];
 
 export default function HomePage() {
+  const search = useSearch();
+  const [authError, setAuthError] = useState<string | null>(null);
+  
+  useEffect(() => {
+    const params = new URLSearchParams(search);
+    const error = params.get("error");
+    const message = params.get("message");
+    
+    if (error) {
+      setAuthError(message || "Authentication failed. Please try again.");
+      // Clear the URL parameters after reading them
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [search]);
+
   return (
     <div className="min-h-full bg-gradient-to-br from-slate-900 via-purple-900/30 to-slate-900">
+      {authError && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 max-w-md w-full mx-4">
+          <div className="bg-red-900/90 border border-red-500/50 rounded-lg p-4 flex items-start gap-3 shadow-xl">
+            <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-white font-medium">Login Error</p>
+              <p className="text-red-200 text-sm mt-1">{authError}</p>
+            </div>
+            <button 
+              onClick={() => setAuthError(null)}
+              className="text-red-400 hover:text-red-300"
+              data-testid="button-dismiss-error"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      )}
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-transparent to-slate-900/50" />
         <div className="relative px-6 py-16 md:py-24 text-center">

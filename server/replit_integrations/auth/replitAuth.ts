@@ -127,26 +127,34 @@ export async function setupAuth(app: Express) {
 
   app.get("/api/login", async (req, res, next) => {
     try {
+      console.log("[auth] Login initiated from hostname:", req.hostname);
+      console.log("[auth] Full URL:", req.protocol + "://" + req.hostname + req.originalUrl);
       await ensureStrategy(req.hostname);
+      console.log("[auth] Strategy ensured, starting authentication...");
       passport.authenticate(`replitauth:${req.hostname}`, {
         prompt: "login consent",
         scope: ["openid", "email", "profile", "offline_access"],
       })(req, res, next);
     } catch (error: any) {
       console.error("[auth] Login error:", error);
+      console.error("[auth] Login error stack:", error?.stack);
       res.redirect("/?error=auth_failed&message=" + encodeURIComponent("Authentication service temporarily unavailable. Please try again."));
     }
   });
 
   app.get("/api/callback", async (req, res, next) => {
     try {
+      console.log("[auth] Callback received from hostname:", req.hostname);
+      console.log("[auth] Callback query params:", JSON.stringify(req.query));
       await ensureStrategy(req.hostname);
+      console.log("[auth] Callback strategy ensured, authenticating...");
       passport.authenticate(`replitauth:${req.hostname}`, {
         successReturnToOrRedirect: "/",
         failureRedirect: "/?error=auth_failed",
       })(req, res, next);
     } catch (error: any) {
       console.error("[auth] Callback error:", error);
+      console.error("[auth] Callback error stack:", error?.stack);
       res.redirect("/?error=auth_failed&message=" + encodeURIComponent("Authentication failed. Please try again."));
     }
   });
