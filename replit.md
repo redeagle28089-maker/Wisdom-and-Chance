@@ -44,6 +44,12 @@ A tactical trading card game simulator built with React, Express, and TypeScript
   - Quick emotes in game chat (GG, Nice!, Thanks, Thinking, Hurry!, Sorry)
   - Deck sharing with import/export codes
 
+- **January 2026:** WebSocket Security Hardening
+  - Session-based WebSocket authentication (validates cookies on connection)
+  - Authorization checks for room joining (host, guest, or spectator)
+  - Authorization checks for game joining (player1 or player2 only)
+  - Removed insecure client-side userId auth mechanism
+
 - **January 2026:** Full Multiplayer System
   - Game lobby to browse and create rooms
   - Real-time WebSocket communication (/ws endpoint)
@@ -187,9 +193,9 @@ A tactical trading card game simulator built with React, Express, and TypeScript
 - `POST /api/rooms/:id/messages` - Send chat message
 
 #### WebSocket Events (/ws)
-- `auth` - Authenticate connection with userId
-- `join_room/leave_room` - Join/leave room for updates
-- `join_game/leave_game` - Join/leave game for real-time sync
+- Authentication: Session-based (validates cookies on connection, no client-side auth needed)
+- `join_room/leave_room` - Join/leave room for updates (requires host, guest, or spectator membership)
+- `join_game/leave_game` - Join/leave game for real-time sync (requires player1 or player2)
 - `room_message/game_message` - Chat in room or game
 - `game_action` - Broadcast game state changes
 - `player_ready` - Notify ready status change
@@ -254,6 +260,4 @@ A tactical trading card game simulator built with React, Express, and TypeScript
 - **Protected (requires login):** Deck Builder, Practice, Profile, Game Board, Lobby, Friends, Room
 
 ### Known Limitations (Development Environment)
-- WebSocket authentication relies on client-sent userId; for production, implement session-based auth on WS upgrade
 - Game state updates use optimistic client PATCHes; production should add server-side move validation
-- Room membership checks exist but not fully enforced in all WS handlers; add before production deployment
