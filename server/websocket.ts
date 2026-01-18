@@ -1,9 +1,12 @@
 import { WebSocketServer, WebSocket } from "ws";
-import { Server } from "http";
+import { Server, IncomingMessage } from "http";
 import { log } from "./index";
 import { db } from "./db";
 import { gameRooms, users } from "@shared/schema";
 import { eq, or, and } from "drizzle-orm";
+import { getSessionStore, getSessionSecret } from "./replit_integrations/auth/replitAuth";
+import cookie from "cookie";
+import cookieSignature from "cookie-signature";
 
 interface ConnectedUser {
   id: string;
@@ -18,6 +21,12 @@ interface WSMessage {
   payload?: any;
 }
 
+interface AuthenticatedSession {
+  userId: string;
+  email?: string;
+  displayName?: string;
+}
+
 class GameWebSocketServer {
   private wss: WebSocketServer;
   private users: Map<string, ConnectedUser> = new Map();
@@ -28,6 +37,63 @@ class GameWebSocketServer {
     this.wss = new WebSocketServer({ server, path: "/ws" });
     this.setupHandlers();
     log("WebSocket server initialized on /ws", "websocket");
+  }
+
+  private parseSessionFromRequest(req: IncomingMessage): Promise<AuthenticatedSession | null> {
+    return new Promise((resolve) => {
+      try {
+        const cookies = cookie.parse(req.headers.cookie || "");
+        const sessionCookie = cookies["connect.sid"];
+        
+        if (!sessionCookie) {
+          log("No session cookie found", "websocket");
+          resolve(null);
+          return;
+        }
+
+        // Unsign the cookie (it's signed with 's:' prefix)
+        const secret = getSessionSecret();
+        let sessionId = sessionCookie;
+        
+        if (sessionCookie.startsWith("s:")) {
+          const unsigned = cookieSignature.unsign(sessionCookie.slice(2), secret);
+          if (!unsigned) {
+            log("Invalid session signature", "websocket");
+            resolve(null);
+            return;
+          }
+          sessionId = unsigned;
+        }
+
+        // Get session from store
+        const store = getSessionStore();
+        store.get(sessionId, (err: any, session: any) => {
+          if (err || !session) {
+            log(`Session not found or error: ${err?.message || 'no session'}`, "websocket");
+            resolve(null);
+            return;
+          }
+
+          // Extract user from passport session
+          const passportUser = session?.passport?.user;
+          if (!passportUser?.claims?.sub) {
+            log("No user in session", "websocket");
+            resolve(null);
+            return;
+          }
+
+          const userId = passportUser.claims.sub;
+          const email = passportUser.claims.email;
+          const displayName = passportUser.claims.first_name || email?.split('@')[0] || "Player";
+
+          log(`Session authenticated for user ${userId}`, "websocket");
+          resolve({ userId, email, displayName });
+        });
+      } catch (error: any) {
+        log(`Session parse error: ${error.message}`, "websocket");
+        resolve(null);
+      }
+    });
   }
 
   private async getUserDisplayName(userId: string): Promise<string> {
@@ -55,57 +121,72 @@ class GameWebSocketServer {
   }
 
   private setupHandlers() {
-    this.wss.on("connection", (ws: WebSocket) => {
-      let userId: string | null = null;
+    this.wss.on("connection", async (ws: WebSocket, req: IncomingMessage) => {
+      // Authenticate using session cookie
+      const session = await this.parseSessionFromRequest(req);
+      
+      if (!session) {
+        log("WebSocket connection rejected: no valid session", "websocket");
+        ws.send(JSON.stringify({ type: "auth_error", payload: { message: "Authentication required" } }));
+        ws.close(4001, "Authentication required");
+        return;
+      }
+
+      const userId = session.userId;
+      const displayName = session.displayName || "Player";
+      
+      // Register the authenticated user
+      this.users.set(userId, { id: userId, ws, displayName });
+      this.broadcastPresence(userId, "online");
+      log(`User ${userId} (${displayName}) authenticated via session`, "websocket");
+      
+      // Send auth success confirmation
+      ws.send(JSON.stringify({ type: "auth_success", payload: { userId, displayName } }));
 
       ws.on("message", async (data: Buffer) => {
         try {
           const message: WSMessage = JSON.parse(data.toString());
           
           switch (message.type) {
+            // Auth message is now ignored - authentication happens on connection
             case "auth":
-              userId = message.payload?.userId;
-              if (userId) {
-                const displayName = await this.getUserDisplayName(userId);
-                this.users.set(userId, { id: userId, ws, displayName });
-                this.broadcastPresence(userId, "online");
-                log(`User ${userId} connected`, "websocket");
-              }
+              // Legacy support: just acknowledge, already authenticated
+              ws.send(JSON.stringify({ type: "auth_success", payload: { userId, displayName } }));
               break;
 
             case "join_room":
-              if (userId && message.payload?.roomId) {
+              if (message.payload?.roomId) {
                 this.joinRoom(userId, message.payload.roomId);
               }
               break;
 
             case "leave_room":
-              if (userId && message.payload?.roomId) {
+              if (message.payload?.roomId) {
                 this.leaveRoom(userId, message.payload.roomId);
               }
               break;
 
             case "join_game":
-              if (userId && message.payload?.gameId) {
+              if (message.payload?.gameId) {
                 this.joinGame(userId, message.payload.gameId);
               }
               break;
 
             case "leave_game":
-              if (userId && message.payload?.gameId) {
+              if (message.payload?.gameId) {
                 this.leaveGame(userId, message.payload.gameId);
               }
               break;
 
             case "room_message":
-              if (userId && message.payload?.roomId) {
+              if (message.payload?.roomId) {
                 const connectedUser = this.users.get(userId);
                 this.broadcastToRoom(message.payload.roomId, {
                   type: "room_message",
                   payload: {
                     roomId: message.payload.roomId,
                     senderId: userId,
-                    senderName: connectedUser?.displayName || "Player",
+                    senderName: connectedUser?.displayName || displayName,
                     message: message.payload.message,
                     timestamp: new Date().toISOString(),
                   },
@@ -114,14 +195,14 @@ class GameWebSocketServer {
               break;
 
             case "game_message":
-              if (userId && message.payload?.gameId) {
+              if (message.payload?.gameId) {
                 const connectedUser = this.users.get(userId);
                 this.broadcastToGame(message.payload.gameId, {
                   type: "game_message",
                   payload: {
                     gameId: message.payload.gameId,
                     senderId: userId,
-                    senderName: connectedUser?.displayName || "Player",
+                    senderName: connectedUser?.displayName || displayName,
                     message: message.payload.message,
                     timestamp: new Date().toISOString(),
                   },
@@ -130,7 +211,7 @@ class GameWebSocketServer {
               break;
 
             case "game_action":
-              if (userId && message.payload?.gameId) {
+              if (message.payload?.gameId) {
                 this.broadcastToGame(message.payload.gameId, {
                   type: "game_update",
                   payload: {
@@ -145,7 +226,7 @@ class GameWebSocketServer {
               break;
 
             case "room_update":
-              if (userId && message.payload?.roomId) {
+              if (message.payload?.roomId) {
                 this.broadcastToRoom(message.payload.roomId, {
                   type: "room_update",
                   payload: message.payload.data,
@@ -154,7 +235,7 @@ class GameWebSocketServer {
               break;
 
             case "player_ready":
-              if (userId && message.payload?.roomId) {
+              if (message.payload?.roomId) {
                 this.broadcastToRoom(message.payload.roomId, {
                   type: "player_ready",
                   payload: {
@@ -167,7 +248,7 @@ class GameWebSocketServer {
               break;
 
             case "game_start":
-              if (userId && message.payload?.roomId) {
+              if (message.payload?.roomId) {
                 this.broadcastToRoom(message.payload.roomId, {
                   type: "game_start",
                   payload: {
@@ -187,18 +268,16 @@ class GameWebSocketServer {
       });
 
       ws.on("close", () => {
-        if (userId) {
-          const user = this.users.get(userId);
-          if (user?.roomId) {
-            this.leaveRoom(userId, user.roomId);
-          }
-          if (user?.gameId) {
-            this.leaveGame(userId, user.gameId);
-          }
-          this.users.delete(userId);
-          this.broadcastPresence(userId, "offline");
-          log(`User ${userId} disconnected`, "websocket");
+        const user = this.users.get(userId);
+        if (user?.roomId) {
+          this.leaveRoom(userId, user.roomId);
         }
+        if (user?.gameId) {
+          this.leaveGame(userId, user.gameId);
+        }
+        this.users.delete(userId);
+        this.broadcastPresence(userId, "offline");
+        log(`User ${userId} disconnected`, "websocket");
       });
 
       ws.on("error", (error) => {

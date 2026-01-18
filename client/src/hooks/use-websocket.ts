@@ -26,13 +26,22 @@ export function useWebSocket() {
     wsRef.current = ws;
 
     ws.onopen = () => {
+      // Authentication happens automatically via session cookie
+      // Server validates session on connection - no need to send auth message
       setIsConnected(true);
-      ws.send(JSON.stringify({ type: "auth", payload: { userId: user.id } }));
     };
 
     ws.onmessage = (event) => {
       try {
         const message: WSMessage = JSON.parse(event.data);
+        
+        // Handle auth error from server (session validation failed)
+        if (message.type === "auth_error") {
+          console.warn("WebSocket authentication failed:", message.payload?.message);
+          ws.close();
+          return;
+        }
+        
         const handlers = handlersRef.current.get(message.type);
         if (handlers) {
           handlers.forEach((handler) => handler(message));
