@@ -2,8 +2,9 @@ import { WebSocketServer, WebSocket } from "ws";
 import { Server, IncomingMessage } from "http";
 import { log } from "./index";
 import { db } from "./db";
-import { gameRooms, users } from "@shared/schema";
+import { gameRooms, users, roomSpectators } from "@shared/schema";
 import { eq, or, and } from "drizzle-orm";
+import { storage } from "./storage";
 import { getSessionStore, getSessionSecret } from "./replit_integrations/auth/replitAuth";
 import cookie from "cookie";
 import cookieSignature from "cookie-signature";
@@ -43,7 +44,7 @@ class GameWebSocketServer {
     return new Promise((resolve) => {
       try {
         const cookies = cookie.parse(req.headers.cookie || "");
-        const sessionCookie = cookies["connect.sid"];
+        let sessionCookie = cookies["connect.sid"];
         
         if (!sessionCookie) {
           log("No session cookie found", "websocket");
@@ -51,18 +52,25 @@ class GameWebSocketServer {
           return;
         }
 
-        // Unsign the cookie (it's signed with 's:' prefix)
+        // URL decode the cookie value first
+        sessionCookie = decodeURIComponent(sessionCookie);
+
+        // Parse signed cookie: format is "s:<sessionId>.<signature>"
         const secret = getSessionSecret();
-        let sessionId = sessionCookie;
+        let sessionId: string | false = false;
         
         if (sessionCookie.startsWith("s:")) {
-          const unsigned = cookieSignature.unsign(sessionCookie.slice(2), secret);
-          if (!unsigned) {
+          // Remove the "s:" prefix and unsign
+          // cookie-signature.unsign expects just the "<sessionId>.<signature>" part
+          sessionId = cookieSignature.unsign(sessionCookie.slice(2), secret);
+          if (!sessionId) {
             log("Invalid session signature", "websocket");
             resolve(null);
             return;
           }
-          sessionId = unsigned;
+        } else {
+          // Unsigned cookie (shouldn't happen with secure setup)
+          sessionId = sessionCookie;
         }
 
         // Get session from store
@@ -110,14 +118,39 @@ class GameWebSocketServer {
 
   private async isRoomMember(userId: string, roomId: string): Promise<boolean> {
     try {
+      // Check if user is host or guest
       const [room] = await db.select().from(gameRooms).where(eq(gameRooms.id, roomId)).limit(1);
       if (room) {
-        return room.hostId === userId || room.guestId === userId;
+        const isHostOrGuest = room.hostId === userId || room.guestId === userId;
+        if (isHostOrGuest) return true;
       }
+      
+      // Check if user is a spectator
+      const [spectator] = await db
+        .select()
+        .from(roomSpectators)
+        .where(and(eq(roomSpectators.roomId, roomId), eq(roomSpectators.userId, userId)))
+        .limit(1);
+      
+      return !!spectator;
     } catch (e) {
       // Fallback if DB query fails
     }
     return false;
+  }
+
+  private async isGameParticipant(userId: string, gameId: string): Promise<boolean> {
+    try {
+      // Check if user is a player in this game
+      const game = await storage.getGame(gameId);
+      if (game) {
+        return game.player1Id === userId || game.player2Id === userId;
+      }
+      return false;
+    } catch (e) {
+      log(`Error checking game participant: ${e}`, "websocket");
+      return false;
+    }
   }
 
   private setupHandlers() {
@@ -156,7 +189,17 @@ class GameWebSocketServer {
 
             case "join_room":
               if (message.payload?.roomId) {
-                this.joinRoom(userId, message.payload.roomId);
+                const roomId = message.payload.roomId;
+                const isMember = await this.isRoomMember(userId, roomId);
+                if (isMember) {
+                  this.joinRoom(userId, roomId);
+                } else {
+                  ws.send(JSON.stringify({ 
+                    type: "error", 
+                    payload: { message: "Not authorized to join this room" } 
+                  }));
+                  log(`User ${userId} denied access to room ${roomId}`, "websocket");
+                }
               }
               break;
 
@@ -168,7 +211,17 @@ class GameWebSocketServer {
 
             case "join_game":
               if (message.payload?.gameId) {
-                this.joinGame(userId, message.payload.gameId);
+                const gameId = message.payload.gameId;
+                const isParticipant = await this.isGameParticipant(userId, gameId);
+                if (isParticipant) {
+                  this.joinGame(userId, gameId);
+                } else {
+                  ws.send(JSON.stringify({ 
+                    type: "error", 
+                    payload: { message: "Not authorized to join this game" } 
+                  }));
+                  log(`User ${userId} denied access to game ${gameId}`, "websocket");
+                }
               }
               break;
 
