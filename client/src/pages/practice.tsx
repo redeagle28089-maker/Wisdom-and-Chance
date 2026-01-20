@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Swords, Crown, Flame, Droplet, Mountain, Wind, Leaf, Play, Layers, History, Trophy, Clock, Eye, Brain, Zap, Target, LogIn } from "lucide-react";
 import type { Deck, Commander, Element, Game, InsertGame, GameState, Card as CardType, AIDifficulty } from "@shared/schema";
+import type { UserDeck } from "@shared/models/auth";
 import { GAME_CONSTANTS, AI_DIFFICULTY } from "@shared/schema";
 import { Link } from "wouter";
 
@@ -53,6 +54,11 @@ export default function PracticePage() {
     enabled: !!user,
   });
 
+  const { data: savedDecks = [] } = useQuery<UserDeck[]>({
+    queryKey: ["/api/user-decks"],
+    enabled: !!user,
+  });
+
   const { data: commanders = [] } = useQuery<Commander[]>({
     queryKey: ["/api/commanders"],
   });
@@ -66,7 +72,21 @@ export default function PracticePage() {
     enabled: !!user,
   });
 
-  const playerDecks = decks.filter((d) => d.playerId === user?.id);
+  // Convert saved decks to the same format as in-memory decks
+  const savedDecksAsDeck: Deck[] = savedDecks.map((sd) => ({
+    id: sd.id,
+    name: sd.name,
+    playerId: sd.userId,
+    commanderId: sd.commanderId,
+    cardIds: sd.cardIds,
+    createdAt: sd.createdAt ? new Date(sd.createdAt) : new Date(),
+  }));
+
+  // Merge in-memory decks with saved decks (saved decks take priority)
+  const inMemoryPlayerDecks = decks.filter((d) => d.playerId === user?.id);
+  const playerDecks = [...savedDecksAsDeck, ...inMemoryPlayerDecks.filter(
+    (d) => !savedDecksAsDeck.some((sd) => sd.id === d.id)
+  )];
   const playerGames = games.filter(
     (g) => g.player1Id === user?.id && g.gameType === "practice"
   ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
