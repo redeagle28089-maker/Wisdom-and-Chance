@@ -121,9 +121,10 @@ export default function DeckBuilderPage() {
   };
 
   const uniqueCards = useMemo(() => {
+    // Show all unique cards by element-power-name (same logic as Card Database)
     const seen = new Map<string, CardType>();
     cards.forEach((card) => {
-      const key = `${card.element}-${card.power}`;
+      const key = `${card.element}-${card.power}-${card.name.split('#')[0].trim()}`;
       if (!seen.has(key)) {
         seen.set(key, card);
       }
@@ -132,7 +133,8 @@ export default function DeckBuilderPage() {
       .filter((card) => selectedElement === "all" || card.element === selectedElement)
       .sort((a, b) => {
         if (a.element !== b.element) return a.element.localeCompare(b.element);
-        return a.power - b.power;
+        if (a.power !== b.power) return a.power - b.power;
+        return a.name.localeCompare(b.name);
       });
   }, [cards, selectedElement]);
 
@@ -388,13 +390,19 @@ export default function DeckBuilderPage() {
 
             <Card className="bg-slate-800/50 border-purple-500/20">
               <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-white">Available Cards</CardTitle>
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <CardTitle className="text-white">Available Cards</CardTitle>
+                    <span className="text-purple-300 text-sm" data-testid="text-available-count">
+                      ({uniqueCards.length} cards)
+                    </span>
+                  </div>
                   <div className="flex gap-2">
                     <Button
                       variant={selectedElement === "all" ? "default" : "outline"}
                       size="sm"
                       onClick={() => setSelectedElement("all")}
+                      data-testid="deck-filter-all"
                     >
                       All
                     </Button>
@@ -406,6 +414,7 @@ export default function DeckBuilderPage() {
                           variant={selectedElement === element ? "default" : "outline"}
                           size="sm"
                           onClick={() => setSelectedElement(element as Element)}
+                          data-testid={`deck-filter-${element.toLowerCase()}`}
                         >
                           <Icon className={`w-4 h-4 ${config.color}`} />
                         </Button>

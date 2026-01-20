@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Flame, Droplet, Mountain, Wind, Leaf } from "lucide-react";
+import { Search, Flame, Droplet, Mountain, Wind, Leaf, Hammer } from "lucide-react";
 import { CardWithPopup, elementConfig } from "@/components/game-card";
 import type { Card as CardType, Element } from "@shared/schema";
 
 export default function CardDatabasePage() {
+  const [, navigate] = useLocation();
   const [search, setSearch] = useState("");
   const [selectedElement, setSelectedElement] = useState<Element | "all">("all");
   const [selectedPower, setSelectedPower] = useState<number | "all">("all");
@@ -41,7 +43,15 @@ export default function CardDatabasePage() {
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-8">
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-4" data-testid="text-database-title">Card Database</h1>
-          <p className="text-lg text-purple-200">Browse all available cards</p>
+          <p className="text-lg text-purple-200 mb-4">Browse all available cards</p>
+          <Button 
+            onClick={() => navigate("/deck-builder")}
+            className="bg-purple-600 hover:bg-purple-700"
+            data-testid="button-build-deck"
+          >
+            <Hammer className="w-4 h-4 mr-2" />
+            Build a Deck
+          </Button>
         </div>
 
         <Card className="bg-slate-800/50 border-purple-500/20 mb-6">
