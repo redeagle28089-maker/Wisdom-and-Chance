@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Flame, Droplet, Mountain, Wind, Leaf, Zap, Plus, Heart, Shield, Swords, Crown } from "lucide-react";
+import { Flame, Droplet, Mountain, Wind, Leaf, Zap, Plus, Minus, Heart, Shield, Swords, Crown } from "lucide-react";
 import type { Card as CardType, Element, Commander } from "@shared/schema";
 
 import fireCardArt from "@assets/generated_images/fire_element_card_art.png";
@@ -451,5 +452,62 @@ export function CommanderWithPopup({ enablePopup = true, ...props }: CommanderWi
           </div>
         </DialogContent>
     </Dialog>
+  );
+}
+
+interface DeckBuilderCardProps {
+  card: CardType;
+  count: number;
+  maxCopies: number;
+  canAdd: boolean;
+  onAdd: () => void;
+  onRemove: () => void;
+}
+
+export function DeckBuilderCard({ 
+  card, 
+  count, 
+  maxCopies, 
+  canAdd, 
+  onAdd, 
+  onRemove 
+}: DeckBuilderCardProps) {
+  return (
+    <div className="relative group" data-testid={`deck-card-wrapper-${card.id}`}>
+      <CardWithPopup card={card} size="md" />
+
+      <div className="absolute bottom-8 left-0 right-0 flex items-center justify-between px-1 pointer-events-none">
+        <Badge 
+          variant="secondary" 
+          className={`text-xs font-bold pointer-events-auto ${count > 0 ? 'bg-green-600 text-white' : 'bg-slate-700 text-slate-300'}`}
+          data-testid={`deck-count-${card.id}`}
+        >
+          {count}/{maxCopies}
+        </Badge>
+      </div>
+
+      <div className="absolute -bottom-1 left-0 right-0 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+        <Button
+          size="sm"
+          variant="destructive"
+          className="rounded-full pointer-events-auto shadow-lg"
+          onClick={(e) => { e.stopPropagation(); onRemove(); }}
+          disabled={count === 0}
+          data-testid={`remove-${card.id}`}
+        >
+          <Minus className="w-4 h-4" />
+        </Button>
+        <Button
+          size="sm"
+          variant="default"
+          className="rounded-full pointer-events-auto shadow-lg"
+          onClick={(e) => { e.stopPropagation(); onAdd(); }}
+          disabled={!canAdd}
+          data-testid={`add-${card.id}`}
+        >
+          <Plus className="w-4 h-4" />
+        </Button>
+      </div>
+    </div>
   );
 }

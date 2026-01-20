@@ -9,7 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Plus, Minus, Save, Trash2, Crown, LogIn, Share2, Download, Copy, Check, Sparkles, Loader2, FolderOpen, Edit2 } from "lucide-react";
-import { elementConfig, CommanderWithPopup, CardWithPopup } from "@/components/game-card";
+import { elementConfig, CommanderWithPopup, CardWithPopup, DeckBuilderCard } from "@/components/game-card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Card as CardType, Commander, Element, UserDeck } from "@shared/schema";
@@ -424,11 +424,9 @@ export default function DeckBuilderPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <ScrollArea className="h-[400px]">
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                <ScrollArea className="h-[500px]">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 pb-4">
                     {uniqueCards.map((card) => {
-                      const config = elementConfig[card.element];
-                      const Icon = config.icon;
                       const count = deckCards.get(card.id) || 0;
                       const powerCount = powerCounts[card.power];
                       const canAdd = count < GAME_CONSTANTS.MAX_COPIES_PER_CARD && 
@@ -436,47 +434,15 @@ export default function DeckBuilderPage() {
                         totalCards < GAME_CONSTANTS.DECK_SIZE;
 
                       return (
-                        <div
+                        <DeckBuilderCard
                           key={card.id}
-                          className={`p-3 rounded-lg border ${config.bgColor}/20 border-purple-500/30`}
-                        >
-                          <div className="flex items-center gap-2 mb-2">
-                            <div className={`w-8 h-8 ${config.bgColor} rounded flex items-center justify-center`}>
-                              <span className="text-white font-bold">{card.power}</span>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-white text-sm font-medium truncate">{card.name.split('#')[0]}</p>
-                              <p className={`text-xs ${config.color}`}>{card.element}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <Badge variant="secondary" className="text-xs">
-                              {count}/{GAME_CONSTANTS.MAX_COPIES_PER_CARD}
-                            </Badge>
-                            <div className="flex gap-1">
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-6 w-6"
-                                onClick={() => removeCard(card.id)}
-                                disabled={count === 0}
-                                data-testid={`remove-${card.id}`}
-                              >
-                                <Minus className="w-3 h-3" />
-                              </Button>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-6 w-6"
-                                onClick={() => addCard(card.id)}
-                                disabled={!canAdd}
-                                data-testid={`add-${card.id}`}
-                              >
-                                <Plus className="w-3 h-3" />
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
+                          card={card}
+                          count={count}
+                          maxCopies={GAME_CONSTANTS.MAX_COPIES_PER_CARD}
+                          canAdd={canAdd}
+                          onAdd={() => addCard(card.id)}
+                          onRemove={() => removeCard(card.id)}
+                        />
                       );
                     })}
                   </div>
