@@ -222,11 +222,21 @@ function MiniCard({
     }
   };
 
+  const handleClick = () => {
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = null;
+    }
+    if (onClick) {
+      onClick();
+    }
+  };
+
   if (faceDown) {
     return (
       <div 
         className={`w-16 h-24 rounded-lg bg-gradient-to-br from-purple-800 to-purple-900 border-2 border-purple-500/50 flex items-center justify-center shadow-lg transition-all duration-300 ${isOnBattlefield ? 'animate-pulse' : ''}`}
-        onClick={onClick}
+        onClick={handleClick}
       >
         <div className="w-10 h-10 rounded-full bg-purple-600/30 flex items-center justify-center border border-purple-400/30">
           <span className="text-purple-300 text-xl font-bold">?</span>
@@ -248,7 +258,7 @@ function MiniCard({
         ${isNewlyPlayed ? 'animate-[cardDraw_0.4s_ease-out]' : ''}
         ${isHovered ? 'z-10' : ''}
       `}
-      onClick={onClick}
+      onClick={handleClick}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onTouchStart={handleTouchStart}
@@ -421,6 +431,7 @@ export default function GameBoardPage() {
   const previousHandRef = useRef<string[] | null>(null);
   const previousBattlefieldRef = useRef<string[] | null>(null);
   const lastGameIdRef = useRef<string | null>(null);
+  const aiExecutingRef = useRef<string | null>(null);
 
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const { joinGame, leaveGame, subscribe, sendGameMessage, sendGameAction } = useWebSocket();
@@ -587,6 +598,203 @@ export default function GameBoardPage() {
     previousBattlefieldRef.current = currentBattlefield;
   }, [myBattlefield, game, gameId]);
 
+  useEffect(() => {
+    if (!game || !gameId) return;
+    if (game.gameType !== "practice") return;
+    if (game.status === "completed") return;
+    
+    const isAITurn = game.activePlayer === "player-ai";
+    if (!isAITurn) return;
+    
+    const phaseKey = `${game.currentTurn}-${game.currentPhase}`;
+    if (aiExecutingRef.current === phaseKey) return;
+    if (updateGameMutation.isPending) return;
+    
+    aiExecutingRef.current = phaseKey;
+    
+    const aiDifficulty = game.aiDifficulty || "medium";
+    
+    const executeAITurn = async () => {
+      const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+      
+      await delay(800);
+      
+      if (game.currentPhase === "draw") {
+        const aiDeck = [...game.gameState.player2Deck];
+        const aiHand = [...game.gameState.player2Hand];
+        
+        if (aiDeck.length < GAME_CONSTANTS.CARDS_TO_DRAW) {
+          updateGameMutation.mutate({
+            status: "completed",
+            winnerId: game.player1Id,
+          });
+          return;
+        }
+        
+        for (let i = 0; i < GAME_CONSTANTS.CARDS_TO_DRAW; i++) {
+          aiHand.push(aiDeck.shift()!);
+        }
+        
+        const newGameState = { 
+          ...game.gameState,
+          player2Hand: aiHand,
+          player2Deck: aiDeck,
+          player1Battlefield: [],
+          player2Battlefield: [],
+        };
+        
+        updateGameMutation.mutate({
+          currentPhase: "deployment",
+          gameState: newGameState,
+        });
+      } else if (game.currentPhase === "deployment") {
+        const aiHand = [...game.gameState.player2Hand];
+        
+        if (aiHand.length < GAME_CONSTANTS.CARDS_TO_DEPLOY) {
+          updateGameMutation.mutate({
+            status: "completed",
+            winnerId: game.player1Id,
+          });
+          return;
+        }
+        
+        let selectedCardIds: string[] = [];
+        
+        if (aiDifficulty === "easy") {
+          const shuffled = [...aiHand].sort(() => Math.random() - 0.5);
+          selectedCardIds = shuffled.slice(0, GAME_CONSTANTS.CARDS_TO_DEPLOY);
+        } else if (aiDifficulty === "medium") {
+          const cardsWithPower = aiHand.map(cardId => {
+            const card = allCards.find(c => c.id === cardId);
+            return { cardId, power: card?.power || 0 };
+          });
+          cardsWithPower.sort((a, b) => b.power - a.power);
+          selectedCardIds = cardsWithPower.slice(0, GAME_CONSTANTS.CARDS_TO_DEPLOY).map(c => c.cardId);
+        } else {
+          const cardsWithPower = aiHand.map(cardId => {
+            const card = allCards.find(c => c.id === cardId);
+            return { cardId, power: card?.power || 0 };
+          });
+          const mid = Math.floor(cardsWithPower.length / 2);
+          cardsWithPower.sort((a, b) => b.power - a.power);
+          const topCards = cardsWithPower.slice(0, mid);
+          const bottomCards = cardsWithPower.slice(mid);
+          
+          if (topCards.length > 0 && bottomCards.length > 0) {
+            selectedCardIds = [topCards[0].cardId, bottomCards[Math.floor(Math.random() * bottomCards.length)].cardId];
+          } else {
+            selectedCardIds = cardsWithPower.slice(0, GAME_CONSTANTS.CARDS_TO_DEPLOY).map(c => c.cardId);
+          }
+        }
+        
+        const newHand = aiHand.filter(id => !selectedCardIds.includes(id));
+        const newBattlefield: BattlefieldCard[] = selectedCardIds.map(cardId => ({
+          cardId,
+          faceDown: true,
+        }));
+        
+        const newGameState = {
+          ...game.gameState,
+          player2Hand: newHand,
+          player2Battlefield: newBattlefield,
+        };
+        
+        const playerBF = game.gameState.player1Battlefield;
+        const nextPhase = playerBF.length === GAME_CONSTANTS.CARDS_TO_DEPLOY ? "combat" : "deployment";
+        
+        updateGameMutation.mutate({
+          currentPhase: nextPhase,
+          gameState: newGameState,
+          activePlayer: nextPhase === "deployment" ? game.player1Id : "player-ai",
+        });
+      } else if (game.currentPhase === "combat") {
+        const newGameState = { ...game.gameState };
+        newGameState.player1Battlefield = newGameState.player1Battlefield.map(bf => ({ ...bf, faceDown: false }));
+        newGameState.player2Battlefield = newGameState.player2Battlefield.map(bf => ({ ...bf, faceDown: false }));
+        
+        updateGameMutation.mutate({
+          currentPhase: "calculation",
+          gameState: newGameState,
+        });
+      } else if (game.currentPhase === "calculation") {
+        const p1Power = game.gameState.player1Battlefield.reduce((sum, bf) => {
+          const card = allCards.find(c => c.id === bf.cardId);
+          return sum + (card?.power || 0);
+        }, 0);
+        
+        const p2Power = game.gameState.player2Battlefield.reduce((sum, bf) => {
+          const card = allCards.find(c => c.id === bf.cardId);
+          return sum + (card?.power || 0);
+        }, 0);
+        
+        const damage = Math.abs(p1Power - p2Power);
+        let newP1HP = game.player1HP;
+        let newP2HP = game.player2HP;
+        let newP1VP = game.player1VictoryPoints;
+        let newP2VP = game.player2VictoryPoints;
+        let newP1WP = game.player1WithdrawalPoints;
+        let newP2WP = game.player2WithdrawalPoints;
+        
+        if (p1Power > p2Power) {
+          newP2HP -= damage;
+          newP1VP += 1;
+          newP2WP += 1;
+          toast({ title: `You win the round! ${damage} damage dealt.` });
+        } else if (p2Power > p1Power) {
+          newP1HP -= damage;
+          newP2VP += 1;
+          newP1WP += 1;
+          toast({ title: `AI wins the round! ${damage} damage dealt.`, variant: "destructive" });
+        } else {
+          toast({ title: "Draw! No damage dealt." });
+        }
+        
+        const p1Yard = [...game.gameState.player1Yard, ...game.gameState.player1Battlefield.map(bf => bf.cardId)];
+        const p2Yard = [...game.gameState.player2Yard, ...game.gameState.player2Battlefield.map(bf => bf.cardId)];
+        
+        const newGameState = {
+          ...game.gameState,
+          player1Battlefield: [],
+          player2Battlefield: [],
+          player1Yard: p1Yard,
+          player2Yard: p2Yard,
+        };
+        
+        let status = game.status;
+        let winnerId = game.winnerId;
+        
+        if (newP1HP <= 0) {
+          status = "completed";
+          winnerId = game.player2Id;
+        } else if (newP2HP <= 0) {
+          status = "completed";
+          winnerId = game.player1Id;
+        }
+        
+        updateGameMutation.mutate({
+          currentPhase: "end",
+          currentTurn: game.currentTurn + 1,
+          player1HP: newP1HP,
+          player2HP: newP2HP,
+          player1VictoryPoints: newP1VP,
+          player2VictoryPoints: newP2VP,
+          player1WithdrawalPoints: newP1WP,
+          player2WithdrawalPoints: newP2WP,
+          gameState: newGameState,
+          status,
+          winnerId,
+        });
+      } else if (game.currentPhase === "end") {
+        updateGameMutation.mutate({
+          currentPhase: "draw",
+          activePlayer: game.player1Id,
+        });
+      }
+    };
+    
+    executeAITurn();
+  }, [game, gameId, allCards, updateGameMutation, updateGameMutation.isPending, toast]);
+
   if (isLoading || !game) {
     return (
       <div className="min-h-full bg-gradient-to-br from-slate-900 via-purple-900/30 to-slate-900 flex items-center justify-center">
@@ -662,10 +870,18 @@ export default function GameBoardPage() {
     }
 
     const opponentBF = isPlayer1 ? newGameState.player2Battlefield : newGameState.player1Battlefield;
-    const nextPhase = opponentBF.length === GAME_CONSTANTS.CARDS_TO_DEPLOY ? "combat" : "deployment";
+    const bothDeployed = opponentBF.length === GAME_CONSTANTS.CARDS_TO_DEPLOY;
+    const nextPhase = bothDeployed ? "combat" : "deployment";
+    
+    const opponentId = isPlayer1 ? game.player2Id! : game.player1Id;
+    const isPractice = game.gameType === "practice";
+    const nextActivePlayer = bothDeployed 
+      ? (isPractice ? "player-ai" : user?.id) 
+      : opponentId;
 
     updateGameMutation.mutate({
       currentPhase: nextPhase,
+      activePlayer: nextActivePlayer,
       gameState: newGameState,
     });
     setSelectedCards([]);
