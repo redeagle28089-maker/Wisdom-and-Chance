@@ -1,0 +1,20 @@
+
+
+
+
+
+
+
+Here are some things I noticed that need to be fixed.
+1
+In AI battle mode, other cards have art in the deck builder, but the art isn't shown in AI battle mode.
+Number two.
+The transition between phases is great, but you're not giving the player time to see what the end result was on their power level versus your power level. Also, include a detailed list of above and deep puffs that contributed to that. For a simple example, what you say is that I had two units, one power rank and never one power rank, both green, with the exact same buff, one block on each unit, one guardian trait, and one plus one green for each unit and one minus red for each enemy unit. What you say the enemy had was the same, except it was a bloom unit, and the buffs were blue instead of green, but the deep buff was red. You would show a detailed list of how the deep buffs add to the grand total of the equation, like in this example, 2 would be the base power level for the green units +2 because of a green buff, so it would be four versus the blue units that have +2 and a base power level of 2, combined between the 21 power level units, so their grand total would be four, so it would be a tie because the deep buff did nothing. Guardian buffs don't only block damage. It goes beyond the combat, finishing calculation phase or well or QuiccStrike.
+Number 3. Make it so in the deck builder you can actually see a separate window where you can check your safe decks, and when you click from you, see the images of the cards in your deck corresponding to the detailed list of what the power rings minimum you've achieved. This must be in the deck that way you can see the cards on one sign and see the list on the other, but in separate squares, and also see the artwork.
+Number four. I don't see advancing withdrawal counters in the practice mode. There should be a marker for the opponent and you that shows the victories or defeats, with the trophy symbols in bright green or the law symbols in bright darkest blue with a flag, indicating who won or lost combat. 
+
+
+
+
+
+

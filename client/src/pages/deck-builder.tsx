@@ -39,6 +39,7 @@ export default function DeckBuilderPage() {
   const [aiDialogOpen, setAiDialogOpen] = useState(false);
   const [editingDeckId, setEditingDeckId] = useState<string | null>(null);
   const [savedDecksOpen, setSavedDecksOpen] = useState(false);
+  const [viewingDeckId, setViewingDeckId] = useState<string | null>(null);
 
   const { data: cards = [] } = useQuery<CardType[]>({
     queryKey: ["/api/cards"],
@@ -472,86 +473,176 @@ export default function DeckBuilderPage() {
                         My Decks ({savedDecks.length})
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="bg-slate-800 border-purple-500/30 max-w-lg">
+                    <DialogContent className="bg-slate-800 border-purple-500/30 max-w-4xl max-h-[80vh]">
                       <DialogHeader>
                         <DialogTitle className="text-white flex items-center gap-2">
                           <FolderOpen className="w-5 h-5 text-purple-400" />
                           Your Saved Decks
                         </DialogTitle>
                       </DialogHeader>
-                      <div className="space-y-3">
-                        <Button 
-                          onClick={() => { startNewDeck(); setSavedDecksOpen(false); }} 
-                          className="w-full bg-gradient-to-r from-green-600 to-teal-600"
-                          data-testid="button-new-deck"
-                        >
-                          <Plus className="w-4 h-4 mr-2" />
-                          Create New Deck
-                        </Button>
-                        {decksLoading ? (
-                          <div className="flex items-center justify-center py-8">
-                            <Loader2 className="w-6 h-6 animate-spin text-purple-400" />
-                          </div>
-                        ) : savedDecks.length === 0 ? (
-                          <div className="text-center py-8">
-                            <p className="text-purple-300">No saved decks yet.</p>
-                            <p className="text-purple-400 text-sm">Build and save your first deck!</p>
-                          </div>
-                        ) : (
-                          <ScrollArea className="h-[300px]">
-                            <div className="space-y-2">
-                              {savedDecks.map((deck) => {
-                                const cmd = commanders.find((c) => c.id === deck.commanderId);
-                                const cmdConfig = cmd ? elementConfig[cmd.element] : null;
-                                return (
-                                  <div 
-                                    key={deck.id}
-                                    className={`p-3 rounded-lg border transition-colors ${
-                                      editingDeckId === deck.id 
-                                        ? "bg-blue-500/20 border-blue-500/50" 
-                                        : "bg-slate-900/50 border-purple-500/30 hover:border-purple-500/50"
-                                    }`}
-                                  >
-                                    <div className="flex items-center justify-between">
-                                      <div className="flex-1 min-w-0">
-                                        <p className="text-white font-medium truncate">{deck.name}</p>
-                                        <p className="text-purple-300 text-sm flex items-center gap-1">
-                                          {cmd && cmdConfig && (
-                                            <>
-                                              <Crown className="w-3 h-3 text-yellow-500" />
-                                              {cmd.name}
-                                            </>
-                                          )}
-                                        </p>
-                                      </div>
-                                      <div className="flex gap-2">
-                                        <Button
-                                          size="sm"
-                                          variant="outline"
-                                          onClick={() => loadSavedDeck(deck)}
-                                          data-testid={`load-deck-${deck.id}`}
-                                        >
-                                          <Edit2 className="w-3 h-3 mr-1" />
-                                          Load
-                                        </Button>
-                                        <Button
-                                          size="icon"
-                                          variant="ghost"
-                                          className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
-                                          onClick={() => deleteDeckMutation.mutate(deck.id)}
-                                          disabled={deleteDeckMutation.isPending}
-                                          data-testid={`delete-deck-${deck.id}`}
-                                        >
-                                          <Trash2 className="w-4 h-4" />
-                                        </Button>
+                      <div className="flex gap-4">
+                        {/* Deck List */}
+                        <div className="w-1/3 space-y-3">
+                          <Button 
+                            onClick={() => { startNewDeck(); setSavedDecksOpen(false); setViewingDeckId(null); }} 
+                            className="w-full bg-gradient-to-r from-green-600 to-teal-600"
+                            data-testid="button-new-deck"
+                          >
+                            <Plus className="w-4 h-4 mr-2" />
+                            Create New Deck
+                          </Button>
+                          {decksLoading ? (
+                            <div className="flex items-center justify-center py-8">
+                              <Loader2 className="w-6 h-6 animate-spin text-purple-400" />
+                            </div>
+                          ) : savedDecks.length === 0 ? (
+                            <div className="text-center py-8">
+                              <p className="text-purple-300">No saved decks yet.</p>
+                              <p className="text-purple-400 text-sm">Build and save your first deck!</p>
+                            </div>
+                          ) : (
+                            <ScrollArea className="h-[400px]">
+                              <div className="space-y-2">
+                                {savedDecks.map((deck) => {
+                                  const cmd = commanders.find((c) => c.id === deck.commanderId);
+                                  const cmdConfig = cmd ? elementConfig[cmd.element] : null;
+                                  const isViewing = viewingDeckId === deck.id;
+                                  return (
+                                    <div 
+                                      key={deck.id}
+                                      className={`p-3 rounded-lg border transition-colors cursor-pointer ${
+                                        isViewing
+                                          ? "bg-purple-500/20 border-purple-500/50" 
+                                          : editingDeckId === deck.id 
+                                            ? "bg-blue-500/20 border-blue-500/50" 
+                                            : "bg-slate-900/50 border-purple-500/30 hover:border-purple-500/50"
+                                      }`}
+                                      onClick={() => setViewingDeckId(isViewing ? null : deck.id)}
+                                      data-testid={`deck-item-${deck.id}`}
+                                    >
+                                      <div className="flex items-center justify-between">
+                                        <div className="flex-1 min-w-0">
+                                          <p className="text-white font-medium truncate">{deck.name}</p>
+                                          <p className="text-purple-300 text-sm flex items-center gap-1">
+                                            {cmd && cmdConfig && (
+                                              <>
+                                                <Crown className="w-3 h-3 text-yellow-500" />
+                                                {cmd.name}
+                                              </>
+                                            )}
+                                          </p>
+                                        </div>
+                                        <div className="flex gap-1">
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={(e) => { e.stopPropagation(); loadSavedDeck(deck); setSavedDecksOpen(false); setViewingDeckId(null); }}
+                                            data-testid={`load-deck-${deck.id}`}
+                                          >
+                                            <Edit2 className="w-3 h-3 mr-1" />
+                                            Load
+                                          </Button>
+                                          <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                                            onClick={(e) => { e.stopPropagation(); deleteDeckMutation.mutate(deck.id); if (viewingDeckId === deck.id) setViewingDeckId(null); }}
+                                            disabled={deleteDeckMutation.isPending}
+                                            data-testid={`delete-deck-${deck.id}`}
+                                          >
+                                            <Trash2 className="w-4 h-4" />
+                                          </Button>
+                                        </div>
                                       </div>
                                     </div>
+                                  );
+                                })}
+                              </div>
+                            </ScrollArea>
+                          )}
+                        </div>
+                        
+                        {/* Card Preview Panel */}
+                        <div className="w-2/3 border-l border-purple-500/30 pl-4">
+                          {viewingDeckId ? (
+                            (() => {
+                              const viewingDeck = savedDecks.find(d => d.id === viewingDeckId);
+                              if (!viewingDeck) return null;
+                              const viewingCards = viewingDeck.cardIds.map(id => cards.find(c => c.id === id)).filter(Boolean) as CardType[];
+                              const viewingCmd = commanders.find(c => c.id === viewingDeck.commanderId);
+                              
+                              // Calculate power distribution for viewing deck
+                              const powerCounts: Record<number, number> = {};
+                              viewingCards.forEach(card => {
+                                powerCounts[card.power] = (powerCounts[card.power] || 0) + 1;
+                              });
+                              
+                              return (
+                                <div className="space-y-4">
+                                  <div className="flex items-center justify-between">
+                                    <h3 className="text-white font-bold text-lg">{viewingDeck.name}</h3>
+                                    <Badge className="bg-purple-600">{viewingCards.length}/40 cards</Badge>
                                   </div>
-                                );
-                              })}
+                                  
+                                  {/* Commander */}
+                                  {viewingCmd && (
+                                    <div className="flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-2">
+                                      <Crown className="w-5 h-5 text-yellow-500" />
+                                      <span className="text-white font-medium">{viewingCmd.name}</span>
+                                      <Badge variant="outline" className="text-yellow-300 border-yellow-500/50">{viewingCmd.element}</Badge>
+                                    </div>
+                                  )}
+                                  
+                                  {/* Power Distribution Chart */}
+                                  <div className="bg-slate-900/50 rounded-lg p-3 border border-purple-500/20">
+                                    <p className="text-purple-300 text-sm mb-2">Power Distribution (need 4 each)</p>
+                                    <div className="grid grid-cols-10 gap-1">
+                                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((power) => {
+                                        const count = powerCounts[power] || 0;
+                                        const isValid = count === 4;
+                                        return (
+                                          <div
+                                            key={power}
+                                            className={`text-center p-1 rounded text-xs ${
+                                              isValid
+                                                ? "bg-green-500/20 border border-green-500/50 text-green-300"
+                                                : count > 4
+                                                  ? "bg-red-500/20 border border-red-500/50 text-red-300"
+                                                  : "bg-slate-800/50 border border-slate-600/50 text-slate-400"
+                                            }`}
+                                          >
+                                            <div className="font-bold">{power}</div>
+                                            <div className="text-[10px]">{count}/4</div>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                  
+                                  {/* Card Grid */}
+                                  <ScrollArea className="h-[250px]">
+                                    <div className="grid grid-cols-6 gap-2">
+                                      {viewingCards.map((card, i) => (
+                                        <CardWithPopup
+                                          key={`${card.id}-${i}`}
+                                          card={card}
+                                          size="sm"
+                                        />
+                                      ))}
+                                    </div>
+                                  </ScrollArea>
+                                </div>
+                              );
+                            })()
+                          ) : (
+                            <div className="h-full flex items-center justify-center text-purple-400">
+                              <div className="text-center">
+                                <FolderOpen className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                                <p>Select a deck to view its cards</p>
+                              </div>
                             </div>
-                          </ScrollArea>
-                        )}
+                          )}
+                        </div>
                       </div>
                     </DialogContent>
                   </Dialog>

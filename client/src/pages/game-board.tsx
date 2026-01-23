@@ -11,9 +11,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useWebSocket } from "@/hooks/use-websocket";
-import { Heart, Swords, Trophy, Flag, ArrowRight, Shield, Flame, Droplet, Mountain, Wind, Leaf, RotateCcw, LogIn, MessageSquare, Eye, Send, X, Zap, Sparkles } from "lucide-react";
+import { Heart, Swords, Trophy, Flag, ArrowRight, Shield, Flame, Droplet, Mountain, Wind, Leaf, RotateCcw, LogIn, MessageSquare, Eye, Send, X, Zap, Sparkles, Plus } from "lucide-react";
 import type { Game, Card as CardType, Element, BattlefieldCard } from "@shared/schema";
 import { GAME_CONSTANTS } from "@shared/schema";
+
+import fireCardArt from "@assets/generated_images/fire_element_card_art.png";
+import waterCardArt from "@assets/generated_images/water_element_card_art.png";
+import earthCardArt from "@assets/generated_images/earth_element_card_art.png";
+import airCardArt from "@assets/generated_images/air_element_card_art.png";
+import natureCardArt from "@assets/generated_images/nature_element_card_art.png";
 
 interface ChatMessage {
   id: string;
@@ -23,13 +29,87 @@ interface ChatMessage {
   createdAt: string;
 }
 
-const elementConfig: Record<Element, { icon: typeof Flame; color: string; bgColor: string }> = {
-  Fire: { icon: Flame, color: "text-red-500", bgColor: "bg-gradient-to-br from-red-600 to-orange-600" },
-  Water: { icon: Droplet, color: "text-blue-500", bgColor: "bg-gradient-to-br from-blue-600 to-cyan-600" },
-  Earth: { icon: Mountain, color: "text-amber-500", bgColor: "bg-gradient-to-br from-amber-700 to-yellow-600" },
-  Air: { icon: Wind, color: "text-green-400", bgColor: "bg-gradient-to-br from-green-400 to-teal-400" },
-  Nature: { icon: Leaf, color: "text-emerald-500", bgColor: "bg-gradient-to-br from-green-700 to-emerald-600" },
+const elementConfig: Record<Element, { icon: typeof Flame; color: string; bgColor: string; cardArt: string }> = {
+  Fire: { icon: Flame, color: "text-red-500", bgColor: "bg-gradient-to-br from-red-600 to-orange-600", cardArt: fireCardArt },
+  Water: { icon: Droplet, color: "text-blue-500", bgColor: "bg-gradient-to-br from-blue-600 to-cyan-600", cardArt: waterCardArt },
+  Earth: { icon: Mountain, color: "text-amber-500", bgColor: "bg-gradient-to-br from-amber-700 to-yellow-600", cardArt: earthCardArt },
+  Air: { icon: Wind, color: "text-green-400", bgColor: "bg-gradient-to-br from-green-400 to-teal-400", cardArt: airCardArt },
+  Nature: { icon: Leaf, color: "text-emerald-500", bgColor: "bg-gradient-to-br from-green-700 to-emerald-600", cardArt: natureCardArt },
 };
+
+const colorToElement: Record<string, Element> = {
+  Red: "Fire",
+  Blue: "Water",
+  Amber: "Earth",
+  Green: "Nature",
+  Black: "Air",
+};
+
+const elementToColor: Record<Element, string> = {
+  Fire: "Red",
+  Water: "Blue",
+  Earth: "Amber",
+  Nature: "Green",
+  Air: "Black",
+};
+
+interface CardPowerBreakdown {
+  card: CardType;
+  basePower: number;
+  buffBonuses: { fromCard: CardType; amount: number }[];
+  debuffPenalties: { fromCard: CardType; amount: number }[];
+  traitInfo: { trait: string; value: number } | null;
+  finalPower: number;
+}
+
+function calculateBattlePower(
+  friendlyCards: CardType[],
+  enemyCards: CardType[],
+  getCardById: (id: string) => CardType | undefined
+): CardPowerBreakdown[] {
+  return friendlyCards.map(card => {
+    const basePower = card.power;
+    const buffBonuses: { fromCard: CardType; amount: number }[] = [];
+    const debuffPenalties: { fromCard: CardType; amount: number }[] = [];
+    
+    // Buffs from OTHER friendly cards that match this card's element
+    friendlyCards.forEach(friendlyCard => {
+      if (friendlyCard.id !== card.id && friendlyCard.buffModifier > 0 && friendlyCard.buffColor) {
+        const buffElement = colorToElement[friendlyCard.buffColor];
+        if (buffElement === card.element) {
+          buffBonuses.push({ fromCard: friendlyCard, amount: friendlyCard.buffModifier });
+        }
+      }
+    });
+    
+    // Debuffs from enemy cards that target this card's element
+    enemyCards.forEach(enemyCard => {
+      if (enemyCard.debuffModifier > 0 && enemyCard.debuffColor) {
+        const debuffElement = colorToElement[enemyCard.debuffColor];
+        if (debuffElement === card.element) {
+          debuffPenalties.push({ fromCard: enemyCard, amount: enemyCard.debuffModifier });
+        }
+      }
+    });
+    
+    const totalBuffs = buffBonuses.reduce((sum, b) => sum + b.amount, 0);
+    const totalDebuffs = debuffPenalties.reduce((sum, d) => sum + d.amount, 0);
+    const finalPower = Math.max(0, basePower + totalBuffs - totalDebuffs);
+    
+    const traitInfo = card.trait && card.traitValue !== null 
+      ? { trait: card.trait, value: card.traitValue }
+      : null;
+    
+    return {
+      card,
+      basePower,
+      buffBonuses,
+      debuffPenalties,
+      traitInfo,
+      finalPower,
+    };
+  });
+}
 
 const phaseNames: Record<string, string> = {
   draw: "Draw Phase",
@@ -38,6 +118,33 @@ const phaseNames: Record<string, string> = {
   calculation: "Calculation Phase",
   end: "End Phase",
 };
+
+function VictoryWithdrawalCounter({
+  victories,
+  withdrawals,
+  isPlayer
+}: {
+  victories: number;
+  withdrawals: number;
+  isPlayer: boolean;
+}) {
+  return (
+    <div className={`flex gap-2 p-2 rounded-lg ${isPlayer ? 'bg-green-900/20 border border-green-500/30' : 'bg-red-900/20 border border-red-500/30'}`} data-testid={`${isPlayer ? 'player' : 'opponent'}-counters`}>
+      <div className="flex items-center gap-1" title="Advances (Victories)">
+        <Trophy className="w-4 h-4 text-green-400" />
+        <span className="text-green-300 font-bold text-sm" data-testid={`${isPlayer ? 'player' : 'opponent'}-victories`}>
+          {victories}
+        </span>
+      </div>
+      <div className="flex items-center gap-1" title="Withdrawals (Defeats)">
+        <Flag className="w-4 h-4 text-blue-400" />
+        <span className="text-blue-300 font-bold text-sm" data-testid={`${isPlayer ? 'player' : 'opponent'}-withdrawals`}>
+          {withdrawals}
+        </span>
+      </div>
+    </div>
+  );
+}
 
 function AnimatedHPBar({ 
   current, 
@@ -266,25 +373,40 @@ function MiniCard({
       onDoubleClick={onPreview}
       data-testid={`card-${card.id}`}
     >
+      {/* Card art background */}
+      <img 
+        src={card.imageUrl || config.cardArt} 
+        alt={card.element}
+        className="absolute inset-0 w-full h-full object-cover rounded-lg"
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30 rounded-lg" />
+      
       {playable && !selected && (
-        <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full animate-ping" />
+        <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full animate-ping z-20" />
       )}
-      <div className="h-full flex flex-col p-1">
-        <div className="flex justify-between items-start">
-          <div className="w-6 h-6 bg-black/50 rounded-full flex items-center justify-center border border-white/20 shadow-inner">
-            <span className="text-white font-bold text-xs">{card.power}</span>
-          </div>
-          {card.buffModifier > 0 && (
-            <div className="w-3 h-3 bg-green-500 rounded-full flex items-center justify-center">
-              <span className="text-[6px] text-white">+</span>
-            </div>
-          )}
+      
+      {/* Power badge - top left */}
+      <div className="absolute top-1 left-1 w-5 h-5 bg-slate-900/90 rounded flex items-center justify-center border border-white/30 z-10">
+        <span className="text-white font-bold text-[10px]">{card.power}</span>
+      </div>
+      
+      {/* Buff indicator - top right */}
+      {card.buffModifier > 0 && (
+        <div className="absolute top-1 right-1 w-4 h-4 bg-white/90 rounded flex items-center justify-center z-10">
+          <span className="text-green-600 font-bold text-[8px]">+{card.buffModifier}</span>
         </div>
-        <div className="flex-1 flex items-center justify-center relative">
-          <div className={`absolute inset-0 bg-gradient-to-t from-black/40 to-transparent rounded`} />
-          <Icon className="w-7 h-7 text-white/90 drop-shadow-lg relative z-10" />
+      )}
+      
+      {/* Debuff indicator - bottom right */}
+      {card.debuffModifier > 0 && (
+        <div className="absolute bottom-5 right-1 w-4 h-4 bg-white/90 rounded flex items-center justify-center z-10">
+          <span className="text-red-600 font-bold text-[8px]">-{card.debuffModifier}</span>
         </div>
-        <p className="text-white text-[7px] truncate text-center font-medium drop-shadow">{card.name.split(' ')[0]}</p>
+      )}
+      
+      {/* Card name at bottom */}
+      <div className="absolute bottom-0 left-0 right-0 bg-slate-900/90 py-0.5 text-center rounded-b-lg z-10">
+        <p className="text-white text-[7px] truncate px-0.5 font-medium">{card.name.split(' ')[0]}</p>
       </div>
       {isHovered && (
         <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 bg-slate-900/95 px-2 py-0.5 rounded text-[9px] text-white whitespace-nowrap z-20 border border-purple-500/30">
@@ -351,6 +473,199 @@ function CardPreviewDialog({
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+interface CombatResultProps {
+  player1Breakdown: CardPowerBreakdown[];
+  player2Breakdown: CardPowerBreakdown[];
+  timer: number;
+  onSkip: () => void;
+  isPlayer1: boolean;
+}
+
+function CombatResultPanel({ 
+  player1Breakdown, 
+  player2Breakdown, 
+  timer, 
+  onSkip,
+  isPlayer1
+}: CombatResultProps) {
+  const player1Total = player1Breakdown.reduce((sum, b) => sum + b.finalPower, 0);
+  const player2Total = player2Breakdown.reduce((sum, b) => sum + b.finalPower, 0);
+  
+  const winner = player1Total > player2Total ? "player1" : player2Total > player1Total ? "player2" : "tie";
+  const damage = Math.abs(player1Total - player2Total);
+  
+  const yourBreakdown = isPlayer1 ? player1Breakdown : player2Breakdown;
+  const enemyBreakdown = isPlayer1 ? player2Breakdown : player1Breakdown;
+  const yourTotal = isPlayer1 ? player1Total : player2Total;
+  const enemyTotal = isPlayer1 ? player2Total : player1Total;
+  const youWin = (isPlayer1 && winner === "player1") || (!isPlayer1 && winner === "player2");
+  const isTie = winner === "tie";
+  
+  const traitIcons: Record<string, typeof Zap> = {
+    "Quick Strike": Zap,
+    "Care Package": Plus,
+    "Restoration": Heart,
+    "Guardian": Shield,
+  };
+  
+  return (
+    <div className="bg-slate-900/95 border border-purple-500/30 rounded-xl p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-white font-bold text-lg flex items-center gap-2">
+          <Swords className="w-5 h-5 text-yellow-400" />
+          Combat Results
+        </h3>
+        <div className="flex items-center gap-3">
+          <div className="text-purple-300 text-sm">
+            Auto-advance: <span className="font-mono text-yellow-400">{timer}s</span>
+          </div>
+          <Button size="sm" variant="outline" onClick={onSkip} data-testid="button-skip-timer">
+            Skip
+          </Button>
+        </div>
+      </div>
+      
+      {/* Result Header */}
+      <div className={`text-center p-3 rounded-lg ${
+        isTie ? 'bg-yellow-500/20 border border-yellow-500/30' : 
+        youWin ? 'bg-green-500/20 border border-green-500/30' : 
+        'bg-red-500/20 border border-red-500/30'
+      }`}>
+        <p className={`font-bold text-lg ${
+          isTie ? 'text-yellow-300' : youWin ? 'text-green-300' : 'text-red-300'
+        }`}>
+          {isTie ? (
+            <>🤝 TIE! Both players get +1 Advance and +1 Withdraw</>
+          ) : youWin ? (
+            <>🏆 Victory! You deal {damage} damage!</>
+          ) : (
+            <>💀 Defeat! You take {damage} damage!</>
+          )}
+        </p>
+        <p className="text-white/60 text-sm mt-1">
+          Your Power: {yourTotal} vs Enemy Power: {enemyTotal}
+        </p>
+      </div>
+      
+      {/* Your Cards Breakdown */}
+      <div className="space-y-2">
+        <p className="text-green-300 font-medium text-sm flex items-center gap-1">
+          <Shield className="w-4 h-4" />
+          Your Cards
+        </p>
+        <div className="space-y-2">
+          {yourBreakdown.map((breakdown, i) => {
+            const config = elementConfig[breakdown.card.element];
+            const Icon = config.icon;
+            const TraitIcon = breakdown.traitInfo ? traitIcons[breakdown.traitInfo.trait] : null;
+            
+            return (
+              <div key={i} className="bg-slate-800/50 rounded-lg p-2 border border-slate-700/50">
+                <div className="flex items-center gap-2">
+                  <div className={`w-8 h-8 rounded ${config.bgColor} flex items-center justify-center`}>
+                    <Icon className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-white font-medium text-sm">{breakdown.card.name}</p>
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="text-white/60">Base: {breakdown.basePower}</span>
+                      {breakdown.buffBonuses.length > 0 && (
+                        <span className="text-green-400">
+                          +{breakdown.buffBonuses.reduce((s, b) => s + b.amount, 0)} buff
+                        </span>
+                      )}
+                      {breakdown.debuffPenalties.length > 0 && (
+                        <span className="text-red-400">
+                          -{breakdown.debuffPenalties.reduce((s, d) => s + d.amount, 0)} debuff
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-yellow-400 font-bold">{breakdown.finalPower}</p>
+                    {breakdown.traitInfo && TraitIcon && (
+                      <div className="flex items-center gap-0.5 text-purple-300 text-xs">
+                        <TraitIcon className="w-3 h-3" />
+                        <span>{breakdown.traitInfo.trait.split(' ')[0]}: {breakdown.traitInfo.value}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Detailed buff/debuff sources */}
+                {(breakdown.buffBonuses.length > 0 || breakdown.debuffPenalties.length > 0) && (
+                  <div className="mt-1 pl-10 space-y-0.5">
+                    {breakdown.buffBonuses.map((buff, j) => (
+                      <p key={`buff-${j}`} className="text-green-400 text-xs">
+                        +{buff.amount} from {buff.fromCard.name} ({buff.fromCard.buffColor} buff)
+                      </p>
+                    ))}
+                    {breakdown.debuffPenalties.map((debuff, j) => (
+                      <p key={`debuff-${j}`} className="text-red-400 text-xs">
+                        -{debuff.amount} from enemy {debuff.fromCard.name} ({debuff.fromCard.debuffColor} debuff)
+                      </p>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      
+      {/* Enemy Cards Breakdown */}
+      <div className="space-y-2">
+        <p className="text-red-300 font-medium text-sm flex items-center gap-1">
+          <Swords className="w-4 h-4" />
+          Enemy Cards
+        </p>
+        <div className="space-y-2">
+          {enemyBreakdown.map((breakdown, i) => {
+            const config = elementConfig[breakdown.card.element];
+            const Icon = config.icon;
+            const TraitIcon = breakdown.traitInfo ? traitIcons[breakdown.traitInfo.trait] : null;
+            
+            return (
+              <div key={i} className="bg-slate-800/50 rounded-lg p-2 border border-red-900/30">
+                <div className="flex items-center gap-2">
+                  <div className={`w-8 h-8 rounded ${config.bgColor} flex items-center justify-center`}>
+                    <Icon className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-white font-medium text-sm">{breakdown.card.name}</p>
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="text-white/60">Base: {breakdown.basePower}</span>
+                      {breakdown.buffBonuses.length > 0 && (
+                        <span className="text-green-400">
+                          +{breakdown.buffBonuses.reduce((s, b) => s + b.amount, 0)} buff
+                        </span>
+                      )}
+                      {breakdown.debuffPenalties.length > 0 && (
+                        <span className="text-red-400">
+                          -{breakdown.debuffPenalties.reduce((s, d) => s + d.amount, 0)} debuff
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-yellow-400 font-bold">{breakdown.finalPower}</p>
+                    {breakdown.traitInfo && TraitIcon && (
+                      <div className="flex items-center gap-0.5 text-purple-300 text-xs">
+                        <TraitIcon className="w-3 h-3" />
+                        <span>{breakdown.traitInfo.trait.split(' ')[0]}: {breakdown.traitInfo.value}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -427,6 +742,13 @@ export default function GameBoardPage() {
   const [previousOpponentHP, setPreviousOpponentHP] = useState<number | undefined>(undefined);
   const [newlyDrawnCards, setNewlyDrawnCards] = useState<Set<string>>(new Set());
   const [newlyDeployedCards, setNewlyDeployedCards] = useState<Set<string>>(new Set());
+  const [combatTimer, setCombatTimer] = useState(30);
+  const [showCombatResults, setShowCombatResults] = useState(false);
+  const [combatBreakdown, setCombatBreakdown] = useState<{
+    player1: CardPowerBreakdown[];
+    player2: CardPowerBreakdown[];
+  } | null>(null);
+  const combatTimerRef = useRef<NodeJS.Timeout | null>(null);
   const chatScrollRef = useRef<HTMLDivElement>(null);
   const previousHandRef = useRef<string[] | null>(null);
   const previousBattlefieldRef = useRef<string[] | null>(null);
@@ -893,23 +1215,80 @@ export default function GameBoardPage() {
     newGameState.player1Battlefield = newGameState.player1Battlefield.map((bf) => ({ ...bf, faceDown: false }));
     newGameState.player2Battlefield = newGameState.player2Battlefield.map((bf) => ({ ...bf, faceDown: false }));
 
+    // Calculate power breakdowns for combat results display
+    const p1Cards = newGameState.player1Battlefield.map(bf => getCardById(bf.cardId)).filter(Boolean) as CardType[];
+    const p2Cards = newGameState.player2Battlefield.map(bf => getCardById(bf.cardId)).filter(Boolean) as CardType[];
+    
+    const player1Breakdown = calculateBattlePower(p1Cards, p2Cards, getCardById);
+    const player2Breakdown = calculateBattlePower(p2Cards, p1Cards, getCardById);
+    
+    setCombatBreakdown({ player1: player1Breakdown, player2: player2Breakdown });
+    setShowCombatResults(true);
+    setCombatTimer(30);
+    
+    // Start the 30-second timer
+    if (combatTimerRef.current) {
+      clearInterval(combatTimerRef.current);
+    }
+    combatTimerRef.current = setInterval(() => {
+      setCombatTimer(prev => {
+        if (prev <= 1) {
+          if (combatTimerRef.current) {
+            clearInterval(combatTimerRef.current);
+            combatTimerRef.current = null;
+          }
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
     updateGameMutation.mutate({
       currentPhase: "calculation",
       gameState: newGameState,
     });
-    toast({ title: "Cards revealed!" });
+    toast({ title: "Cards revealed! Review combat results." });
   };
 
-  const handleCalculation = () => {
-    const p1Power = game.gameState.player1Battlefield.reduce((sum, bf) => {
-      const card = getCardById(bf.cardId);
-      return sum + (card?.power || 0);
-    }, 0);
+  const skipCombatTimer = () => {
+    if (combatTimerRef.current) {
+      clearInterval(combatTimerRef.current);
+      combatTimerRef.current = null;
+    }
+    setCombatTimer(0);
+  };
 
-    const p2Power = game.gameState.player2Battlefield.reduce((sum, bf) => {
-      const card = getCardById(bf.cardId);
-      return sum + (card?.power || 0);
-    }, 0);
+  // Auto-advance when timer reaches 0
+  useEffect(() => {
+    if (combatTimer === 0 && showCombatResults && combatBreakdown && game?.currentPhase === "calculation") {
+      setShowCombatResults(false);
+      handleCalculation();
+    }
+  }, [combatTimer, showCombatResults, combatBreakdown, game?.currentPhase]);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (combatTimerRef.current) {
+        clearInterval(combatTimerRef.current);
+      }
+    };
+  }, []);
+
+  const handleCalculation = () => {
+    // Use the calculated breakdown if available, otherwise calculate now
+    let player1Breakdown = combatBreakdown?.player1;
+    let player2Breakdown = combatBreakdown?.player2;
+    
+    if (!player1Breakdown || !player2Breakdown) {
+      const p1Cards = game.gameState.player1Battlefield.map(bf => getCardById(bf.cardId)).filter(Boolean) as CardType[];
+      const p2Cards = game.gameState.player2Battlefield.map(bf => getCardById(bf.cardId)).filter(Boolean) as CardType[];
+      player1Breakdown = calculateBattlePower(p1Cards, p2Cards, getCardById);
+      player2Breakdown = calculateBattlePower(p2Cards, p1Cards, getCardById);
+    }
+    
+    const p1Power = player1Breakdown.reduce((sum, b) => sum + b.finalPower, 0);
+    const p2Power = player2Breakdown.reduce((sum, b) => sum + b.finalPower, 0);
 
     const damage = Math.abs(p1Power - p2Power);
     let newP1HP = game.player1HP;
@@ -930,7 +1309,12 @@ export default function GameBoardPage() {
       newP1WP += 1;
       toast({ title: `Player 2 wins! ${damage} damage dealt.` });
     } else {
-      toast({ title: "Draw! No damage dealt." });
+      // Tie - both get +1 advance and +1 withdraw
+      newP1VP += 1;
+      newP2VP += 1;
+      newP1WP += 1;
+      newP2WP += 1;
+      toast({ title: "Draw! Both players get +1 Advance and +1 Withdraw." });
     }
 
     const p1Yard = [...game.gameState.player1Yard, ...game.gameState.player1Battlefield.map((bf) => bf.cardId)];
@@ -956,6 +1340,10 @@ export default function GameBoardPage() {
       winnerId = game.player1Id;
       toast({ title: "Game Over! You win!", variant: "default" });
     }
+
+    // Reset combat results state
+    setShowCombatResults(false);
+    setCombatBreakdown(null);
 
     updateGameMutation.mutate({
       currentPhase: "end",
@@ -1012,6 +1400,11 @@ export default function GameBoardPage() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <AnimatedHPBar current={opponentHP} max={GAME_CONSTANTS.STARTING_HP} isPlayer={false} label="Opponent" previousHP={previousOpponentHP} />
+            <VictoryWithdrawalCounter 
+              victories={isPlayer1 ? game.player2VictoryPoints : game.player1VictoryPoints} 
+              withdrawals={isPlayer1 ? game.player2WithdrawalPoints : game.player1WithdrawalPoints} 
+              isPlayer={false} 
+            />
             {isMultiplayer && spectatorCount > 0 && (
               <Badge variant="outline" className="text-purple-300 border-purple-500/30">
                 <Eye className="w-3 h-3 mr-1" />
@@ -1021,6 +1414,11 @@ export default function GameBoardPage() {
           </div>
           <PhaseIndicator currentPhase={game.currentPhase} isMyTurn={isMyTurn} turn={game.currentTurn} />
           <div className="flex items-center gap-3">
+            <VictoryWithdrawalCounter 
+              victories={isPlayer1 ? game.player1VictoryPoints : game.player2VictoryPoints} 
+              withdrawals={isPlayer1 ? game.player1WithdrawalPoints : game.player2WithdrawalPoints} 
+              isPlayer={true} 
+            />
             <AnimatedHPBar current={myHP} max={GAME_CONSTANTS.STARTING_HP} isPlayer={true} label="You" previousHP={previousMyHP} />
             <div className="flex items-center gap-2">
               {isMultiplayer && (
@@ -1096,7 +1494,7 @@ export default function GameBoardPage() {
                   Reveal Cards
                 </Button>
               )}
-              {game.currentPhase === "calculation" && isMyTurn && (
+              {game.currentPhase === "calculation" && isMyTurn && !showCombatResults && (
                 <Button onClick={handleCalculation} className="bg-gradient-to-r from-yellow-600 to-orange-600" data-testid="button-calculate">
                   <Trophy className="w-4 h-4 mr-2" />
                   Calculate Damage
@@ -1122,6 +1520,17 @@ export default function GameBoardPage() {
           onPreview={setPreviewCard}
           newlyDeployedCards={newlyDeployedCards}
         />
+
+        {/* Combat Results Panel */}
+        {showCombatResults && combatBreakdown && game.currentPhase === "calculation" && (
+          <CombatResultPanel
+            player1Breakdown={combatBreakdown.player1}
+            player2Breakdown={combatBreakdown.player2}
+            timer={combatTimer}
+            onSkip={skipCombatTimer}
+            isPlayer1={isPlayer1}
+          />
+        )}
 
         <div className="bg-gradient-to-t from-green-900/10 to-slate-800/30 rounded-xl border-2 border-green-500/20 p-4">
           <div className="flex items-center justify-between mb-3">
