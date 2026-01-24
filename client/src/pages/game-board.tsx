@@ -539,11 +539,15 @@ function AnimatedHPBar({
 function PhaseIndicator({ 
   currentPhase, 
   isMyTurn, 
-  turn 
+  turn,
+  hasCombatLog,
+  onViewCombatLog,
 }: { 
   currentPhase: string; 
   isMyTurn: boolean; 
   turn: number;
+  hasCombatLog?: boolean;
+  onViewCombatLog?: () => void;
 }) {
   const phases = ['draw', 'deployment', 'combat', 'calculation', 'end'];
   const phaseIcons: Record<string, typeof ArrowRight> = {
@@ -563,7 +567,19 @@ function PhaseIndicator({
   
   return (
     <div className="flex flex-col items-center gap-2">
-      <div className="flex items-center gap-1 text-xs">
+      <div className="flex items-center gap-2 text-xs">
+        {hasCombatLog && onViewCombatLog && (
+          <Button 
+            size="sm"
+            variant="outline" 
+            onClick={onViewCombatLog}
+            className="border-amber-500/50 text-amber-300"
+            data-testid="button-view-combat-log"
+          >
+            <Scroll className="w-3 h-3 mr-1" />
+            Combat Log
+          </Button>
+        )}
         <Badge variant="outline" className="text-purple-300 border-purple-500/30">
           Turn {turn}
         </Badge>
@@ -2068,7 +2084,13 @@ export default function GameBoardPage() {
               </Badge>
             )}
           </div>
-          <PhaseIndicator currentPhase={game.currentPhase} isMyTurn={isMyTurn} turn={game.currentTurn} />
+          <PhaseIndicator 
+            currentPhase={game.currentPhase} 
+            isMyTurn={isMyTurn} 
+            turn={game.currentTurn}
+            hasCombatLog={!!game.gameState.lastCombatLog}
+            onViewCombatLog={() => setShowCombatLogDialog(true)}
+          />
           <div className="flex items-center gap-3">
             <VictoryWithdrawalCounter 
               victories={isPlayer1 ? game.player1VictoryPoints : game.player2VictoryPoints} 
@@ -2164,19 +2186,6 @@ export default function GameBoardPage() {
               )}
               {!isMyTurn && (
                 <p className="text-purple-300">Waiting for opponent...</p>
-              )}
-              
-              {/* Combat Log Button - Always visible after first combat */}
-              {game.gameState.lastCombatLog && (
-                <Button 
-                  variant="outline" 
-                  onClick={() => setShowCombatLogDialog(true)}
-                  className="border-amber-500/50 text-amber-300 hover:bg-amber-500/20"
-                  data-testid="button-view-combat-log"
-                >
-                  <Scroll className="w-4 h-4 mr-2" />
-                  View Combat Log
-                </Button>
               )}
             </div>
           </Card>
