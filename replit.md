@@ -8,6 +8,13 @@ A tactical trading card game simulator built with React, Express, and TypeScript
 **Current State:** Fully functional TCG with Google authentication, multiplayer rooms, friend system, and real-time gameplay.
 
 ## Recent Changes
+- **January 2026:** Combat System Fixes & Combat Log
+  - Fixed AI combat calculation bug (AI was calculating 0 power for all cards)
+  - Card instance IDs (format: cardId::N) now properly resolved to base card IDs
+  - AI now draws and deploys cards simultaneously with player in practice mode
+  - Added combat log button (scroll icon) to view previous round's combat details
+  - Combat log dialog shows: card power breakdowns, trait effects, final results
+
 - **January 2026:** New Pages & Card Database Enhancement
   - Card tiles now display unique fantasy names above UNIT label
   - Analytics Dashboard with stats, element performance, charts
