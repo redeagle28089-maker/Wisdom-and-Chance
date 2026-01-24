@@ -1745,6 +1745,21 @@ export default function GameBoardPage() {
       newGameState.player2Battlefield = [];
     }
 
+    // In practice mode, also have AI draw simultaneously
+    const isPractice = game.gameType === "practice";
+    if (isPractice) {
+      const aiDeck = [...newGameState.player2Deck];
+      const aiHand = [...newGameState.player2Hand];
+      
+      if (aiDeck.length >= GAME_CONSTANTS.CARDS_TO_DRAW) {
+        for (let i = 0; i < GAME_CONSTANTS.CARDS_TO_DRAW; i++) {
+          aiHand.push(aiDeck.shift()!);
+        }
+        newGameState.player2Hand = aiHand;
+        newGameState.player2Deck = aiDeck;
+      }
+    }
+
     updateGameMutation.mutate({
       currentPhase: "deployment",
       gameState: newGameState,
@@ -1773,12 +1788,58 @@ export default function GameBoardPage() {
       newGameState.player2Battlefield = newBattlefield;
     }
 
+    const isPractice = game.gameType === "practice";
+    
+    // In practice mode, have AI deploy simultaneously
+    if (isPractice && isPlayer1) {
+      const aiHand = [...newGameState.player2Hand];
+      const aiDifficulty = game.aiDifficulty || "medium";
+      
+      if (aiHand.length >= GAME_CONSTANTS.CARDS_TO_DEPLOY) {
+        let aiSelectedCards: string[] = [];
+        
+        if (aiDifficulty === "easy") {
+          const shuffled = [...aiHand].sort(() => Math.random() - 0.5);
+          aiSelectedCards = shuffled.slice(0, GAME_CONSTANTS.CARDS_TO_DEPLOY);
+        } else if (aiDifficulty === "medium") {
+          const cardsWithPower = aiHand.map(cardId => {
+            const baseCardId = getCardIdFromInstance(cardId);
+            const card = allCards.find(c => c.id === baseCardId);
+            return { cardId, power: card?.power || 0 };
+          });
+          cardsWithPower.sort((a, b) => b.power - a.power);
+          aiSelectedCards = cardsWithPower.slice(0, GAME_CONSTANTS.CARDS_TO_DEPLOY).map(c => c.cardId);
+        } else {
+          const cardsWithPower = aiHand.map(cardId => {
+            const baseCardId = getCardIdFromInstance(cardId);
+            const card = allCards.find(c => c.id === baseCardId);
+            return { cardId, power: card?.power || 0 };
+          });
+          const mid = Math.floor(cardsWithPower.length / 2);
+          cardsWithPower.sort((a, b) => b.power - a.power);
+          const topCards = cardsWithPower.slice(0, mid);
+          const bottomCards = cardsWithPower.slice(mid);
+          
+          if (topCards.length > 0 && bottomCards.length > 0) {
+            aiSelectedCards = [topCards[0].cardId, bottomCards[Math.floor(Math.random() * bottomCards.length)].cardId];
+          } else {
+            aiSelectedCards = cardsWithPower.slice(0, GAME_CONSTANTS.CARDS_TO_DEPLOY).map(c => c.cardId);
+          }
+        }
+        
+        newGameState.player2Hand = aiHand.filter(id => !aiSelectedCards.includes(id));
+        newGameState.player2Battlefield = aiSelectedCards.map(cardId => ({
+          cardId,
+          faceDown: true,
+        }));
+      }
+    }
+
     const opponentBF = isPlayer1 ? newGameState.player2Battlefield : newGameState.player1Battlefield;
     const bothDeployed = opponentBF.length === GAME_CONSTANTS.CARDS_TO_DEPLOY;
     const nextPhase = bothDeployed ? "combat" : "deployment";
     
     const opponentId = isPlayer1 ? game.player2Id! : game.player1Id;
-    const isPractice = game.gameType === "practice";
     const nextActivePlayer = bothDeployed 
       ? (isPractice ? "player-ai" : user?.id) 
       : opponentId;
