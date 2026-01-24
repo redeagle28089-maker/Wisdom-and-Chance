@@ -1117,6 +1117,37 @@ export default function GameBoardPage() {
     executeAITurn();
   }, [game, gameId, allCards, updateGameMutation, updateGameMutation.isPending, toast]);
 
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (combatTimerRef.current) {
+        clearInterval(combatTimerRef.current);
+      }
+    };
+  }, []);
+
+  // Ref to hold the handleCalculation function (defined after loading check)
+  const handleCalculationRef = useRef<(() => void) | null>(null);
+  
+  // State for triggering auto-advance after timer expires
+  const [pendingCalculation, setPendingCalculation] = useState(false);
+  
+  // When timer expires, set pending calculation flag
+  useEffect(() => {
+    if (combatTimer === 0 && showCombatResults && combatBreakdown && game?.currentPhase === "calculation") {
+      setShowCombatResults(false);
+      setPendingCalculation(true);
+    }
+  }, [combatTimer, showCombatResults, combatBreakdown, game?.currentPhase]);
+  
+  // Handle pending calculation by calling handleCalculation via ref
+  useEffect(() => {
+    if (pendingCalculation && handleCalculationRef.current) {
+      setPendingCalculation(false);
+      handleCalculationRef.current();
+    }
+  }, [pendingCalculation]);
+
   if (isLoading || !game) {
     return (
       <div className="min-h-full bg-gradient-to-br from-slate-900 via-purple-900/30 to-slate-900 flex items-center justify-center">
@@ -1258,27 +1289,11 @@ export default function GameBoardPage() {
     setCombatTimer(0);
   };
 
-  // Auto-advance when timer reaches 0
-  useEffect(() => {
-    if (combatTimer === 0 && showCombatResults && combatBreakdown && game?.currentPhase === "calculation") {
-      setShowCombatResults(false);
-      handleCalculation();
-    }
-  }, [combatTimer, showCombatResults, combatBreakdown, game?.currentPhase]);
-
-  // Cleanup timer on unmount
-  useEffect(() => {
-    return () => {
-      if (combatTimerRef.current) {
-        clearInterval(combatTimerRef.current);
-      }
-    };
-  }, []);
-
   const handleCalculation = () => {
     // Use the calculated breakdown if available, otherwise calculate now
     let player1Breakdown = combatBreakdown?.player1;
     let player2Breakdown = combatBreakdown?.player2;
+
     
     if (!player1Breakdown || !player2Breakdown) {
       const p1Cards = game.gameState.player1Battlefield.map(bf => getCardById(bf.cardId)).filter(Boolean) as CardType[];
@@ -1359,6 +1374,9 @@ export default function GameBoardPage() {
       winnerId,
     });
   };
+  
+  // Store handleCalculation in ref for use by auto-advance useEffect
+  handleCalculationRef.current = handleCalculation;
 
   const handleEndPhase = () => {
     updateGameMutation.mutate({
