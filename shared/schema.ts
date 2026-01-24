@@ -141,6 +141,7 @@ export const gameStateSchema = z.object({
   player1Yard: z.array(z.string()),
   player2Yard: z.array(z.string()),
   lastCombatLog: combatLogSchema.optional(),
+  combatHistory: z.array(combatLogSchema).optional(),
 });
 
 export type GameState = z.infer<typeof gameStateSchema>;

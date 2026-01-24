@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useWebSocket } from "@/hooks/use-websocket";
-import { Heart, Swords, Trophy, Flag, ArrowRight, Shield, Flame, Droplet, Mountain, Wind, Leaf, RotateCcw, LogIn, MessageSquare, Eye, Send, X, Zap, Sparkles, Plus, Scroll } from "lucide-react";
+import { Heart, Swords, Trophy, Flag, ArrowRight, Shield, Flame, Droplet, Mountain, Wind, Leaf, RotateCcw, LogIn, MessageSquare, Eye, Send, X, Zap, Sparkles, Plus, Scroll, History } from "lucide-react";
 import type { Game, Card as CardType, Element, BattlefieldCard } from "@shared/schema";
 import { GAME_CONSTANTS } from "@shared/schema";
 import { getCardIdFromInstance } from "@/lib/card-utils";
@@ -542,12 +542,16 @@ function PhaseIndicator({
   turn,
   hasCombatLog,
   onViewCombatLog,
+  combatHistoryCount,
+  onViewCombatHistory,
 }: { 
   currentPhase: string; 
   isMyTurn: boolean; 
   turn: number;
   hasCombatLog?: boolean;
   onViewCombatLog?: () => void;
+  combatHistoryCount?: number;
+  onViewCombatHistory?: () => void;
 }) {
   const phases = ['draw', 'deployment', 'combat', 'calculation', 'end'];
   const phaseIcons: Record<string, typeof ArrowRight> = {
@@ -568,6 +572,18 @@ function PhaseIndicator({
   return (
     <div className="flex flex-col items-center gap-2">
       <div className="flex items-center gap-2 text-xs">
+        {combatHistoryCount && combatHistoryCount > 0 && onViewCombatHistory && (
+          <Button 
+            size="sm"
+            variant="outline" 
+            onClick={onViewCombatHistory}
+            className="border-cyan-500/50 text-cyan-300"
+            data-testid="button-view-combat-history"
+          >
+            <History className="w-3 h-3 mr-1" />
+            History ({combatHistoryCount})
+          </Button>
+        )}
         {hasCombatLog && onViewCombatLog && (
           <Button 
             size="sm"
@@ -577,7 +593,7 @@ function PhaseIndicator({
             data-testid="button-view-combat-log"
           >
             <Scroll className="w-3 h-3 mr-1" />
-            Combat Log
+            Last Round
           </Button>
         )}
         <Badge variant="outline" className="text-purple-300 border-purple-500/30">
@@ -1303,6 +1319,8 @@ export default function GameBoardPage() {
   } | null>(null);
   const [combatSummary, setCombatSummary] = useState<CombatSummary | null>(null);
   const [showCombatLogDialog, setShowCombatLogDialog] = useState(false);
+  const [showCombatHistoryDialog, setShowCombatHistoryDialog] = useState(false);
+  const [selectedHistoryRound, setSelectedHistoryRound] = useState<number | null>(null);
   const combatTimerRef = useRef<NodeJS.Timeout | null>(null);
   const chatScrollRef = useRef<HTMLDivElement>(null);
   const previousHandRef = useRef<string[] | null>(null);
@@ -2008,6 +2026,7 @@ export default function GameBoardPage() {
     };
     
     newGameState.lastCombatLog = combatLog;
+    newGameState.combatHistory = [...(game.gameState.combatHistory || []), combatLog];
     
     // Reset combat results state
     setShowCombatResults(false);
@@ -2090,6 +2109,8 @@ export default function GameBoardPage() {
             turn={game.currentTurn}
             hasCombatLog={!!game.gameState.lastCombatLog}
             onViewCombatLog={() => setShowCombatLogDialog(true)}
+            combatHistoryCount={game.gameState.combatHistory?.length || 0}
+            onViewCombatHistory={() => setShowCombatHistoryDialog(true)}
           />
           <div className="flex items-center gap-3">
             <VictoryWithdrawalCounter 
@@ -2437,6 +2458,111 @@ export default function GameBoardPage() {
                 </div>
               </div>
             </ScrollArea>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Combat History Dialog */}
+      <Dialog open={showCombatHistoryDialog} onOpenChange={(open) => {
+        setShowCombatHistoryDialog(open);
+        if (!open) setSelectedHistoryRound(null);
+      }}>
+        <DialogContent className="bg-slate-800 border-cyan-500/30 max-w-2xl max-h-[80vh] overflow-hidden" data-testid="dialog-combat-history">
+          <DialogHeader>
+            <DialogTitle className="text-white flex items-center gap-2">
+              <History className="w-5 h-5 text-cyan-400" />
+              Combat History - All Rounds
+            </DialogTitle>
+          </DialogHeader>
+          {game.gameState.combatHistory && game.gameState.combatHistory.length > 0 ? (
+            <ScrollArea className="max-h-[60vh] pr-4">
+              <div className="space-y-2">
+                {game.gameState.combatHistory.map((log, index) => {
+                  const yourTotal = isPlayer1 ? log.player1Total : log.player2Total;
+                  const enemyTotal = isPlayer1 ? log.player2Total : log.player1Total;
+                  const youWon = (isPlayer1 && log.winner === "player1") || (!isPlayer1 && log.winner === "player2");
+                  const isTie = log.winner === "tie";
+                  
+                  return (
+                    <div key={index}>
+                      <button
+                        onClick={() => setSelectedHistoryRound(selectedHistoryRound === index ? null : index)}
+                        className={`w-full p-3 rounded-lg border transition-all text-left ${
+                          selectedHistoryRound === index 
+                            ? 'bg-slate-700/50 border-cyan-500/50' 
+                            : 'bg-slate-700/30 border-slate-600/30 hover:border-slate-500/50'
+                        }`}
+                        data-testid={`combat-history-round-${index}`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <Badge variant="outline" className="text-cyan-300 border-cyan-500/30">
+                              Turn {log.turn}
+                            </Badge>
+                            <span className={`font-medium ${
+                              isTie ? 'text-yellow-300' : youWon ? 'text-green-400' : 'text-red-400'
+                            }`}>
+                              {isTie ? 'Draw' : youWon ? 'Won' : 'Lost'}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-4 text-sm">
+                            <span className="text-green-400">You: {yourTotal}</span>
+                            <span className="text-slate-500">vs</span>
+                            <span className="text-red-400">Enemy: {enemyTotal}</span>
+                            {!isTie && (
+                              <Badge className={youWon ? 'bg-green-600/50' : 'bg-red-600/50'}>
+                                {log.damage} dmg
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </button>
+                      
+                      {selectedHistoryRound === index && (
+                        <div className="mt-2 p-3 bg-slate-900/50 rounded-lg border border-slate-700/50 animate-in slide-in-from-top-2">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="bg-green-900/20 border border-green-500/20 rounded-lg p-3">
+                              <h4 className="text-green-400 text-sm font-medium mb-2">Your Cards</h4>
+                              {(isPlayer1 ? log.player1Cards : log.player2Cards).map((card, i) => (
+                                <div key={i} className="text-xs text-slate-300 mb-1">
+                                  <span className="font-medium">{card.cardName}</span>
+                                  <span className="text-slate-500 ml-1">
+                                    Base: {card.basePower}
+                                    {card.traitBonus !== 0 && <span className="text-purple-400"> {card.traitBonus > 0 ? '+' : ''}{card.traitBonus}</span>}
+                                    {card.buffBonus !== 0 && <span className="text-cyan-400"> +{card.buffBonus}</span>}
+                                    {card.debuffPenalty !== 0 && <span className="text-orange-400"> -{card.debuffPenalty}</span>}
+                                  </span>
+                                  <span className="text-green-400 ml-1">= {card.finalPower}</span>
+                                </div>
+                              ))}
+                            </div>
+                            <div className="bg-red-900/20 border border-red-500/20 rounded-lg p-3">
+                              <h4 className="text-red-400 text-sm font-medium mb-2">Opponent's Cards</h4>
+                              {(isPlayer1 ? log.player2Cards : log.player1Cards).map((card, i) => (
+                                <div key={i} className="text-xs text-slate-300 mb-1">
+                                  <span className="font-medium">{card.cardName}</span>
+                                  <span className="text-slate-500 ml-1">
+                                    Base: {card.basePower}
+                                    {card.traitBonus !== 0 && <span className="text-purple-400"> {card.traitBonus > 0 ? '+' : ''}{card.traitBonus}</span>}
+                                    {card.buffBonus !== 0 && <span className="text-cyan-400"> +{card.buffBonus}</span>}
+                                    {card.debuffPenalty !== 0 && <span className="text-orange-400"> -{card.debuffPenalty}</span>}
+                                  </span>
+                                  <span className="text-red-400 ml-1">= {card.finalPower}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </ScrollArea>
+          ) : (
+            <div className="text-center text-slate-400 py-8">
+              No combat rounds recorded yet. Complete a combat phase to see history.
+            </div>
           )}
         </DialogContent>
       </Dialog>
