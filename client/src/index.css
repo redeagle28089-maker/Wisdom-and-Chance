@@ -322,3 +322,32 @@
 .animate-damage-shake {
   animation: damageShake 0.5s ease-in-out;
 }
+
+@keyframes subtleGlow {
+  0%, 100% { 
+    box-shadow: 0 0 4px rgba(74, 222, 128, 0.2), 0 0 8px rgba(74, 222, 128, 0.1);
+  }
+  50% { 
+    box-shadow: 0 0 8px rgba(74, 222, 128, 0.4), 0 0 16px rgba(74, 222, 128, 0.2);
+  }
+}
+
+.animate-subtleGlow {
+  animation: subtleGlow 3s ease-in-out infinite;
+}
+
+@keyframes subtleGlowOverlay {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 0.15; }
+}
+
+@keyframes slowPulse {
+  0%, 100% { 
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  50% { 
+    transform: scale(1.1);
+    opacity: 0.9;
+  }
+}

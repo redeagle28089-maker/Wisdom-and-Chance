@@ -12,6 +12,7 @@ import type { Deck, Commander, Element, Game, InsertGame, GameState, Card as Car
 import type { UserDeck } from "@shared/models/auth";
 import { GAME_CONSTANTS, AI_DIFFICULTY } from "@shared/schema";
 import { Link } from "wouter";
+import { createCardInstances } from "@/lib/card-utils";
 
 const elementConfig: Record<Element, { icon: typeof Flame; color: string; bgColor: string }> = {
   Fire: { icon: Flame, color: "text-red-500", bgColor: "bg-red-600" },
@@ -117,8 +118,8 @@ export default function PracticePage() {
     const aiCommander = commanders[Math.floor(Math.random() * commanders.length)];
     const aiDeckCards = shuffleArray(allCards.filter((c) => !c.isCommander).slice(0, 40));
 
-    const player1Deck = shuffleArray([...selectedDeck.cardIds]);
-    const player2Deck = shuffleArray(aiDeckCards.map((c) => c.id));
+    const player1Deck = shuffleArray(createCardInstances([...selectedDeck.cardIds]));
+    const player2Deck = shuffleArray(createCardInstances(aiDeckCards.map((c) => c.id)));
 
     const player1Hand = player1Deck.splice(0, GAME_CONSTANTS.STARTING_HAND_SIZE);
     const player2Hand = player2Deck.splice(0, GAME_CONSTANTS.STARTING_HAND_SIZE);

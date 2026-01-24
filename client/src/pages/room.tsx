@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import type { Deck, Commander, Element, InsertGame, Game, GameState } from "@shared/schema";
 import { GAME_CONSTANTS } from "@shared/schema";
+import { createCardInstances } from "@/lib/card-utils";
 
 interface RoomDetails {
   id: string;
@@ -249,8 +250,8 @@ export default function RoomPage() {
         throw new Error("Could not find selected decks");
       }
 
-      const player1Deck = shuffleArray([...hostDeck.cardIds]);
-      const player2Deck = shuffleArray([...guestDeck.cardIds]);
+      const player1Deck = shuffleArray(createCardInstances([...hostDeck.cardIds]));
+      const player2Deck = shuffleArray(createCardInstances([...guestDeck.cardIds]));
 
       const player1Hand = player1Deck.splice(0, GAME_CONSTANTS.STARTING_HAND_SIZE);
       const player2Hand = player2Deck.splice(0, GAME_CONSTANTS.STARTING_HAND_SIZE);

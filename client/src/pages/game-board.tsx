@@ -14,6 +14,7 @@ import { useWebSocket } from "@/hooks/use-websocket";
 import { Heart, Swords, Trophy, Flag, ArrowRight, Shield, Flame, Droplet, Mountain, Wind, Leaf, RotateCcw, LogIn, MessageSquare, Eye, Send, X, Zap, Sparkles, Plus } from "lucide-react";
 import type { Game, Card as CardType, Element, BattlefieldCard } from "@shared/schema";
 import { GAME_CONSTANTS } from "@shared/schema";
+import { getCardIdFromInstance } from "@/lib/card-utils";
 
 import fireCardArt from "@assets/generated_images/fire_element_card_art.png";
 import waterCardArt from "@assets/generated_images/water_element_card_art.png";
@@ -29,12 +30,12 @@ interface ChatMessage {
   createdAt: string;
 }
 
-const elementConfig: Record<Element, { icon: typeof Flame; color: string; bgColor: string; cardArt: string }> = {
-  Fire: { icon: Flame, color: "text-red-500", bgColor: "bg-gradient-to-br from-red-600 to-orange-600", cardArt: fireCardArt },
-  Water: { icon: Droplet, color: "text-blue-500", bgColor: "bg-gradient-to-br from-blue-600 to-cyan-600", cardArt: waterCardArt },
-  Earth: { icon: Mountain, color: "text-amber-500", bgColor: "bg-gradient-to-br from-amber-700 to-yellow-600", cardArt: earthCardArt },
-  Air: { icon: Wind, color: "text-green-400", bgColor: "bg-gradient-to-br from-green-400 to-teal-400", cardArt: airCardArt },
-  Nature: { icon: Leaf, color: "text-emerald-500", bgColor: "bg-gradient-to-br from-green-700 to-emerald-600", cardArt: natureCardArt },
+const elementConfig: Record<Element, { icon: typeof Flame; color: string; bgColor: string; cardArt: string; solidBorder: string }> = {
+  Fire: { icon: Flame, color: "text-red-500", bgColor: "bg-gradient-to-br from-red-600 to-orange-600", cardArt: fireCardArt, solidBorder: "border-red-500" },
+  Water: { icon: Droplet, color: "text-blue-500", bgColor: "bg-gradient-to-br from-blue-600 to-cyan-600", cardArt: waterCardArt, solidBorder: "border-blue-500" },
+  Earth: { icon: Mountain, color: "text-amber-500", bgColor: "bg-gradient-to-br from-amber-700 to-yellow-600", cardArt: earthCardArt, solidBorder: "border-orange-500" },
+  Air: { icon: Wind, color: "text-green-400", bgColor: "bg-gradient-to-br from-green-400 to-teal-400", cardArt: airCardArt, solidBorder: "border-cyan-400" },
+  Nature: { icon: Leaf, color: "text-emerald-500", bgColor: "bg-gradient-to-br from-green-700 to-emerald-600", cardArt: natureCardArt, solidBorder: "border-green-500" },
 };
 
 const colorToElement: Record<string, Element> = {
@@ -361,7 +362,7 @@ function MiniCard({
             ? 'border-green-400/70 hover:border-green-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-green-500/20' 
             : 'border-white/20 hover:border-white/40'
         }
-        ${playable && !selected ? 'animate-[pulse_2s_ease-in-out_infinite]' : ''}
+        ${playable && !selected ? 'animate-subtleGlow' : ''}
         ${isNewlyPlayed ? 'animate-[cardDraw_0.4s_ease-out]' : ''}
         ${isHovered ? 'z-10' : ''}
       `}
@@ -371,7 +372,7 @@ function MiniCard({
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
       onDoubleClick={onPreview}
-      data-testid={`card-${card.id}`}
+      data-testid={`card-minicard-${card.id}`}
     >
       {/* Card art background */}
       <img 
@@ -382,7 +383,7 @@ function MiniCard({
       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30 rounded-lg" />
       
       {playable && !selected && (
-        <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full animate-ping z-20" />
+        <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-green-400 rounded-full animate-[slowPulse_2s_ease-in-out_infinite] z-20 opacity-80" />
       )}
       
       {/* Power badge - top left */}
@@ -440,14 +441,20 @@ function CardPreviewDialog({
             {card.name}
           </DialogTitle>
         </DialogHeader>
-        <div className={`w-full aspect-[3/4] rounded-xl ${config.bgColor} p-4 flex flex-col items-center justify-center relative overflow-hidden`}>
-          <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-black/30" />
-          <div className="absolute top-3 left-3 w-12 h-12 bg-black/50 rounded-full flex items-center justify-center border-2 border-white/30">
+        <div className={`w-full aspect-[3/4] rounded-xl border-4 ${config.solidBorder} relative overflow-hidden`}>
+          <img 
+            src={card.imageUrl || config.cardArt} 
+            alt={card.name}
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/60" />
+          <div className="absolute top-3 left-3 w-12 h-12 bg-slate-900/90 rounded flex items-center justify-center border-2 border-white/30">
             <span className="text-white font-bold text-xl">{card.power}</span>
           </div>
-          <Icon className="w-24 h-24 text-white/80 drop-shadow-2xl relative z-10" />
-          <p className="text-white font-bold text-lg mt-4 relative z-10">{card.name}</p>
-          <Badge className="mt-2 bg-black/30">{card.element}</Badge>
+          <div className="absolute bottom-0 left-0 right-0 bg-slate-900/95 py-2 text-center">
+            <p className="text-white font-bold text-lg">{card.name}</p>
+            <Badge className="mt-1 bg-purple-600">{card.element}</Badge>
+          </div>
         </div>
         <div className="space-y-2">
           {card.trait && (
@@ -682,7 +689,10 @@ function BattlefieldZone({
   onPreview: (card: CardType) => void;
   newlyDeployedCards?: Set<string>;
 }) {
-  const getCardById = (cardId: string) => allCards.find((c) => c.id === cardId);
+  const getCardById = (instanceId: string) => {
+    const cardId = getCardIdFromInstance(instanceId);
+    return allCards.find((c) => c.id === cardId);
+  };
   
   return (
     <div className={`relative rounded-xl border-2 ${isOpponent ? 'border-red-500/20 bg-gradient-to-b from-red-900/10 to-slate-800/30' : 'border-green-500/20 bg-gradient-to-t from-green-900/10 to-slate-800/30'} p-4`}>
@@ -849,7 +859,10 @@ export default function GameBoardPage() {
 
   const isMultiplayer = game?.gameType === "multiplayer";
 
-  const getCardById = (cardId: string) => allCards.find((c) => c.id === cardId);
+  const getCardById = (instanceId: string) => {
+    const cardId = getCardIdFromInstance(instanceId);
+    return allCards.find((c) => c.id === cardId);
+  };
 
   const isPlayer1 = game ? game.player1Id === user?.id : false;
   const myHP = game ? (isPlayer1 ? game.player1HP : game.player2HP) : GAME_CONSTANTS.STARTING_HP;
