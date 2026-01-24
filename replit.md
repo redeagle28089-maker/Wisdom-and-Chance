@@ -12,8 +12,9 @@ A tactical trading card game simulator built with React, Express, and TypeScript
   - Fixed AI combat calculation bug (AI was calculating 0 power for all cards)
   - Card instance IDs (format: cardId::N) now properly resolved to base card IDs
   - AI now draws and deploys cards simultaneously with player in practice mode
-  - Added combat log button (scroll icon) to view previous round's combat details
-  - Combat log dialog shows: card power breakdowns, trait effects, final results
+  - Combat log button prominently placed with "View Combat Log" text and amber styling
+  - Combat log persisted in game.gameState.lastCombatLog (survives re-renders)
+  - Combat log dialog shows: card name, base power, trait bonuses, buff/debuff modifiers, final power
 
 - **January 2026:** New Pages & Card Database Enhancement
   - Card tiles now display unique fantasy names above UNIT label
