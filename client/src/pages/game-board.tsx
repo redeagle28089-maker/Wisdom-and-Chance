@@ -1286,11 +1286,6 @@ export default function GameBoardPage() {
     player2: CardPowerBreakdown[];
   } | null>(null);
   const [combatSummary, setCombatSummary] = useState<CombatSummary | null>(null);
-  const [lastCombatSummary, setLastCombatSummary] = useState<CombatSummary | null>(null);
-  const [lastCombatBreakdown, setLastCombatBreakdown] = useState<{
-    player1: CardPowerBreakdown[];
-    player2: CardPowerBreakdown[];
-  } | null>(null);
   const [showCombatLogDialog, setShowCombatLogDialog] = useState(false);
   const combatTimerRef = useRef<NodeJS.Timeout | null>(null);
   const chatScrollRef = useRef<HTMLDivElement>(null);
@@ -1973,13 +1968,30 @@ export default function GameBoardPage() {
       toast({ title: "Game Over! You win!", variant: "default" });
     }
 
-    // Save combat summary for later viewing before resetting
-    if (combatSummary) {
-      setLastCombatSummary(combatSummary);
-    }
-    if (combatBreakdown) {
-      setLastCombatBreakdown(combatBreakdown);
-    }
+    // Save combat log to game state for persistence
+    // Map CardPowerBreakdown to schema format
+    const mapBreakdownToSchema = (breakdowns: CardPowerBreakdown[]) => breakdowns.map(b => ({
+      cardId: b.card.id,
+      cardName: b.card.name,
+      basePower: b.basePower,
+      traitBonus: b.traitInfo?.value || 0,
+      buffBonus: b.buffBonuses.reduce((s, bb) => s + bb.amount, 0),
+      debuffPenalty: b.debuffPenalties.reduce((s, dp) => s + dp.amount, 0),
+      finalPower: b.finalPower,
+      traitName: b.traitInfo?.trait,
+    }));
+    
+    const combatLog = {
+      player1Cards: mapBreakdownToSchema(player1Breakdown),
+      player2Cards: mapBreakdownToSchema(player2Breakdown),
+      player1Total: p1Power,
+      player2Total: p2Power,
+      damage,
+      winner: p1Power > p2Power ? "player1" as const : p2Power > p1Power ? "player2" as const : "tie" as const,
+      turn: game.currentTurn,
+    };
+    
+    newGameState.lastCombatLog = combatLog;
     
     // Reset combat results state
     setShowCombatResults(false);
@@ -2065,17 +2077,6 @@ export default function GameBoardPage() {
             />
             <AnimatedHPBar current={myHP} max={GAME_CONSTANTS.STARTING_HP} isPlayer={true} label="You" previousHP={previousMyHP} />
             <div className="flex items-center gap-2">
-              {lastCombatSummary && (
-                <Button 
-                  variant="outline" 
-                  size="icon" 
-                  onClick={() => setShowCombatLogDialog(true)}
-                  data-testid="button-view-combat-log"
-                  title="View Last Combat Log"
-                >
-                  <Scroll className="w-4 h-4" />
-                </Button>
-              )}
               {isMultiplayer && (
                 <Button 
                   variant="outline" 
@@ -2163,6 +2164,19 @@ export default function GameBoardPage() {
               )}
               {!isMyTurn && (
                 <p className="text-purple-300">Waiting for opponent...</p>
+              )}
+              
+              {/* Combat Log Button - Always visible after first combat */}
+              {game.gameState.lastCombatLog && (
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowCombatLogDialog(true)}
+                  className="border-amber-500/50 text-amber-300 hover:bg-amber-500/20"
+                  data-testid="button-view-combat-log"
+                >
+                  <Scroll className="w-4 h-4 mr-2" />
+                  View Combat Log
+                </Button>
               )}
             </div>
           </Card>
@@ -2328,128 +2342,88 @@ export default function GameBoardPage() {
           <DialogHeader>
             <DialogTitle className="text-white flex items-center gap-2">
               <Scroll className="w-5 h-5 text-purple-400" />
-              Last Combat Log
+              Combat Log - Turn {game.gameState.lastCombatLog?.turn || '?'}
             </DialogTitle>
           </DialogHeader>
-          {lastCombatSummary && lastCombatBreakdown && (
+          {game.gameState.lastCombatLog && (
             <ScrollArea className="max-h-[60vh] pr-4">
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-green-900/20 border border-green-500/20 rounded-lg p-3" data-testid="combat-log-your-cards">
                     <h4 className="text-green-400 text-sm font-medium mb-2">Your Cards</h4>
-                    {lastCombatBreakdown[isPlayer1 ? 'player1' : 'player2'].map((b, i) => (
+                    {(isPlayer1 ? game.gameState.lastCombatLog.player1Cards : game.gameState.lastCombatLog.player2Cards).map((card, i) => (
                       <div key={i} className="text-xs text-slate-300 mb-1" data-testid={`combat-log-your-card-${i}`}>
-                        <span className="font-medium">{b.card.name}</span>
-                        <span className="text-slate-500 ml-1">Power: {b.finalPower}</span>
-                        {b.traitInfo && (
-                          <span className="text-purple-400 ml-1">({b.traitInfo.trait})</span>
+                        <span className="font-medium">{card.cardName}</span>
+                        <span className="text-slate-500 ml-1">
+                          Base: {card.basePower}
+                          {card.traitBonus !== 0 && <span className="text-purple-400"> {card.traitBonus > 0 ? '+' : ''}{card.traitBonus} trait</span>}
+                          {card.buffBonus !== 0 && <span className="text-cyan-400"> +{card.buffBonus} buff</span>}
+                          {card.debuffPenalty !== 0 && <span className="text-orange-400"> -{card.debuffPenalty} debuff</span>}
+                        </span>
+                        <span className="text-green-400 ml-1">= {card.finalPower}</span>
+                        {card.traitName && (
+                          <div className="text-purple-400 text-xs mt-0.5">({card.traitName})</div>
                         )}
                       </div>
                     ))}
                     <div className="text-sm font-bold text-green-300 mt-2 pt-2 border-t border-green-500/20" data-testid="combat-log-your-total">
-                      Total: {lastCombatBreakdown[isPlayer1 ? 'player1' : 'player2'].reduce((s, b) => s + b.finalPower, 0)}
+                      Total: {isPlayer1 ? game.gameState.lastCombatLog.player1Total : game.gameState.lastCombatLog.player2Total}
                     </div>
                   </div>
                   <div className="bg-red-900/20 border border-red-500/20 rounded-lg p-3" data-testid="combat-log-enemy-cards">
                     <h4 className="text-red-400 text-sm font-medium mb-2">Opponent's Cards</h4>
-                    {lastCombatBreakdown[isPlayer1 ? 'player2' : 'player1'].map((b, i) => (
+                    {(isPlayer1 ? game.gameState.lastCombatLog.player2Cards : game.gameState.lastCombatLog.player1Cards).map((card, i) => (
                       <div key={i} className="text-xs text-slate-300 mb-1" data-testid={`combat-log-enemy-card-${i}`}>
-                        <span className="font-medium">{b.card.name}</span>
-                        <span className="text-slate-500 ml-1">Power: {b.finalPower}</span>
-                        {b.traitInfo && (
-                          <span className="text-purple-400 ml-1">({b.traitInfo.trait})</span>
+                        <span className="font-medium">{card.cardName}</span>
+                        <span className="text-slate-500 ml-1">
+                          Base: {card.basePower}
+                          {card.traitBonus !== 0 && <span className="text-purple-400"> {card.traitBonus > 0 ? '+' : ''}{card.traitBonus} trait</span>}
+                          {card.buffBonus !== 0 && <span className="text-cyan-400"> +{card.buffBonus} buff</span>}
+                          {card.debuffPenalty !== 0 && <span className="text-orange-400"> -{card.debuffPenalty} debuff</span>}
+                        </span>
+                        <span className="text-red-400 ml-1">= {card.finalPower}</span>
+                        {card.traitName && (
+                          <div className="text-purple-400 text-xs mt-0.5">({card.traitName})</div>
                         )}
                       </div>
                     ))}
                     <div className="text-sm font-bold text-red-300 mt-2 pt-2 border-t border-red-500/20" data-testid="combat-log-enemy-total">
-                      Total: {lastCombatBreakdown[isPlayer1 ? 'player2' : 'player1'].reduce((s, b) => s + b.finalPower, 0)}
+                      Total: {isPlayer1 ? game.gameState.lastCombatLog.player2Total : game.gameState.lastCombatLog.player1Total}
                     </div>
-                  </div>
-                </div>
-
-                <div className="bg-purple-900/20 border border-purple-500/20 rounded-lg p-3" data-testid="combat-log-trait-effects">
-                  <h4 className="text-purple-400 text-sm font-medium mb-2 flex items-center gap-2">
-                    <Sparkles className="w-4 h-4" />
-                    Trait Effects Summary
-                  </h4>
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-                    {(isPlayer1 ? lastCombatSummary.player1QuickStrikeDamage : lastCombatSummary.player2QuickStrikeDamage) > 0 && (
-                      <div className="text-green-300">Your Quick Strike: +{isPlayer1 ? lastCombatSummary.player1QuickStrikeDamage : lastCombatSummary.player2QuickStrikeDamage} dmg</div>
-                    )}
-                    {(isPlayer1 ? lastCombatSummary.player2QuickStrikeDamage : lastCombatSummary.player1QuickStrikeDamage) > 0 && (
-                      <div className="text-red-300">Enemy Quick Strike: +{isPlayer1 ? lastCombatSummary.player2QuickStrikeDamage : lastCombatSummary.player1QuickStrikeDamage} dmg</div>
-                    )}
-                    {(isPlayer1 ? lastCombatSummary.player1GuardianBlocked : lastCombatSummary.player2GuardianBlocked) > 0 && (
-                      <div className="text-green-300">Your Guardian: -{isPlayer1 ? lastCombatSummary.player1GuardianBlocked : lastCombatSummary.player2GuardianBlocked} blocked</div>
-                    )}
-                    {(isPlayer1 ? lastCombatSummary.player2GuardianBlocked : lastCombatSummary.player1GuardianBlocked) > 0 && (
-                      <div className="text-red-300">Enemy Guardian: -{isPlayer1 ? lastCombatSummary.player2GuardianBlocked : lastCombatSummary.player1GuardianBlocked} blocked</div>
-                    )}
-                    {(isPlayer1 ? lastCombatSummary.player1Healing : lastCombatSummary.player2Healing) > 0 && (
-                      <div className="text-green-300">Your Healing: +{isPlayer1 ? lastCombatSummary.player1Healing : lastCombatSummary.player2Healing} HP</div>
-                    )}
-                    {(isPlayer1 ? lastCombatSummary.player2Healing : lastCombatSummary.player1Healing) > 0 && (
-                      <div className="text-red-300">Enemy Healing: +{isPlayer1 ? lastCombatSummary.player2Healing : lastCombatSummary.player1Healing} HP</div>
-                    )}
-                    {(isPlayer1 ? lastCombatSummary.player1CardsDrawn : lastCombatSummary.player2CardsDrawn) > 0 && (
-                      <div className="text-green-300">Your Cards Drawn: +{isPlayer1 ? lastCombatSummary.player1CardsDrawn : lastCombatSummary.player2CardsDrawn}</div>
-                    )}
-                    {(isPlayer1 ? lastCombatSummary.player2CardsDrawn : lastCombatSummary.player1CardsDrawn) > 0 && (
-                      <div className="text-red-300">Enemy Cards Drawn: +{isPlayer1 ? lastCombatSummary.player2CardsDrawn : lastCombatSummary.player1CardsDrawn}</div>
-                    )}
                   </div>
                 </div>
 
                 <div className="bg-slate-700/30 rounded-lg p-3" data-testid="combat-log-final-result">
-                  <h4 className="text-slate-300 text-sm font-medium mb-2">Final Result</h4>
-                  <div className="flex justify-between text-sm">
-                    <div className="text-green-300" data-testid="combat-log-your-result">
-                      You: {(isPlayer1 ? lastCombatSummary.finalDamageToPlayer1 : lastCombatSummary.finalDamageToPlayer2) > 0 
-                        ? `-${isPlayer1 ? lastCombatSummary.finalDamageToPlayer1 : lastCombatSummary.finalDamageToPlayer2} HP`
-                        : 'No damage'
-                      }
-                      {(isPlayer1 ? lastCombatSummary.player1Healing : lastCombatSummary.player2Healing) > 0 && 
-                        ` +${isPlayer1 ? lastCombatSummary.player1Healing : lastCombatSummary.player2Healing} healed`
-                      }
-                    </div>
-                    <div className="text-red-300" data-testid="combat-log-enemy-result">
-                      Enemy: {(isPlayer1 ? lastCombatSummary.finalDamageToPlayer2 : lastCombatSummary.finalDamageToPlayer1) > 0 
-                        ? `-${isPlayer1 ? lastCombatSummary.finalDamageToPlayer2 : lastCombatSummary.finalDamageToPlayer1} HP`
-                        : 'No damage'
-                      }
-                      {(isPlayer1 ? lastCombatSummary.player2Healing : lastCombatSummary.player1Healing) > 0 && 
-                        ` +${isPlayer1 ? lastCombatSummary.player2Healing : lastCombatSummary.player1Healing} healed`
-                      }
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-slate-700/30 rounded-lg p-3" data-testid="combat-log-detailed">
-                  <h4 className="text-slate-300 text-sm font-medium mb-2">Detailed Combat Log</h4>
-                  <div className="space-y-1 text-xs max-h-40 overflow-y-auto">
-                    {lastCombatSummary.log.map((entry, i) => {
-                      const IconComponent = entry.icon === "zap" ? Zap : 
-                        entry.icon === "shield" ? Shield : 
-                        entry.icon === "heart" ? Heart : 
-                        entry.icon === "plus" ? Plus :
-                        entry.icon === "swords" ? Swords :
-                        entry.icon === "trophy" ? Trophy :
-                        entry.icon === "skull" ? Swords :
-                        Sparkles;
-                      
-                      const textColor = entry.actor === "player1" 
-                        ? (isPlayer1 ? "text-green-300" : "text-red-300")
-                        : entry.actor === "player2" 
-                          ? (isPlayer1 ? "text-red-300" : "text-green-300")
-                          : "text-slate-400";
-                      
-                      return (
-                        <div key={i} className={`flex items-start gap-2 ${textColor} py-0.5`}>
-                          <IconComponent className="w-3 h-3 mt-0.5 flex-shrink-0" />
-                          <span>{entry.description}</span>
+                  <h4 className="text-slate-300 text-sm font-medium mb-2 flex items-center gap-2">
+                    <Trophy className="w-4 h-4" />
+                    Final Result
+                  </h4>
+                  <div className="text-center">
+                    {game.gameState.lastCombatLog.winner === "tie" ? (
+                      <div className="text-yellow-300 text-lg font-bold">Draw! No damage dealt.</div>
+                    ) : (
+                      <>
+                        <div className={`text-lg font-bold ${
+                          (isPlayer1 && game.gameState.lastCombatLog.winner === "player1") || 
+                          (!isPlayer1 && game.gameState.lastCombatLog.winner === "player2") 
+                            ? "text-green-400" 
+                            : "text-red-400"
+                        }`}>
+                          {(isPlayer1 && game.gameState.lastCombatLog.winner === "player1") || 
+                           (!isPlayer1 && game.gameState.lastCombatLog.winner === "player2") 
+                            ? "You Won!" 
+                            : "Opponent Won!"}
                         </div>
-                      );
-                    })}
+                        <div className="text-sm text-slate-400 mt-1">
+                          Damage Dealt: <span className="text-amber-400 font-bold">{game.gameState.lastCombatLog.damage}</span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  <div className="flex justify-between text-xs text-slate-400 mt-3 pt-2 border-t border-slate-600/50">
+                    <div>Your Power: {isPlayer1 ? game.gameState.lastCombatLog.player1Total : game.gameState.lastCombatLog.player2Total}</div>
+                    <div>vs</div>
+                    <div>Enemy Power: {isPlayer1 ? game.gameState.lastCombatLog.player2Total : game.gameState.lastCombatLog.player1Total}</div>
                   </div>
                 </div>
               </div>

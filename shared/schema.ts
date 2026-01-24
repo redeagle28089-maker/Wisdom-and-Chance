@@ -106,6 +106,31 @@ export const battlefieldCardSchema = z.object({
 
 export type BattlefieldCard = z.infer<typeof battlefieldCardSchema>;
 
+export const cardPowerBreakdownSchema = z.object({
+  cardId: z.string(),
+  cardName: z.string(),
+  basePower: z.number(),
+  traitBonus: z.number(),
+  buffBonus: z.number(),
+  debuffPenalty: z.number(),
+  finalPower: z.number(),
+  traitName: z.string().optional(),
+});
+
+export type CardPowerBreakdown = z.infer<typeof cardPowerBreakdownSchema>;
+
+export const combatLogSchema = z.object({
+  player1Cards: z.array(cardPowerBreakdownSchema),
+  player2Cards: z.array(cardPowerBreakdownSchema),
+  player1Total: z.number(),
+  player2Total: z.number(),
+  damage: z.number(),
+  winner: z.enum(["player1", "player2", "tie"]),
+  turn: z.number(),
+});
+
+export type CombatLog = z.infer<typeof combatLogSchema>;
+
 export const gameStateSchema = z.object({
   player1Hand: z.array(z.string()),
   player2Hand: z.array(z.string()),
@@ -115,6 +140,7 @@ export const gameStateSchema = z.object({
   player2Battlefield: z.array(battlefieldCardSchema),
   player1Yard: z.array(z.string()),
   player2Yard: z.array(z.string()),
+  lastCombatLog: combatLogSchema.optional(),
 });
 
 export type GameState = z.infer<typeof gameStateSchema>;
