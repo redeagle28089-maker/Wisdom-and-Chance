@@ -63,6 +63,34 @@ interface CardPowerBreakdown {
   finalPower: number;
 }
 
+interface CombatLogEntry {
+  step: number;
+  phase: "quick_strike" | "power_calculation" | "damage_resolution" | "guardian_block" | "healing" | "card_draw";
+  description: string;
+  icon: string;
+  actor: "player1" | "player2" | "both" | "system";
+  cardName?: string;
+  traitName?: string;
+  value?: number;
+  targetAffected?: "player1_hp" | "player2_hp" | "player1_damage" | "player2_damage" | "cards";
+}
+
+interface CombatSummary {
+  player1QuickStrikeDamage: number;
+  player2QuickStrikeDamage: number;
+  player1GuardianBlocked: number;
+  player2GuardianBlocked: number;
+  player1Healing: number;
+  player2Healing: number;
+  player1CardsDrawn: number;
+  player2CardsDrawn: number;
+  baseDamageToPlayer1: number;
+  baseDamageToPlayer2: number;
+  finalDamageToPlayer1: number;
+  finalDamageToPlayer2: number;
+  log: CombatLogEntry[];
+}
+
 function calculateBattlePower(
   friendlyCards: CardType[],
   enemyCards: CardType[],
@@ -110,6 +138,312 @@ function calculateBattlePower(
       finalPower,
     };
   });
+}
+
+function generateCombatLog(
+  player1Breakdown: CardPowerBreakdown[],
+  player2Breakdown: CardPowerBreakdown[],
+  player1Total: number,
+  player2Total: number
+): CombatSummary {
+  const log: CombatLogEntry[] = [];
+  let step = 1;
+  
+  // Track trait effects
+  let player1QuickStrikeDamage = 0;
+  let player2QuickStrikeDamage = 0;
+  let player1GuardianBlocked = 0;
+  let player2GuardianBlocked = 0;
+  let player1Healing = 0;
+  let player2Healing = 0;
+  let player1CardsDrawn = 0;
+  let player2CardsDrawn = 0;
+
+  // Phase 1: Quick Strike (attacks first, deals damage before normal combat)
+  const player1QuickStrikers = player1Breakdown.filter(b => b.traitInfo?.trait === "Quick Strike");
+  const player2QuickStrikers = player2Breakdown.filter(b => b.traitInfo?.trait === "Quick Strike");
+  
+  if (player1QuickStrikers.length > 0 || player2QuickStrikers.length > 0) {
+    log.push({
+      step: step++,
+      phase: "quick_strike",
+      description: "Quick Strike Phase - Fast attackers deal damage first!",
+      icon: "zap",
+      actor: "system"
+    });
+    
+    player1QuickStrikers.forEach(b => {
+      const damage = b.traitInfo!.value;
+      player1QuickStrikeDamage += damage;
+      log.push({
+        step: step++,
+        phase: "quick_strike",
+        description: `[P1] ${b.card.name} strikes first! Deals ${damage} damage to P2.`,
+        icon: "zap",
+        actor: "player1",
+        cardName: b.card.name,
+        traitName: "Quick Strike",
+        value: damage,
+        targetAffected: "player2_hp"
+      });
+    });
+    
+    player2QuickStrikers.forEach(b => {
+      const damage = b.traitInfo!.value;
+      player2QuickStrikeDamage += damage;
+      log.push({
+        step: step++,
+        phase: "quick_strike",
+        description: `[P2] ${b.card.name} strikes first! Deals ${damage} damage to P1.`,
+        icon: "zap",
+        actor: "player2",
+        cardName: b.card.name,
+        traitName: "Quick Strike",
+        value: damage,
+        targetAffected: "player1_hp"
+      });
+    });
+  }
+
+  // Phase 2: Power Calculation
+  log.push({
+    step: step++,
+    phase: "power_calculation",
+    description: "Power Calculation - Comparing total battlefield power...",
+    icon: "calculator",
+    actor: "system"
+  });
+
+  // Show power breakdown for each side (neutral perspective)
+  log.push({
+    step: step++,
+    phase: "power_calculation",
+    description: `[P1] Total power: ${player1Total} (${player1Breakdown.map(b => `${b.card.name}: ${b.finalPower}`).join(" + ")})`,
+    icon: "shield",
+    actor: "player1",
+    value: player1Total
+  });
+
+  log.push({
+    step: step++,
+    phase: "power_calculation",
+    description: `[P2] Total power: ${player2Total} (${player2Breakdown.map(b => `${b.card.name}: ${b.finalPower}`).join(" + ")})`,
+    icon: "swords",
+    actor: "player2",
+    value: player2Total
+  });
+
+  // Phase 3: Damage Resolution
+  const baseDamage = Math.abs(player1Total - player2Total);
+  const winner = player1Total > player2Total ? "player1" : player2Total > player1Total ? "player2" : "tie";
+  
+  // Base damage from power comparison
+  let baseDamageToPlayer1 = 0;
+  let baseDamageToPlayer2 = 0;
+  
+  if (winner === "player1") {
+    baseDamageToPlayer2 = baseDamage;
+    log.push({
+      step: step++,
+      phase: "damage_resolution",
+      description: `P1 wins combat! P2 takes ${baseDamage} damage (${player1Total} - ${player2Total} = ${baseDamage})`,
+      icon: "trophy",
+      actor: "player1",
+      value: baseDamage,
+      targetAffected: "player2_hp"
+    });
+  } else if (winner === "player2") {
+    baseDamageToPlayer1 = baseDamage;
+    log.push({
+      step: step++,
+      phase: "damage_resolution",
+      description: `P2 wins combat! P1 takes ${baseDamage} damage (${player2Total} - ${player1Total} = ${baseDamage})`,
+      icon: "skull",
+      actor: "player2",
+      value: baseDamage,
+      targetAffected: "player1_hp"
+    });
+  } else {
+    log.push({
+      step: step++,
+      phase: "damage_resolution",
+      description: "Tie! Both players gain +1 Advance and +1 Withdraw.",
+      icon: "handshake",
+      actor: "both"
+    });
+  }
+
+  // Calculate total incoming damage before Guardian (includes Quick Strike)
+  const totalIncomingToP1 = baseDamageToPlayer1 + player2QuickStrikeDamage;
+  const totalIncomingToP2 = baseDamageToPlayer2 + player1QuickStrikeDamage;
+
+  // Phase 4: Guardian blocks (reduces ALL incoming damage, including Quick Strike)
+  const player1Guardians = player1Breakdown.filter(b => b.traitInfo?.trait === "Guardian");
+  const player2Guardians = player2Breakdown.filter(b => b.traitInfo?.trait === "Guardian");
+  
+  if ((player1Guardians.length > 0 && totalIncomingToP1 > 0) || 
+      (player2Guardians.length > 0 && totalIncomingToP2 > 0)) {
+    log.push({
+      step: step++,
+      phase: "guardian_block",
+      description: "Guardian Phase - Defensive traits block incoming damage!",
+      icon: "shield",
+      actor: "system"
+    });
+    
+    if (player1Guardians.length > 0 && totalIncomingToP1 > 0) {
+      player1Guardians.forEach(b => {
+        const blockAmount = Math.min(b.traitInfo!.value, totalIncomingToP1 - player1GuardianBlocked);
+        if (blockAmount > 0) {
+          player1GuardianBlocked += blockAmount;
+          log.push({
+            step: step++,
+            phase: "guardian_block",
+            description: `[P1] ${b.card.name}'s Guardian blocks ${blockAmount} incoming damage!`,
+            icon: "shield",
+            actor: "player1",
+            cardName: b.card.name,
+            traitName: "Guardian",
+            value: blockAmount,
+            targetAffected: "player1_damage"
+          });
+        }
+      });
+    }
+    
+    if (player2Guardians.length > 0 && totalIncomingToP2 > 0) {
+      player2Guardians.forEach(b => {
+        const blockAmount = Math.min(b.traitInfo!.value, totalIncomingToP2 - player2GuardianBlocked);
+        if (blockAmount > 0) {
+          player2GuardianBlocked += blockAmount;
+          log.push({
+            step: step++,
+            phase: "guardian_block",
+            description: `[P2] ${b.card.name}'s Guardian blocks ${blockAmount} incoming damage!`,
+            icon: "shield",
+            actor: "player2",
+            cardName: b.card.name,
+            traitName: "Guardian",
+            value: blockAmount,
+            targetAffected: "player2_damage"
+          });
+        }
+      });
+    }
+  }
+
+  // Phase 5: Restoration (healing)
+  const player1Healers = player1Breakdown.filter(b => b.traitInfo?.trait === "Restoration");
+  const player2Healers = player2Breakdown.filter(b => b.traitInfo?.trait === "Restoration");
+  
+  if (player1Healers.length > 0 || player2Healers.length > 0) {
+    log.push({
+      step: step++,
+      phase: "healing",
+      description: "Restoration Phase - Healing effects activate!",
+      icon: "heart",
+      actor: "system"
+    });
+    
+    player1Healers.forEach(b => {
+      const healAmount = b.traitInfo!.value;
+      player1Healing += healAmount;
+      log.push({
+        step: step++,
+        phase: "healing",
+        description: `[P1] ${b.card.name}'s Restoration heals P1 for ${healAmount} HP!`,
+        icon: "heart",
+        actor: "player1",
+        cardName: b.card.name,
+        traitName: "Restoration",
+        value: healAmount,
+        targetAffected: "player1_hp"
+      });
+    });
+    
+    player2Healers.forEach(b => {
+      const healAmount = b.traitInfo!.value;
+      player2Healing += healAmount;
+      log.push({
+        step: step++,
+        phase: "healing",
+        description: `[P2] ${b.card.name}'s Restoration heals P2 for ${healAmount} HP!`,
+        icon: "heart",
+        actor: "player2",
+        cardName: b.card.name,
+        traitName: "Restoration",
+        value: healAmount,
+        targetAffected: "player2_hp"
+      });
+    });
+  }
+
+  // Phase 6: Care Package (card draw)
+  const player1Drawers = player1Breakdown.filter(b => b.traitInfo?.trait === "Care Package");
+  const player2Drawers = player2Breakdown.filter(b => b.traitInfo?.trait === "Care Package");
+  
+  if (player1Drawers.length > 0 || player2Drawers.length > 0) {
+    log.push({
+      step: step++,
+      phase: "card_draw",
+      description: "Care Package Phase - Bonus card draws!",
+      icon: "plus",
+      actor: "system"
+    });
+    
+    player1Drawers.forEach(b => {
+      const drawAmount = b.traitInfo!.value;
+      player1CardsDrawn += drawAmount;
+      log.push({
+        step: step++,
+        phase: "card_draw",
+        description: `[P1] ${b.card.name}'s Care Package lets P1 draw ${drawAmount} extra card(s)!`,
+        icon: "plus",
+        actor: "player1",
+        cardName: b.card.name,
+        traitName: "Care Package",
+        value: drawAmount,
+        targetAffected: "cards"
+      });
+    });
+    
+    player2Drawers.forEach(b => {
+      const drawAmount = b.traitInfo!.value;
+      player2CardsDrawn += drawAmount;
+      log.push({
+        step: step++,
+        phase: "card_draw",
+        description: `[P2] ${b.card.name}'s Care Package lets P2 draw ${drawAmount} extra card(s)!`,
+        icon: "plus",
+        actor: "player2",
+        cardName: b.card.name,
+        traitName: "Care Package",
+        value: drawAmount,
+        targetAffected: "cards"
+      });
+    });
+  }
+
+  // Calculate final damage after all modifiers
+  // Total incoming = base combat damage + Quick Strike damage - Guardian blocked
+  const finalDamageToPlayer1 = Math.max(0, baseDamageToPlayer1 + player2QuickStrikeDamage - player1GuardianBlocked);
+  const finalDamageToPlayer2 = Math.max(0, baseDamageToPlayer2 + player1QuickStrikeDamage - player2GuardianBlocked);
+
+  return {
+    player1QuickStrikeDamage,
+    player2QuickStrikeDamage,
+    player1GuardianBlocked,
+    player2GuardianBlocked,
+    player1Healing,
+    player2Healing,
+    player1CardsDrawn,
+    player2CardsDrawn,
+    baseDamageToPlayer1,
+    baseDamageToPlayer2,
+    finalDamageToPlayer1,
+    finalDamageToPlayer2,
+    log
+  };
 }
 
 const phaseNames: Record<string, string> = {
@@ -486,6 +820,7 @@ function CardPreviewDialog({
 interface CombatResultProps {
   player1Breakdown: CardPowerBreakdown[];
   player2Breakdown: CardPowerBreakdown[];
+  combatSummary: CombatSummary | null;
   timer: number;
   onSkip: () => void;
   isPlayer1: boolean;
@@ -494,10 +829,13 @@ interface CombatResultProps {
 function CombatResultPanel({ 
   player1Breakdown, 
   player2Breakdown, 
+  combatSummary,
   timer, 
   onSkip,
   isPlayer1
 }: CombatResultProps) {
+  const [showDetailedLog, setShowDetailedLog] = useState(false);
+  
   const player1Total = player1Breakdown.reduce((sum, b) => sum + b.finalPower, 0);
   const player2Total = player2Breakdown.reduce((sum, b) => sum + b.finalPower, 0);
   
@@ -518,8 +856,53 @@ function CombatResultPanel({
     "Guardian": Shield,
   };
   
+  const logIconMap: Record<string, typeof Zap> = {
+    "zap": Zap,
+    "calculator": ArrowRight,
+    "shield": Shield,
+    "swords": Swords,
+    "trophy": Trophy,
+    "skull": X,
+    "handshake": ArrowRight,
+    "heart": Heart,
+    "plus": Plus,
+  };
+
+  const phaseColors: Record<string, string> = {
+    "quick_strike": "border-yellow-500/50 bg-yellow-500/10",
+    "power_calculation": "border-blue-500/50 bg-blue-500/10",
+    "damage_resolution": "border-purple-500/50 bg-purple-500/10",
+    "guardian_block": "border-cyan-500/50 bg-cyan-500/10",
+    "healing": "border-pink-500/50 bg-pink-500/10",
+    "card_draw": "border-green-500/50 bg-green-500/10",
+  };
+
+  const actorColors: Record<string, string> = {
+    "player1": "text-green-300",
+    "player2": "text-red-300",
+    "both": "text-yellow-300",
+    "system": "text-purple-300",
+  };
+
+  // Calculate trait effect summaries for current player's perspective
+  const yourQuickStrike = isPlayer1 ? combatSummary?.player1QuickStrikeDamage || 0 : combatSummary?.player2QuickStrikeDamage || 0;
+  const enemyQuickStrike = isPlayer1 ? combatSummary?.player2QuickStrikeDamage || 0 : combatSummary?.player1QuickStrikeDamage || 0;
+  const yourGuardianBlock = isPlayer1 ? combatSummary?.player1GuardianBlocked || 0 : combatSummary?.player2GuardianBlocked || 0;
+  const enemyGuardianBlock = isPlayer1 ? combatSummary?.player2GuardianBlocked || 0 : combatSummary?.player1GuardianBlocked || 0;
+  const yourHealing = isPlayer1 ? combatSummary?.player1Healing || 0 : combatSummary?.player2Healing || 0;
+  const enemyHealing = isPlayer1 ? combatSummary?.player2Healing || 0 : combatSummary?.player1Healing || 0;
+  const yourCardsDraw = isPlayer1 ? combatSummary?.player1CardsDrawn || 0 : combatSummary?.player2CardsDrawn || 0;
+  const enemyCardsDraw = isPlayer1 ? combatSummary?.player2CardsDrawn || 0 : combatSummary?.player1CardsDrawn || 0;
+  const finalDamageToYou = isPlayer1 ? combatSummary?.finalDamageToPlayer1 || 0 : combatSummary?.finalDamageToPlayer2 || 0;
+  const finalDamageToEnemy = isPlayer1 ? combatSummary?.finalDamageToPlayer2 || 0 : combatSummary?.finalDamageToPlayer1 || 0;
+
+  const hasTraitEffects = yourQuickStrike > 0 || enemyQuickStrike > 0 || 
+                          yourGuardianBlock > 0 || enemyGuardianBlock > 0 ||
+                          yourHealing > 0 || enemyHealing > 0 ||
+                          yourCardsDraw > 0 || enemyCardsDraw > 0;
+  
   return (
-    <div className="bg-slate-900/95 border border-purple-500/30 rounded-xl p-4 space-y-4">
+    <div className="bg-slate-900/95 border border-purple-500/30 rounded-xl p-4 space-y-4 max-h-[80vh] overflow-y-auto">
       <div className="flex items-center justify-between">
         <h3 className="text-white font-bold text-lg flex items-center gap-2">
           <Swords className="w-5 h-5 text-yellow-400" />
@@ -545,17 +928,161 @@ function CombatResultPanel({
           isTie ? 'text-yellow-300' : youWin ? 'text-green-300' : 'text-red-300'
         }`}>
           {isTie ? (
-            <>🤝 TIE! Both players get +1 Advance and +1 Withdraw</>
+            <>TIE! Both players get +1 Advance and +1 Withdraw</>
           ) : youWin ? (
-            <>🏆 Victory! You deal {damage} damage!</>
+            <>Victory! You deal {finalDamageToEnemy > 0 ? finalDamageToEnemy : damage} damage!</>
           ) : (
-            <>💀 Defeat! You take {damage} damage!</>
+            <>Defeat! You take {finalDamageToYou > 0 ? finalDamageToYou : damage} damage!</>
           )}
         </p>
         <p className="text-white/60 text-sm mt-1">
           Your Power: {yourTotal} vs Enemy Power: {enemyTotal}
         </p>
       </div>
+
+      {/* Trait Effects Summary */}
+      {hasTraitEffects && combatSummary && (
+        <div className="bg-slate-800/50 border border-purple-500/30 rounded-lg p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <h4 className="text-purple-300 font-medium text-sm flex items-center gap-1">
+              <Zap className="w-4 h-4" />
+              Trait Effects Summary
+            </h4>
+            <Button 
+              size="sm" 
+              variant="ghost" 
+              onClick={() => setShowDetailedLog(!showDetailedLog)}
+              className="text-xs h-6"
+              data-testid="button-toggle-combat-log"
+            >
+              {showDetailedLog ? "Hide Log" : "Show Full Log"}
+            </Button>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            {/* Your Trait Effects */}
+            <div className="space-y-1">
+              <p className="text-green-400 font-medium">Your Traits:</p>
+              {yourQuickStrike > 0 && (
+                <div className="flex items-center gap-1 text-yellow-300">
+                  <Zap className="w-3 h-3" />
+                  <span>Quick Strike: {yourQuickStrike} dmg to enemy</span>
+                </div>
+              )}
+              {yourGuardianBlock > 0 && (
+                <div className="flex items-center gap-1 text-cyan-300">
+                  <Shield className="w-3 h-3" />
+                  <span>Guardian: Blocked {yourGuardianBlock} dmg</span>
+                </div>
+              )}
+              {yourHealing > 0 && (
+                <div className="flex items-center gap-1 text-pink-300">
+                  <Heart className="w-3 h-3" />
+                  <span>Restoration: +{yourHealing} HP</span>
+                </div>
+              )}
+              {yourCardsDraw > 0 && (
+                <div className="flex items-center gap-1 text-green-300">
+                  <Plus className="w-3 h-3" />
+                  <span>Care Package: +{yourCardsDraw} cards</span>
+                </div>
+              )}
+              {yourQuickStrike === 0 && yourGuardianBlock === 0 && yourHealing === 0 && yourCardsDraw === 0 && (
+                <p className="text-white/40 italic">No traits activated</p>
+              )}
+            </div>
+            
+            {/* Enemy Trait Effects */}
+            <div className="space-y-1">
+              <p className="text-red-400 font-medium">Enemy Traits:</p>
+              {enemyQuickStrike > 0 && (
+                <div className="flex items-center gap-1 text-yellow-300">
+                  <Zap className="w-3 h-3" />
+                  <span>Quick Strike: {enemyQuickStrike} dmg to you</span>
+                </div>
+              )}
+              {enemyGuardianBlock > 0 && (
+                <div className="flex items-center gap-1 text-cyan-300">
+                  <Shield className="w-3 h-3" />
+                  <span>Guardian: Blocked {enemyGuardianBlock} dmg</span>
+                </div>
+              )}
+              {enemyHealing > 0 && (
+                <div className="flex items-center gap-1 text-pink-300">
+                  <Heart className="w-3 h-3" />
+                  <span>Restoration: +{enemyHealing} HP</span>
+                </div>
+              )}
+              {enemyCardsDraw > 0 && (
+                <div className="flex items-center gap-1 text-green-300">
+                  <Plus className="w-3 h-3" />
+                  <span>Care Package: +{enemyCardsDraw} cards</span>
+                </div>
+              )}
+              {enemyQuickStrike === 0 && enemyGuardianBlock === 0 && enemyHealing === 0 && enemyCardsDraw === 0 && (
+                <p className="text-white/40 italic">No traits activated</p>
+              )}
+            </div>
+          </div>
+
+          {/* Final Damage Calculation */}
+          <div className="mt-2 pt-2 border-t border-slate-700">
+            <p className="text-white/80 text-xs font-medium">Final Health Changes:</p>
+            <div className="flex justify-between text-xs mt-1">
+              <div>
+                <span className="text-green-300">You: </span>
+                {finalDamageToYou > 0 && <span className="text-red-400">-{finalDamageToYou} HP</span>}
+                {yourHealing > 0 && <span className="text-pink-400"> +{yourHealing} heal</span>}
+                {finalDamageToYou === 0 && yourHealing === 0 && <span className="text-white/40">No change</span>}
+              </div>
+              <div>
+                <span className="text-red-300">Enemy: </span>
+                {finalDamageToEnemy > 0 && <span className="text-red-400">-{finalDamageToEnemy} HP</span>}
+                {enemyHealing > 0 && <span className="text-pink-400"> +{enemyHealing} heal</span>}
+                {finalDamageToEnemy === 0 && enemyHealing === 0 && <span className="text-white/40">No change</span>}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Detailed Combat Log */}
+      {showDetailedLog && combatSummary && (
+        <div className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-3 space-y-2 max-h-64 overflow-y-auto">
+          <h4 className="text-white font-medium text-sm flex items-center gap-1 sticky top-0 bg-slate-800/90 p-1 -m-1 rounded">
+            <ArrowRight className="w-4 h-4 text-purple-400" />
+            Detailed Combat Log
+          </h4>
+          <div className="space-y-1.5">
+            {combatSummary.log.map((entry, i) => {
+              const IconComponent = logIconMap[entry.icon] || ArrowRight;
+              return (
+                <div 
+                  key={i} 
+                  className={`p-2 rounded border text-xs ${phaseColors[entry.phase] || 'border-slate-600/50 bg-slate-700/30'}`}
+                >
+                  <div className="flex items-start gap-2">
+                    <div className="flex-shrink-0 mt-0.5">
+                      <IconComponent className={`w-3 h-3 ${actorColors[entry.actor]}`} />
+                    </div>
+                    <div className="flex-1">
+                      <span className={actorColors[entry.actor]}>{entry.description}</span>
+                      {entry.traitName && (
+                        <span className="ml-1 text-purple-400 font-medium">
+                          [{entry.traitName}]
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex-shrink-0 text-white/40 text-[10px]">
+                      #{entry.step}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
       
       {/* Your Cards Breakdown */}
       <div className="space-y-2">
@@ -577,7 +1104,7 @@ function CombatResultPanel({
                   </div>
                   <div className="flex-1">
                     <p className="text-white font-medium text-sm">{breakdown.card.name}</p>
-                    <div className="flex items-center gap-2 text-xs">
+                    <div className="flex items-center gap-2 text-xs flex-wrap">
                       <span className="text-white/60">Base: {breakdown.basePower}</span>
                       {breakdown.buffBonuses.length > 0 && (
                         <span className="text-green-400">
@@ -643,7 +1170,7 @@ function CombatResultPanel({
                   </div>
                   <div className="flex-1">
                     <p className="text-white font-medium text-sm">{breakdown.card.name}</p>
-                    <div className="flex items-center gap-2 text-xs">
+                    <div className="flex items-center gap-2 text-xs flex-wrap">
                       <span className="text-white/60">Base: {breakdown.basePower}</span>
                       {breakdown.buffBonuses.length > 0 && (
                         <span className="text-green-400">
@@ -758,6 +1285,7 @@ export default function GameBoardPage() {
     player1: CardPowerBreakdown[];
     player2: CardPowerBreakdown[];
   } | null>(null);
+  const [combatSummary, setCombatSummary] = useState<CombatSummary | null>(null);
   const combatTimerRef = useRef<NodeJS.Timeout | null>(null);
   const chatScrollRef = useRef<HTMLDivElement>(null);
   const previousHandRef = useRef<string[] | null>(null);
@@ -1266,7 +1794,12 @@ export default function GameBoardPage() {
     const player1Breakdown = calculateBattlePower(p1Cards, p2Cards, getCardById);
     const player2Breakdown = calculateBattlePower(p2Cards, p1Cards, getCardById);
     
+    const player1Total = player1Breakdown.reduce((sum, b) => sum + b.finalPower, 0);
+    const player2Total = player2Breakdown.reduce((sum, b) => sum + b.finalPower, 0);
+    const summary = generateCombatLog(player1Breakdown, player2Breakdown, player1Total, player2Total);
+    
     setCombatBreakdown({ player1: player1Breakdown, player2: player2Breakdown });
+    setCombatSummary(summary);
     setShowCombatResults(true);
     setCombatTimer(30);
     
@@ -1372,6 +1905,7 @@ export default function GameBoardPage() {
     // Reset combat results state
     setShowCombatResults(false);
     setCombatBreakdown(null);
+    setCombatSummary(null);
 
     updateGameMutation.mutate({
       currentPhase: "end",
@@ -1557,6 +2091,7 @@ export default function GameBoardPage() {
           <CombatResultPanel
             player1Breakdown={combatBreakdown.player1}
             player2Breakdown={combatBreakdown.player2}
+            combatSummary={combatSummary}
             timer={combatTimer}
             onSkip={skipCombatTimer}
             isPlayer1={isPlayer1}
