@@ -1639,11 +1639,11 @@ export default function GameBoardPage() {
           cardId: b.card.id,
           cardName: b.card.name,
           basePower: b.basePower,
-          traitBonus: b.traitInfo?.value || 0,
           buffBonus: b.buffBonuses.reduce((s, bb) => s + bb.amount, 0),
           debuffPenalty: b.debuffPenalties.reduce((s, dp) => s + dp.amount, 0),
           finalPower: b.finalPower,
           traitName: b.traitInfo?.trait,
+          traitValue: b.traitInfo?.value,
         }));
         
         const combatLog = {
@@ -2012,11 +2012,11 @@ export default function GameBoardPage() {
       cardId: b.card.id,
       cardName: b.card.name,
       basePower: b.basePower,
-      traitBonus: b.traitInfo?.value || 0,
       buffBonus: b.buffBonuses.reduce((s, bb) => s + bb.amount, 0),
       debuffPenalty: b.debuffPenalties.reduce((s, dp) => s + dp.amount, 0),
       finalPower: b.finalPower,
       traitName: b.traitInfo?.trait,
+      traitValue: b.traitInfo?.value,
     }));
     
     const combatLog = {
@@ -2443,14 +2443,14 @@ export default function GameBoardPage() {
                           <div className="text-green-300 font-medium mb-1">{card.cardName}</div>
                           <div className="space-y-0.5">
                             <div className="text-slate-400">Base Power: <span className="text-yellow-400">{card.basePower}</span></div>
-                            {card.traitBonus !== 0 && (
-                              <div className="text-purple-400">+ Trait Bonus: <span className="font-bold">{card.traitBonus > 0 ? '+' : ''}{card.traitBonus}</span></div>
-                            )}
                             {card.buffBonus !== 0 && (
                               <div className="text-cyan-400">+ Buff Bonus: <span className="font-bold">+{card.buffBonus}</span></div>
                             )}
                             {card.debuffPenalty !== 0 && (
                               <div className="text-orange-400">- Debuff Penalty: <span className="font-bold">-{card.debuffPenalty}</span></div>
+                            )}
+                            {card.traitName && card.traitValue && (
+                              <div className="text-purple-400 mt-1 border-t border-slate-600 pt-1">Trait: <span className="font-bold">{card.traitName} ({card.traitValue})</span></div>
                             )}
                           </div>
                         </div>
@@ -2463,14 +2463,14 @@ export default function GameBoardPage() {
                           <div className="text-red-300 font-medium mb-1">{card.cardName}</div>
                           <div className="space-y-0.5">
                             <div className="text-slate-400">Base Power: <span className="text-yellow-400">{card.basePower}</span></div>
-                            {card.traitBonus !== 0 && (
-                              <div className="text-purple-400">+ Trait Bonus: <span className="font-bold">{card.traitBonus > 0 ? '+' : ''}{card.traitBonus}</span></div>
-                            )}
                             {card.buffBonus !== 0 && (
                               <div className="text-cyan-400">+ Buff Bonus: <span className="font-bold">+{card.buffBonus}</span></div>
                             )}
                             {card.debuffPenalty !== 0 && (
                               <div className="text-orange-400">- Debuff Penalty: <span className="font-bold">-{card.debuffPenalty}</span></div>
+                            )}
+                            {card.traitName && card.traitValue && (
+                              <div className="text-purple-400 mt-1 border-t border-slate-600 pt-1">Trait: <span className="font-bold">{card.traitName} ({card.traitValue})</span></div>
                             )}
                           </div>
                         </div>
@@ -2492,7 +2492,7 @@ export default function GameBoardPage() {
                         <div key={i} className="text-xs text-slate-300 mb-1 flex justify-between">
                           <span>{card.cardName}:</span>
                           <span className="text-green-400 font-bold">
-                            {card.basePower} {card.traitBonus !== 0 ? (card.traitBonus > 0 ? `+${card.traitBonus}` : card.traitBonus) : ''} {card.buffBonus !== 0 ? `+${card.buffBonus}` : ''} {card.debuffPenalty !== 0 ? `-${card.debuffPenalty}` : ''} = {card.finalPower}
+                            {card.basePower} {card.buffBonus !== 0 ? `+${card.buffBonus}` : ''} {card.debuffPenalty !== 0 ? `-${card.debuffPenalty}` : ''} = {card.finalPower}
                           </span>
                         </div>
                       ))}
@@ -2507,7 +2507,7 @@ export default function GameBoardPage() {
                         <div key={i} className="text-xs text-slate-300 mb-1 flex justify-between">
                           <span>{card.cardName}:</span>
                           <span className="text-red-400 font-bold">
-                            {card.basePower} {card.traitBonus !== 0 ? (card.traitBonus > 0 ? `+${card.traitBonus}` : card.traitBonus) : ''} {card.buffBonus !== 0 ? `+${card.buffBonus}` : ''} {card.debuffPenalty !== 0 ? `-${card.debuffPenalty}` : ''} = {card.finalPower}
+                            {card.basePower} {card.buffBonus !== 0 ? `+${card.buffBonus}` : ''} {card.debuffPenalty !== 0 ? `-${card.debuffPenalty}` : ''} = {card.finalPower}
                           </span>
                         </div>
                       ))}
@@ -2625,11 +2625,13 @@ export default function GameBoardPage() {
                                   <span className="font-medium">{card.cardName}</span>
                                   <span className="text-slate-500 ml-1">
                                     Base: {card.basePower}
-                                    {card.traitBonus !== 0 && <span className="text-purple-400"> {card.traitBonus > 0 ? '+' : ''}{card.traitBonus}</span>}
                                     {card.buffBonus !== 0 && <span className="text-cyan-400"> +{card.buffBonus}</span>}
                                     {card.debuffPenalty !== 0 && <span className="text-orange-400"> -{card.debuffPenalty}</span>}
                                   </span>
                                   <span className="text-green-400 ml-1">= {card.finalPower}</span>
+                                  {card.traitName && card.traitValue && (
+                                    <span className="text-purple-400 ml-2">({card.traitName}: {card.traitValue})</span>
+                                  )}
                                 </div>
                               ))}
                             </div>
@@ -2640,11 +2642,13 @@ export default function GameBoardPage() {
                                   <span className="font-medium">{card.cardName}</span>
                                   <span className="text-slate-500 ml-1">
                                     Base: {card.basePower}
-                                    {card.traitBonus !== 0 && <span className="text-purple-400"> {card.traitBonus > 0 ? '+' : ''}{card.traitBonus}</span>}
                                     {card.buffBonus !== 0 && <span className="text-cyan-400"> +{card.buffBonus}</span>}
                                     {card.debuffPenalty !== 0 && <span className="text-orange-400"> -{card.debuffPenalty}</span>}
                                   </span>
                                   <span className="text-red-400 ml-1">= {card.finalPower}</span>
+                                  {card.traitName && card.traitValue && (
+                                    <span className="text-purple-400 ml-2">({card.traitName}: {card.traitValue})</span>
+                                  )}
                                 </div>
                               ))}
                             </div>

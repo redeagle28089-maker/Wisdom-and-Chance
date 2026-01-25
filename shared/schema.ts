@@ -110,11 +110,11 @@ export const cardPowerBreakdownSchema = z.object({
   cardId: z.string(),
   cardName: z.string(),
   basePower: z.number(),
-  traitBonus: z.number(),
   buffBonus: z.number(),
   debuffPenalty: z.number(),
   finalPower: z.number(),
   traitName: z.string().optional(),
+  traitValue: z.number().optional(),
 });
 
 export type CardPowerBreakdown = z.infer<typeof cardPowerBreakdownSchema>;
