@@ -85,12 +85,12 @@ export const traitIcons: Record<string, typeof Zap> = {
   "Guardian": Shield,
 };
 
-export const buffDebuffColorMap: Record<string, { bg: string; text: string }> = {
-  Red: { bg: "bg-white/95", text: "text-red-600" },
-  Blue: { bg: "bg-white/95", text: "text-blue-600" },
-  Amber: { bg: "bg-white/95", text: "text-amber-600" },
-  Green: { bg: "bg-white/95", text: "text-green-600" },
-  Black: { bg: "bg-white/95", text: "text-slate-900" },
+export const buffDebuffColorMap: Record<string, { bg: string; text: string; border: string }> = {
+  Red: { bg: "bg-red-500/90", text: "text-white", border: "border-red-300/50" },
+  Blue: { bg: "bg-blue-500/90", text: "text-white", border: "border-blue-300/50" },
+  Amber: { bg: "bg-amber-500/90", text: "text-white", border: "border-amber-300/50" },
+  Green: { bg: "bg-green-500/90", text: "text-white", border: "border-green-300/50" },
+  Black: { bg: "bg-slate-800/90", text: "text-white", border: "border-slate-500/50" },
 };
 
 interface GameCardProps {
@@ -157,32 +157,48 @@ export function GameCard({
         <div className={`absolute inset-0 ${config.bgColor} opacity-90`} />
       )}
       
-      {/* Power badge - top left */}
-      <div className="absolute top-1.5 left-1.5 min-w-7 h-7 px-1.5 bg-slate-900/90 rounded flex items-center justify-center text-white font-bold text-sm shadow-lg border border-white/30">
+      {/* Power/Rank badge - top left (always visible) */}
+      <div className="absolute top-1.5 left-1.5 min-w-7 h-7 px-1.5 bg-slate-900/90 rounded flex items-center justify-center text-white font-bold text-sm shadow-lg border border-white/30" data-testid={`card-power-${card.id}`}>
         {card.power}
       </div>
       
-      {/* Trait value badge - top right (shows traitValue + trait icon when card has a trait) */}
-      {card.trait && card.traitValue !== null && (
-        <div className="absolute top-1.5 right-1.5 min-w-7 h-7 px-1.5 bg-white/95 rounded flex items-center justify-center text-slate-900 font-bold text-xs shadow-lg gap-0.5">
-          <span>{card.traitValue}</span>
-          {TraitIcon && <TraitIcon className="w-3 h-3" />}
-        </div>
-      )}
+      {/* Trait value badge - top right (always visible - purple when has trait, gray when none) */}
+      <div className={`absolute top-1.5 right-1.5 min-w-7 h-7 px-1.5 rounded flex items-center justify-center font-bold text-xs shadow-lg gap-0.5 border ${
+        card.trait 
+          ? 'bg-purple-600/90 text-white border-purple-400/50' 
+          : 'bg-slate-700/80 text-slate-400 border-slate-500/30'
+      }`} data-testid={`card-trait-${card.id}`}>
+        <span>{card.traitValue ?? 0}</span>
+        {TraitIcon && <TraitIcon className="w-3 h-3" />}
+      </div>
       
-      {/* Buff badge - bottom left (white box with element-colored number) */}
-      {card.buffModifier > 0 && (
-        <div className={`absolute bottom-7 left-1.5 min-w-7 h-6 px-1.5 bg-white/95 rounded flex items-center justify-center font-bold text-xs shadow-lg ${card.buffColor ? buffDebuffColorMap[card.buffColor]?.text || 'text-green-600' : 'text-green-600'}`}>
-          +{card.buffModifier}
-        </div>
-      )}
+      {/* Buff badge - bottom left (always visible - uses card's buff color) */}
+      {(() => {
+        const buffColorStyle = card.buffColor && buffDebuffColorMap[card.buffColor];
+        return (
+          <div className={`absolute bottom-7 left-1.5 min-w-7 h-6 px-1.5 rounded flex items-center justify-center font-bold text-xs shadow-lg ${
+            card.buffModifier > 0 
+              ? buffColorStyle ? `${buffColorStyle.bg} ${buffColorStyle.text} ${buffColorStyle.border}` : 'bg-cyan-500/90 text-white border border-cyan-300/50'
+              : 'bg-slate-700/80 text-slate-400 border border-slate-500/30'
+          }`} data-testid={`card-buff-${card.id}`}>
+            +{card.buffModifier}
+          </div>
+        );
+      })()}
       
-      {/* Debuff badge - bottom right (white box with element-colored number) */}
-      {card.debuffModifier > 0 && (
-        <div className={`absolute bottom-7 right-1.5 min-w-7 h-6 px-1.5 bg-white/95 rounded flex items-center justify-center font-bold text-xs shadow-lg ${card.debuffColor ? buffDebuffColorMap[card.debuffColor]?.text || 'text-red-600' : 'text-red-600'}`}>
-          -{card.debuffModifier}
-        </div>
-      )}
+      {/* Debuff badge - bottom right (always visible - uses card's debuff color) */}
+      {(() => {
+        const debuffColorStyle = card.debuffColor && buffDebuffColorMap[card.debuffColor];
+        return (
+          <div className={`absolute bottom-7 right-1.5 min-w-7 h-6 px-1.5 rounded flex items-center justify-center font-bold text-xs shadow-lg ${
+            card.debuffModifier > 0 
+              ? debuffColorStyle ? `${debuffColorStyle.bg} ${debuffColorStyle.text} ${debuffColorStyle.border}` : 'bg-orange-500/90 text-white border border-orange-300/50'
+              : 'bg-slate-700/80 text-slate-400 border border-slate-500/30'
+          }`} data-testid={`card-debuff-${card.id}`}>
+            -{card.debuffModifier}
+          </div>
+        );
+      })()}
       
       {/* Card name and UNIT label at bottom */}
       <div className="absolute bottom-0 left-0 right-0 bg-slate-900/95 py-1 text-center">
@@ -353,16 +369,26 @@ export function CardWithPopup({ enablePopup = true, ...props }: CardWithPopupPro
             </div>
           )}
 
-          {/* Buff/Debuff boxes at bottom */}
+          {/* Buff/Debuff boxes at bottom (uses card's element colors) */}
           <div className="flex gap-4 p-6 pt-3">
-            <div className={`flex-1 p-4 rounded-xl ${config.headerBg}`} data-testid="card-popup-buff">
-              <span className="text-white font-bold text-2xl">+{card.buffModifier}</span>
-              <p className="text-white/80 text-sm mt-1">Buff: {card.element.toLowerCase()}</p>
-            </div>
-            <div className="flex-1 p-4 rounded-xl bg-red-800" data-testid="card-popup-debuff">
-              <span className="text-white font-bold text-2xl">-{card.debuffModifier}</span>
-              <p className="text-white/80 text-sm mt-1">Debuff: {card.element.toLowerCase()}</p>
-            </div>
+            {(() => {
+              const buffStyle = card.buffColor && buffDebuffColorMap[card.buffColor];
+              return (
+                <div className={`flex-1 p-4 rounded-xl ${buffStyle ? buffStyle.bg : config.headerBg}`} data-testid="card-popup-buff">
+                  <span className="text-white font-bold text-2xl">+{card.buffModifier}</span>
+                  <p className="text-white/80 text-sm mt-1">Buff: {card.buffColor?.toLowerCase() || card.element.toLowerCase()}</p>
+                </div>
+              );
+            })()}
+            {(() => {
+              const debuffStyle = card.debuffColor && buffDebuffColorMap[card.debuffColor];
+              return (
+                <div className={`flex-1 p-4 rounded-xl ${debuffStyle ? debuffStyle.bg : 'bg-orange-600'}`} data-testid="card-popup-debuff">
+                  <span className="text-white font-bold text-2xl">-{card.debuffModifier}</span>
+                  <p className="text-white/80 text-sm mt-1">Debuff: {card.debuffColor?.toLowerCase() || card.element.toLowerCase()}</p>
+                </div>
+              );
+            })()}
           </div>
         </DialogContent>
     </Dialog>

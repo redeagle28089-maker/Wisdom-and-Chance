@@ -54,6 +54,21 @@ const elementToColor: Record<Element, string> = {
   Air: "Black",
 };
 
+const traitIconsMap: Record<string, typeof Zap> = {
+  "Quick Strike": Zap,
+  "Care Package": Plus,
+  "Restoration": Heart,
+  "Guardian": Shield,
+};
+
+const buffDebuffColorMap: Record<string, { bg: string; text: string; border: string }> = {
+  Red: { bg: "bg-red-500/90", text: "text-white", border: "border-red-300/50" },
+  Blue: { bg: "bg-blue-500/90", text: "text-white", border: "border-blue-300/50" },
+  Amber: { bg: "bg-amber-500/90", text: "text-white", border: "border-amber-300/50" },
+  Green: { bg: "bg-green-500/90", text: "text-white", border: "border-green-300/50" },
+  Black: { bg: "bg-slate-800/90", text: "text-white", border: "border-slate-500/50" },
+};
+
 interface CardPowerBreakdown {
   card: CardType;
   basePower: number;
@@ -736,24 +751,51 @@ function MiniCard({
         <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-green-400 rounded-full animate-[slowPulse_2s_ease-in-out_infinite] z-20 opacity-80" />
       )}
       
-      {/* Power badge - top left */}
+      {/* Power/Rank badge - top left (always visible) */}
       <div className="absolute top-1 left-1 w-5 h-5 bg-slate-900/90 rounded flex items-center justify-center border border-white/30 z-10">
         <span className="text-white font-bold text-[10px]">{card.power}</span>
       </div>
       
-      {/* Buff indicator - top right */}
-      {card.buffModifier > 0 && (
-        <div className="absolute top-1 right-1 w-4 h-4 bg-white/90 rounded flex items-center justify-center z-10">
-          <span className="text-green-600 font-bold text-[8px]">+{card.buffModifier}</span>
-        </div>
-      )}
+      {/* Trait value badge - top right (always visible with icon) */}
+      {(() => {
+        const TraitIcon = card.trait ? traitIconsMap[card.trait] || Zap : null;
+        return (
+          <div className={`absolute top-1 right-1 h-5 px-0.5 rounded flex items-center justify-center gap-0.5 z-10 ${
+            card.trait ? 'bg-purple-600/90 border border-purple-400/50' : 'bg-slate-700/80 border border-slate-500/30'
+          }`}>
+            <span className={`font-bold text-[8px] ${card.trait ? 'text-white' : 'text-slate-400'}`}>{card.traitValue ?? 0}</span>
+            {TraitIcon && <TraitIcon className="w-2.5 h-2.5 text-white" />}
+          </div>
+        );
+      })()}
       
-      {/* Debuff indicator - bottom right */}
-      {card.debuffModifier > 0 && (
-        <div className="absolute bottom-5 right-1 w-4 h-4 bg-white/90 rounded flex items-center justify-center z-10">
-          <span className="text-red-600 font-bold text-[8px]">-{card.debuffModifier}</span>
-        </div>
-      )}
+      {/* Buff indicator - bottom left (always visible - uses card's buff color) */}
+      {(() => {
+        const buffStyle = card.buffColor && buffDebuffColorMap[card.buffColor];
+        return (
+          <div className={`absolute bottom-5 left-1 w-5 h-4 rounded flex items-center justify-center z-10 ${
+            card.buffModifier > 0 
+              ? buffStyle ? `${buffStyle.bg} ${buffStyle.border}` : 'bg-cyan-500/90 border border-cyan-300/50'
+              : 'bg-slate-700/80 border border-slate-500/30'
+          }`}>
+            <span className={`font-bold text-[7px] ${card.buffModifier > 0 ? 'text-white' : 'text-slate-400'}`}>+{card.buffModifier}</span>
+          </div>
+        );
+      })()}
+      
+      {/* Debuff indicator - bottom right (always visible - uses card's debuff color) */}
+      {(() => {
+        const debuffStyle = card.debuffColor && buffDebuffColorMap[card.debuffColor];
+        return (
+          <div className={`absolute bottom-5 right-1 w-5 h-4 rounded flex items-center justify-center z-10 ${
+            card.debuffModifier > 0 
+              ? debuffStyle ? `${debuffStyle.bg} ${debuffStyle.border}` : 'bg-orange-500/90 border border-orange-300/50'
+              : 'bg-slate-700/80 border border-slate-500/30'
+          }`}>
+            <span className={`font-bold text-[7px] ${card.debuffModifier > 0 ? 'text-white' : 'text-slate-400'}`}>-{card.debuffModifier}</span>
+          </div>
+        );
+      })()}
       
       {/* Card name at bottom */}
       <div className="absolute bottom-0 left-0 right-0 bg-slate-900/90 py-0.5 text-center rounded-b-lg z-10">
@@ -798,9 +840,51 @@ function CardPreviewDialog({
             className="absolute inset-0 w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/60" />
-          <div className="absolute top-3 left-3 w-12 h-12 bg-slate-900/90 rounded flex items-center justify-center border-2 border-white/30">
+          {/* Power/Rank badge - top left */}
+          <div className="absolute top-3 left-3 w-12 h-12 bg-slate-900/90 rounded-lg flex items-center justify-center border-2 border-white/30">
             <span className="text-white font-bold text-xl">{card.power}</span>
           </div>
+          {/* Trait value badge - top right (with icon) */}
+          {(() => {
+            const TraitIcon = card.trait ? traitIconsMap[card.trait] || Zap : null;
+            return (
+              <div className={`absolute top-3 right-3 w-12 h-12 rounded-lg flex flex-col items-center justify-center border-2 ${
+                card.trait ? 'bg-purple-600/90 border-purple-400/50' : 'bg-slate-700/80 border-slate-500/30'
+              }`}>
+                <div className="flex items-center gap-1">
+                  <span className={`font-bold text-lg ${card.trait ? 'text-white' : 'text-slate-400'}`}>{card.traitValue ?? 0}</span>
+                  {TraitIcon && <TraitIcon className="w-4 h-4 text-white" />}
+                </div>
+                <span className={`text-[8px] ${card.trait ? 'text-purple-200' : 'text-slate-500'}`}>TRAIT</span>
+              </div>
+            );
+          })()}
+          {/* Buff badge - bottom left (uses card's buff color) */}
+          {(() => {
+            const buffStyle = card.buffColor && buffDebuffColorMap[card.buffColor];
+            return (
+              <div className={`absolute bottom-12 left-3 w-10 h-8 rounded-lg flex items-center justify-center border ${
+                card.buffModifier > 0 
+                  ? buffStyle ? `${buffStyle.bg} ${buffStyle.border}` : 'bg-cyan-500/90 border-cyan-300/50'
+                  : 'bg-slate-700/80 border-slate-500/30'
+              }`}>
+                <span className={`font-bold text-sm ${card.buffModifier > 0 ? 'text-white' : 'text-slate-400'}`}>+{card.buffModifier}</span>
+              </div>
+            );
+          })()}
+          {/* Debuff badge - bottom right (uses card's debuff color) */}
+          {(() => {
+            const debuffStyle = card.debuffColor && buffDebuffColorMap[card.debuffColor];
+            return (
+              <div className={`absolute bottom-12 right-3 w-10 h-8 rounded-lg flex items-center justify-center border ${
+                card.debuffModifier > 0 
+                  ? debuffStyle ? `${debuffStyle.bg} ${debuffStyle.border}` : 'bg-orange-500/90 border-orange-300/50'
+                  : 'bg-slate-700/80 border-slate-500/30'
+              }`}>
+                <span className={`font-bold text-sm ${card.debuffModifier > 0 ? 'text-white' : 'text-slate-400'}`}>-{card.debuffModifier}</span>
+              </div>
+            );
+          })()}
           <div className="absolute bottom-0 left-0 right-0 bg-slate-900/95 py-2 text-center">
             <p className="text-white font-bold text-lg">{card.name}</p>
             <Badge className="mt-1 bg-purple-600">{card.element}</Badge>
@@ -809,23 +893,29 @@ function CardPreviewDialog({
         <div className="space-y-2">
           {card.trait && (
             <div className="bg-purple-500/20 rounded-lg p-2">
-              <p className="text-purple-300 text-xs font-medium">Trait</p>
-              <p className="text-white text-sm">{card.trait}</p>
+              <p className="text-purple-300 text-xs font-medium">Trait: {card.trait}</p>
+              <p className="text-white text-sm">Value: {card.traitValue ?? 0}</p>
             </div>
           )}
           <div className="flex gap-2">
-            {card.buffModifier > 0 && (
-              <div className="flex-1 bg-green-500/20 rounded-lg p-2">
-                <p className="text-green-300 text-xs font-medium">Buff</p>
-                <p className="text-white text-sm">{card.buffColor} +{card.buffModifier}</p>
-              </div>
-            )}
-            {card.debuffModifier > 0 && (
-              <div className="flex-1 bg-red-500/20 rounded-lg p-2">
-                <p className="text-red-300 text-xs font-medium">Debuff</p>
-                <p className="text-white text-sm">{card.debuffColor} -{card.debuffModifier}</p>
-              </div>
-            )}
+            {(() => {
+              const buffStyle = card.buffColor && buffDebuffColorMap[card.buffColor];
+              return (
+                <div className={`flex-1 rounded-lg p-2 ${card.buffModifier > 0 && buffStyle ? buffStyle.bg.replace('/90', '/30') : card.buffModifier > 0 ? 'bg-cyan-500/30' : 'bg-slate-700/20'}`}>
+                  <p className={`text-xs font-medium ${card.buffModifier > 0 ? 'text-white' : 'text-slate-400'}`}>Buff ({card.buffColor || 'None'})</p>
+                  <p className="text-white text-sm">+{card.buffModifier}</p>
+                </div>
+              );
+            })()}
+            {(() => {
+              const debuffStyle = card.debuffColor && buffDebuffColorMap[card.debuffColor];
+              return (
+                <div className={`flex-1 rounded-lg p-2 ${card.debuffModifier > 0 && debuffStyle ? debuffStyle.bg.replace('/90', '/30') : card.debuffModifier > 0 ? 'bg-orange-500/30' : 'bg-slate-700/20'}`}>
+                  <p className={`text-xs font-medium ${card.debuffModifier > 0 ? 'text-white' : 'text-slate-400'}`}>Debuff ({card.debuffColor || 'None'})</p>
+                  <p className="text-white text-sm">-{card.debuffModifier}</p>
+                </div>
+              );
+            })()}
           </div>
         </div>
       </DialogContent>
