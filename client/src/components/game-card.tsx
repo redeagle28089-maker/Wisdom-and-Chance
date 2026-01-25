@@ -162,13 +162,13 @@ export function GameCard({
         {card.power}
       </div>
       
-      {/* Trait value badge - top right (always visible - purple when has trait, gray when none) */}
+      {/* Trait value badge - top right (always visible - purple when has trait, gray when none; defaults to 1 if trait exists) */}
       <div className={`absolute top-1.5 right-1.5 min-w-7 h-7 px-1.5 rounded flex items-center justify-center font-bold text-xs shadow-lg gap-0.5 border ${
         card.trait 
           ? 'bg-purple-600/90 text-white border-purple-400/50' 
           : 'bg-slate-700/80 text-slate-400 border-slate-500/30'
       }`} data-testid={`card-trait-${card.id}`}>
-        <span>{card.traitValue ?? 0}</span>
+        <span>{card.trait ? (card.traitValue ?? 1) : 0}</span>
         {TraitIcon && <TraitIcon className="w-3 h-3" />}
       </div>
       

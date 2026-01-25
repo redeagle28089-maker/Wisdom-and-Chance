@@ -763,7 +763,7 @@ function MiniCard({
           <div className={`absolute top-1 right-1 h-5 px-0.5 rounded flex items-center justify-center gap-0.5 z-10 ${
             card.trait ? 'bg-purple-600/90 border border-purple-400/50' : 'bg-slate-700/80 border border-slate-500/30'
           }`}>
-            <span className={`font-bold text-[8px] ${card.trait ? 'text-white' : 'text-slate-400'}`}>{card.traitValue ?? 0}</span>
+            <span className={`font-bold text-[8px] ${card.trait ? 'text-white' : 'text-slate-400'}`}>{card.trait ? (card.traitValue ?? 1) : 0}</span>
             {TraitIcon && <TraitIcon className="w-2.5 h-2.5 text-white" />}
           </div>
         );
@@ -852,7 +852,7 @@ function CardPreviewDialog({
                 card.trait ? 'bg-purple-600/90 border-purple-400/50' : 'bg-slate-700/80 border-slate-500/30'
               }`}>
                 <div className="flex items-center gap-1">
-                  <span className={`font-bold text-lg ${card.trait ? 'text-white' : 'text-slate-400'}`}>{card.traitValue ?? 0}</span>
+                  <span className={`font-bold text-lg ${card.trait ? 'text-white' : 'text-slate-400'}`}>{card.trait ? (card.traitValue ?? 1) : 0}</span>
                   {TraitIcon && <TraitIcon className="w-4 h-4 text-white" />}
                 </div>
                 <span className={`text-[8px] ${card.trait ? 'text-purple-200' : 'text-slate-500'}`}>TRAIT</span>
@@ -894,7 +894,7 @@ function CardPreviewDialog({
           {card.trait && (
             <div className="bg-purple-500/20 rounded-lg p-2">
               <p className="text-purple-300 text-xs font-medium">Trait: {card.trait}</p>
-              <p className="text-white text-sm">Value: {card.traitValue ?? 0}</p>
+              <p className="text-white text-sm">Value: {card.traitValue ?? 1}</p>
             </div>
           )}
           <div className="flex gap-2">
