@@ -587,13 +587,12 @@ function PhaseIndicator({
         {hasCombatLog && onViewCombatLog && (
           <Button 
             size="sm"
-            variant="outline" 
             onClick={onViewCombatLog}
-            className="border-amber-500/50 text-amber-300"
+            className="bg-red-600 hover:bg-red-500 text-white font-bold border-2 border-red-400 shadow-lg shadow-red-500/50 animate-pulse"
             data-testid="button-view-combat-log"
           >
-            <Scroll className="w-3 h-3 mr-1" />
-            Last Round
+            <Swords className="w-4 h-4 mr-1" />
+            Combat Log
           </Button>
         )}
         <Badge variant="outline" className="text-purple-300 border-purple-500/30">
