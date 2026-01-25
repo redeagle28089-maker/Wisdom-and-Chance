@@ -540,16 +540,12 @@ function PhaseIndicator({
   currentPhase, 
   isMyTurn, 
   turn,
-  hasCombatLog,
-  onViewCombatLog,
   combatHistoryCount,
   onViewCombatHistory,
 }: { 
   currentPhase: string; 
   isMyTurn: boolean; 
   turn: number;
-  hasCombatLog?: boolean;
-  onViewCombatLog?: () => void;
   combatHistoryCount?: number;
   onViewCombatHistory?: () => void;
 }) {
@@ -582,17 +578,6 @@ function PhaseIndicator({
           >
             <History className="w-3 h-3 mr-1" />
             History ({combatHistoryCount})
-          </Button>
-        )}
-        {hasCombatLog && onViewCombatLog && (
-          <Button 
-            size="sm"
-            onClick={onViewCombatLog}
-            className="bg-red-600 hover:bg-red-500 text-white font-bold border-2 border-red-400 shadow-lg shadow-red-500/50 animate-pulse"
-            data-testid="button-view-combat-log"
-          >
-            <Swords className="w-4 h-4 mr-1" />
-            Combat Log
           </Button>
         )}
         <Badge variant="outline" className="text-purple-300 border-purple-500/30">
@@ -2106,8 +2091,6 @@ export default function GameBoardPage() {
             currentPhase={game.currentPhase} 
             isMyTurn={isMyTurn} 
             turn={game.currentTurn}
-            hasCombatLog={!!game.gameState.lastCombatLog}
-            onViewCombatLog={() => setShowCombatLogDialog(true)}
             combatHistoryCount={game.gameState.combatHistory?.length || 0}
             onViewCombatHistory={() => setShowCombatHistoryDialog(true)}
           />
@@ -2166,7 +2149,7 @@ export default function GameBoardPage() {
           onPreview={setPreviewCard}
         />
 
-        <div className="flex justify-center">
+        <div className="flex justify-center items-center gap-4">
           <Card className="bg-purple-900/50 border-purple-500/30 p-4">
             <div className="flex items-center gap-4">
               {game.currentPhase === "draw" && isMyTurn && (
@@ -2209,6 +2192,18 @@ export default function GameBoardPage() {
               )}
             </div>
           </Card>
+          {/* Combat Log Button - To the right of turn action card, visible in all phases */}
+          {game.gameState.lastCombatLog && (
+            <Button 
+              size="lg"
+              onClick={() => setShowCombatLogDialog(true)}
+              className="bg-red-600 text-white font-bold border-2 border-red-400 shadow-lg shadow-red-500/50 animate-pulse"
+              data-testid="button-view-combat-log"
+            >
+              <Swords className="w-5 h-5 mr-2" />
+              Combat Log
+            </Button>
+          )}
         </div>
 
         <BattlefieldZone 
@@ -2365,6 +2360,7 @@ export default function GameBoardPage() {
           </div>
         </div>
       )}
+
 
       <Dialog open={showCombatLogDialog} onOpenChange={setShowCombatLogDialog}>
         <DialogContent className="bg-slate-900 border-red-500/50 max-w-3xl max-h-[85vh] overflow-hidden" data-testid="dialog-combat-log">
