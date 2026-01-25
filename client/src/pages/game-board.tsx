@@ -885,7 +885,7 @@ function CardPreviewDialog({
               </div>
             );
           })()}
-          <div className="absolute bottom-0 left-0 right-0 bg-slate-900/95 py-2 text-center">
+          <div className="absolute bottom-0 left-0 right-0 bg-slate-900/95 py-2 text-[16px] mt-[0px] mb-[0px] ml-[55px] mr-[55px] pt-[0px] pb-[0px] pl-[0px] pr-[0px] font-normal text-center">
             <p className="text-white font-bold text-lg">{card.name}</p>
             <Badge className="mt-1 bg-purple-600">{card.element}</Badge>
           </div>
@@ -2180,7 +2180,6 @@ export default function GameBoardPage() {
   return (
     <div className="min-h-full bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900 p-4 relative overflow-hidden">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-purple-900/20 via-transparent to-transparent pointer-events-none" />
-      
       <div className="max-w-6xl mx-auto space-y-3 relative z-10">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -2373,13 +2372,11 @@ export default function GameBoardPage() {
           </div>
         </div>
       </div>
-
       <CardPreviewDialog 
         card={previewCard} 
         open={!!previewCard} 
         onClose={() => setPreviewCard(null)} 
       />
-
       {chatOpen && isMultiplayer && (
         <div className="fixed bottom-4 right-4 w-80 h-96 bg-slate-800 border border-purple-500/30 rounded-lg shadow-xl flex flex-col z-50">
           <div className="flex items-center justify-between p-3 border-b border-purple-500/20">
@@ -2470,8 +2467,6 @@ export default function GameBoardPage() {
           </div>
         </div>
       )}
-
-
       <Dialog open={showCombatLogDialog} onOpenChange={setShowCombatLogDialog}>
         <DialogContent className="bg-slate-900 border-red-500/50 max-w-3xl max-h-[85vh] overflow-hidden" data-testid="dialog-combat-log">
           <DialogHeader>
@@ -2648,7 +2643,6 @@ export default function GameBoardPage() {
           )}
         </DialogContent>
       </Dialog>
-
       {/* Combat History Dialog */}
       <Dialog open={showCombatHistoryDialog} onOpenChange={(open) => {
         setShowCombatHistoryDialog(open);
