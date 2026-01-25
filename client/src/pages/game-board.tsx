@@ -885,7 +885,7 @@ function CardPreviewDialog({
               </div>
             );
           })()}
-          <div className="absolute bottom-0 left-0 right-0 bg-slate-900/95 py-2 text-[16px] mt-[0px] mb-[0px] ml-[55px] mr-[55px] pt-[0px] pb-[0px] pl-[0px] pr-[0px] font-normal text-center">
+          <div className="absolute bottom-0 left-0 right-0 bg-slate-900/95 py-2 text-center ml-[100px] mr-[100px]">
             <p className="text-white font-bold text-lg">{card.name}</p>
             <Badge className="mt-1 bg-purple-600">{card.element}</Badge>
           </div>
