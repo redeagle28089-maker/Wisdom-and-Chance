@@ -1601,17 +1601,14 @@ export default function GameBoardPage() {
           gameState: newGameState,
         });
       } else if (game.currentPhase === "calculation") {
-        const p1Power = game.gameState.player1Battlefield.reduce((sum, bf) => {
-          const baseCardId = getCardIdFromInstance(bf.cardId);
-          const card = allCards.find(c => c.id === baseCardId);
-          return sum + (card?.power || 0);
-        }, 0);
+        const p1Cards = game.gameState.player1Battlefield.map(bf => getCardById(bf.cardId)).filter(Boolean) as CardType[];
+        const p2Cards = game.gameState.player2Battlefield.map(bf => getCardById(bf.cardId)).filter(Boolean) as CardType[];
         
-        const p2Power = game.gameState.player2Battlefield.reduce((sum, bf) => {
-          const baseCardId = getCardIdFromInstance(bf.cardId);
-          const card = allCards.find(c => c.id === baseCardId);
-          return sum + (card?.power || 0);
-        }, 0);
+        const player1Breakdown = calculateBattlePower(p1Cards, p2Cards, getCardById);
+        const player2Breakdown = calculateBattlePower(p2Cards, p1Cards, getCardById);
+        
+        const p1Power = player1Breakdown.reduce((sum, b) => sum + b.finalPower, 0);
+        const p2Power = player2Breakdown.reduce((sum, b) => sum + b.finalPower, 0);
         
         const damage = Math.abs(p1Power - p2Power);
         let newP1HP = game.player1HP;
@@ -1638,12 +1635,35 @@ export default function GameBoardPage() {
         const p1Yard = [...game.gameState.player1Yard, ...game.gameState.player1Battlefield.map(bf => bf.cardId)];
         const p2Yard = [...game.gameState.player2Yard, ...game.gameState.player2Battlefield.map(bf => bf.cardId)];
         
+        const mapBreakdownToSchema = (breakdowns: CardPowerBreakdown[]) => breakdowns.map(b => ({
+          cardId: b.card.id,
+          cardName: b.card.name,
+          basePower: b.basePower,
+          traitBonus: b.traitInfo?.value || 0,
+          buffBonus: b.buffBonuses.reduce((s, bb) => s + bb.amount, 0),
+          debuffPenalty: b.debuffPenalties.reduce((s, dp) => s + dp.amount, 0),
+          finalPower: b.finalPower,
+          traitName: b.traitInfo?.trait,
+        }));
+        
+        const combatLog = {
+          player1Cards: mapBreakdownToSchema(player1Breakdown),
+          player2Cards: mapBreakdownToSchema(player2Breakdown),
+          player1Total: p1Power,
+          player2Total: p2Power,
+          damage,
+          winner: p1Power > p2Power ? "player1" as const : p2Power > p1Power ? "player2" as const : "tie" as const,
+          turn: game.currentTurn,
+        };
+        
         const newGameState = {
           ...game.gameState,
           player1Battlefield: [],
           player2Battlefield: [],
           player1Yard: p1Yard,
           player2Yard: p2Yard,
+          lastCombatLog: combatLog,
+          combatHistory: [...(game.gameState.combatHistory || []), combatLog],
         };
         
         let status = game.status;
