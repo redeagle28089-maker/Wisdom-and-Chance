@@ -2367,72 +2367,159 @@ export default function GameBoardPage() {
       )}
 
       <Dialog open={showCombatLogDialog} onOpenChange={setShowCombatLogDialog}>
-        <DialogContent className="bg-slate-800 border-purple-500/30 max-w-lg max-h-[80vh] overflow-hidden" data-testid="dialog-combat-log">
+        <DialogContent className="bg-slate-900 border-red-500/50 max-w-3xl max-h-[85vh] overflow-hidden" data-testid="dialog-combat-log">
           <DialogHeader>
-            <DialogTitle className="text-white flex items-center gap-2">
-              <Scroll className="w-5 h-5 text-purple-400" />
-              Combat Log - Turn {game.gameState.lastCombatLog?.turn || '?'}
+            <DialogTitle className="text-white flex items-center gap-2 text-xl">
+              <Swords className="w-6 h-6 text-red-500" />
+              Combat Calculation Log - Turn {game.gameState.lastCombatLog?.turn || '?'}
             </DialogTitle>
           </DialogHeader>
           {game.gameState.lastCombatLog && (
-            <ScrollArea className="max-h-[60vh] pr-4">
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-green-900/20 border border-green-500/20 rounded-lg p-3" data-testid="combat-log-your-cards">
-                    <h4 className="text-green-400 text-sm font-medium mb-2">Your Cards</h4>
-                    {(isPlayer1 ? game.gameState.lastCombatLog.player1Cards : game.gameState.lastCombatLog.player2Cards).map((card, i) => (
-                      <div key={i} className="text-xs text-slate-300 mb-1" data-testid={`combat-log-your-card-${i}`}>
-                        <span className="font-medium">{card.cardName}</span>
-                        <span className="text-slate-500 ml-1">
-                          Base: {card.basePower}
-                          {card.traitBonus !== 0 && <span className="text-purple-400"> {card.traitBonus > 0 ? '+' : ''}{card.traitBonus} trait</span>}
-                          {card.buffBonus !== 0 && <span className="text-cyan-400"> +{card.buffBonus} buff</span>}
-                          {card.debuffPenalty !== 0 && <span className="text-orange-400"> -{card.debuffPenalty} debuff</span>}
-                        </span>
-                        <span className="text-green-400 ml-1">= {card.finalPower}</span>
-                        {card.traitName && (
-                          <div className="text-purple-400 text-xs mt-0.5">({card.traitName})</div>
-                        )}
-                      </div>
-                    ))}
-                    <div className="text-sm font-bold text-green-300 mt-2 pt-2 border-t border-green-500/20" data-testid="combat-log-your-total">
-                      Total: {isPlayer1 ? game.gameState.lastCombatLog.player1Total : game.gameState.lastCombatLog.player2Total}
-                    </div>
+            <ScrollArea className="max-h-[70vh] pr-4">
+              <div className="space-y-4 font-mono text-sm">
+                {/* Step 1: Cards Deployed */}
+                <div className="bg-slate-800/80 border border-slate-600 rounded-lg p-4">
+                  <div className="text-cyan-400 font-bold mb-3 flex items-center gap-2">
+                    <span className="bg-cyan-500 text-black px-2 py-0.5 rounded text-xs">STEP 1</span>
+                    Cards Deployed
                   </div>
-                  <div className="bg-red-900/20 border border-red-500/20 rounded-lg p-3" data-testid="combat-log-enemy-cards">
-                    <h4 className="text-red-400 text-sm font-medium mb-2">Opponent's Cards</h4>
-                    {(isPlayer1 ? game.gameState.lastCombatLog.player2Cards : game.gameState.lastCombatLog.player1Cards).map((card, i) => (
-                      <div key={i} className="text-xs text-slate-300 mb-1" data-testid={`combat-log-enemy-card-${i}`}>
-                        <span className="font-medium">{card.cardName}</span>
-                        <span className="text-slate-500 ml-1">
-                          Base: {card.basePower}
-                          {card.traitBonus !== 0 && <span className="text-purple-400"> {card.traitBonus > 0 ? '+' : ''}{card.traitBonus} trait</span>}
-                          {card.buffBonus !== 0 && <span className="text-cyan-400"> +{card.buffBonus} buff</span>}
-                          {card.debuffPenalty !== 0 && <span className="text-orange-400"> -{card.debuffPenalty} debuff</span>}
-                        </span>
-                        <span className="text-red-400 ml-1">= {card.finalPower}</span>
-                        {card.traitName && (
-                          <div className="text-purple-400 text-xs mt-0.5">({card.traitName})</div>
-                        )}
-                      </div>
-                    ))}
-                    <div className="text-sm font-bold text-red-300 mt-2 pt-2 border-t border-red-500/20" data-testid="combat-log-enemy-total">
-                      Total: {isPlayer1 ? game.gameState.lastCombatLog.player2Total : game.gameState.lastCombatLog.player1Total}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <div className="text-green-400 text-xs mb-2 font-bold">YOUR CARDS:</div>
+                      {(isPlayer1 ? game.gameState.lastCombatLog.player1Cards : game.gameState.lastCombatLog.player2Cards).map((card, i) => (
+                        <div key={i} className="bg-green-900/30 border border-green-700/50 rounded p-2 mb-2" data-testid={`combat-log-your-card-${i}`}>
+                          <div className="text-green-300 font-bold">{card.cardName}</div>
+                          <div className="text-slate-400 text-xs mt-1">
+                            <div>Card ID: <span className="text-slate-300">{card.cardId}</span></div>
+                            <div>Base Power: <span className="text-yellow-400 font-bold">{card.basePower}</span></div>
+                            {card.traitName && <div>Trait: <span className="text-purple-400">{card.traitName}</span></div>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div>
+                      <div className="text-red-400 text-xs mb-2 font-bold">OPPONENT CARDS:</div>
+                      {(isPlayer1 ? game.gameState.lastCombatLog.player2Cards : game.gameState.lastCombatLog.player1Cards).map((card, i) => (
+                        <div key={i} className="bg-red-900/30 border border-red-700/50 rounded p-2 mb-2" data-testid={`combat-log-enemy-card-${i}`}>
+                          <div className="text-red-300 font-bold">{card.cardName}</div>
+                          <div className="text-slate-400 text-xs mt-1">
+                            <div>Card ID: <span className="text-slate-300">{card.cardId}</span></div>
+                            <div>Base Power: <span className="text-yellow-400 font-bold">{card.basePower}</span></div>
+                            {card.traitName && <div>Trait: <span className="text-purple-400">{card.traitName}</span></div>}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
 
-                <div className="bg-slate-700/30 rounded-lg p-3" data-testid="combat-log-final-result">
-                  <h4 className="text-slate-300 text-sm font-medium mb-2 flex items-center gap-2">
-                    <Trophy className="w-4 h-4" />
-                    Final Result
-                  </h4>
-                  <div className="text-center">
+                {/* Step 2: Calculate Modifiers */}
+                <div className="bg-slate-800/80 border border-slate-600 rounded-lg p-4">
+                  <div className="text-purple-400 font-bold mb-3 flex items-center gap-2">
+                    <span className="bg-purple-500 text-black px-2 py-0.5 rounded text-xs">STEP 2</span>
+                    Apply Modifiers
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <div className="text-green-400 text-xs mb-2 font-bold">YOUR MODIFIERS:</div>
+                      {(isPlayer1 ? game.gameState.lastCombatLog.player1Cards : game.gameState.lastCombatLog.player2Cards).map((card, i) => (
+                        <div key={i} className="bg-slate-700/50 rounded p-2 mb-2 text-xs">
+                          <div className="text-green-300 font-medium mb-1">{card.cardName}</div>
+                          <div className="space-y-0.5">
+                            <div className="text-slate-400">Base Power: <span className="text-yellow-400">{card.basePower}</span></div>
+                            {card.traitBonus !== 0 && (
+                              <div className="text-purple-400">+ Trait Bonus: <span className="font-bold">{card.traitBonus > 0 ? '+' : ''}{card.traitBonus}</span></div>
+                            )}
+                            {card.buffBonus !== 0 && (
+                              <div className="text-cyan-400">+ Buff Bonus: <span className="font-bold">+{card.buffBonus}</span></div>
+                            )}
+                            {card.debuffPenalty !== 0 && (
+                              <div className="text-orange-400">- Debuff Penalty: <span className="font-bold">-{card.debuffPenalty}</span></div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div>
+                      <div className="text-red-400 text-xs mb-2 font-bold">OPPONENT MODIFIERS:</div>
+                      {(isPlayer1 ? game.gameState.lastCombatLog.player2Cards : game.gameState.lastCombatLog.player1Cards).map((card, i) => (
+                        <div key={i} className="bg-slate-700/50 rounded p-2 mb-2 text-xs">
+                          <div className="text-red-300 font-medium mb-1">{card.cardName}</div>
+                          <div className="space-y-0.5">
+                            <div className="text-slate-400">Base Power: <span className="text-yellow-400">{card.basePower}</span></div>
+                            {card.traitBonus !== 0 && (
+                              <div className="text-purple-400">+ Trait Bonus: <span className="font-bold">{card.traitBonus > 0 ? '+' : ''}{card.traitBonus}</span></div>
+                            )}
+                            {card.buffBonus !== 0 && (
+                              <div className="text-cyan-400">+ Buff Bonus: <span className="font-bold">+{card.buffBonus}</span></div>
+                            )}
+                            {card.debuffPenalty !== 0 && (
+                              <div className="text-orange-400">- Debuff Penalty: <span className="font-bold">-{card.debuffPenalty}</span></div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Step 3: Calculate Final Power */}
+                <div className="bg-slate-800/80 border border-slate-600 rounded-lg p-4">
+                  <div className="text-yellow-400 font-bold mb-3 flex items-center gap-2">
+                    <span className="bg-yellow-500 text-black px-2 py-0.5 rounded text-xs">STEP 3</span>
+                    Calculate Final Power
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-green-900/30 border border-green-600/50 rounded-lg p-3">
+                      <div className="text-green-400 text-xs mb-2 font-bold">YOUR POWER CALCULATION:</div>
+                      {(isPlayer1 ? game.gameState.lastCombatLog.player1Cards : game.gameState.lastCombatLog.player2Cards).map((card, i) => (
+                        <div key={i} className="text-xs text-slate-300 mb-1 flex justify-between">
+                          <span>{card.cardName}:</span>
+                          <span className="text-green-400 font-bold">
+                            {card.basePower} {card.traitBonus !== 0 ? (card.traitBonus > 0 ? `+${card.traitBonus}` : card.traitBonus) : ''} {card.buffBonus !== 0 ? `+${card.buffBonus}` : ''} {card.debuffPenalty !== 0 ? `-${card.debuffPenalty}` : ''} = {card.finalPower}
+                          </span>
+                        </div>
+                      ))}
+                      <div className="border-t border-green-500/30 mt-2 pt-2 flex justify-between font-bold text-green-300">
+                        <span>TOTAL:</span>
+                        <span>{isPlayer1 ? game.gameState.lastCombatLog.player1Total : game.gameState.lastCombatLog.player2Total}</span>
+                      </div>
+                    </div>
+                    <div className="bg-red-900/30 border border-red-600/50 rounded-lg p-3">
+                      <div className="text-red-400 text-xs mb-2 font-bold">OPPONENT POWER CALCULATION:</div>
+                      {(isPlayer1 ? game.gameState.lastCombatLog.player2Cards : game.gameState.lastCombatLog.player1Cards).map((card, i) => (
+                        <div key={i} className="text-xs text-slate-300 mb-1 flex justify-between">
+                          <span>{card.cardName}:</span>
+                          <span className="text-red-400 font-bold">
+                            {card.basePower} {card.traitBonus !== 0 ? (card.traitBonus > 0 ? `+${card.traitBonus}` : card.traitBonus) : ''} {card.buffBonus !== 0 ? `+${card.buffBonus}` : ''} {card.debuffPenalty !== 0 ? `-${card.debuffPenalty}` : ''} = {card.finalPower}
+                          </span>
+                        </div>
+                      ))}
+                      <div className="border-t border-red-500/30 mt-2 pt-2 flex justify-between font-bold text-red-300">
+                        <span>TOTAL:</span>
+                        <span>{isPlayer1 ? game.gameState.lastCombatLog.player2Total : game.gameState.lastCombatLog.player1Total}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Step 4: Determine Winner */}
+                <div className="bg-slate-800/80 border border-slate-600 rounded-lg p-4">
+                  <div className="text-amber-400 font-bold mb-3 flex items-center gap-2">
+                    <span className="bg-amber-500 text-black px-2 py-0.5 rounded text-xs">STEP 4</span>
+                    Determine Winner & Damage
+                  </div>
+                  <div className="bg-slate-700/50 rounded-lg p-4 text-center">
+                    <div className="text-lg mb-2">
+                      <span className="text-green-400 font-bold">{isPlayer1 ? game.gameState.lastCombatLog.player1Total : game.gameState.lastCombatLog.player2Total}</span>
+                      <span className="text-slate-400 mx-3">vs</span>
+                      <span className="text-red-400 font-bold">{isPlayer1 ? game.gameState.lastCombatLog.player2Total : game.gameState.lastCombatLog.player1Total}</span>
+                    </div>
                     {game.gameState.lastCombatLog.winner === "tie" ? (
-                      <div className="text-yellow-300 text-lg font-bold">Draw! No damage dealt.</div>
+                      <div className="text-yellow-400 text-xl font-bold">DRAW - No damage dealt</div>
                     ) : (
                       <>
-                        <div className={`text-lg font-bold ${
+                        <div className={`text-2xl font-bold ${
                           (isPlayer1 && game.gameState.lastCombatLog.winner === "player1") || 
                           (!isPlayer1 && game.gameState.lastCombatLog.winner === "player2") 
                             ? "text-green-400" 
@@ -2440,19 +2527,14 @@ export default function GameBoardPage() {
                         }`}>
                           {(isPlayer1 && game.gameState.lastCombatLog.winner === "player1") || 
                            (!isPlayer1 && game.gameState.lastCombatLog.winner === "player2") 
-                            ? "You Won!" 
-                            : "Opponent Won!"}
+                            ? "YOU WIN THIS ROUND!" 
+                            : "OPPONENT WINS THIS ROUND!"}
                         </div>
-                        <div className="text-sm text-slate-400 mt-1">
-                          Damage Dealt: <span className="text-amber-400 font-bold">{game.gameState.lastCombatLog.damage}</span>
+                        <div className="text-slate-300 mt-2">
+                          Damage = |{isPlayer1 ? game.gameState.lastCombatLog.player1Total : game.gameState.lastCombatLog.player2Total} - {isPlayer1 ? game.gameState.lastCombatLog.player2Total : game.gameState.lastCombatLog.player1Total}| = <span className="text-amber-400 font-bold text-xl">{game.gameState.lastCombatLog.damage} HP</span>
                         </div>
                       </>
                     )}
-                  </div>
-                  <div className="flex justify-between text-xs text-slate-400 mt-3 pt-2 border-t border-slate-600/50">
-                    <div>Your Power: {isPlayer1 ? game.gameState.lastCombatLog.player1Total : game.gameState.lastCombatLog.player2Total}</div>
-                    <div>vs</div>
-                    <div>Enemy Power: {isPlayer1 ? game.gameState.lastCombatLog.player2Total : game.gameState.lastCombatLog.player1Total}</div>
                   </div>
                 </div>
               </div>
