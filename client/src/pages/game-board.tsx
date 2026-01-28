@@ -1510,7 +1510,11 @@ export default function GameBoardPage() {
   const myHand = game ? (isPlayer1 ? game.gameState.player1Hand : game.gameState.player2Hand) : [];
   const opponentHandSize = game ? (isPlayer1 ? game.gameState.player2Hand.length : game.gameState.player1Hand.length) : 0;
   const myBattlefield = game ? (isPlayer1 ? game.gameState.player1Battlefield : game.gameState.player2Battlefield) : [];
-  const opponentBattlefield = game ? (isPlayer1 ? game.gameState.player2Battlefield : game.gameState.player1Battlefield) : [];
+  const rawOpponentBattlefield = game ? (isPlayer1 ? game.gameState.player2Battlefield : game.gameState.player1Battlefield) : [];
+  // In practice mode, always show opponent's cards face-up so player can review during combat phase
+  const opponentBattlefield = game?.gameType === "practice" 
+    ? rawOpponentBattlefield.map(bf => ({ ...bf, faceDown: false }))
+    : rawOpponentBattlefield;
   const myDeckSize = game ? (isPlayer1 ? game.gameState.player1Deck.length : game.gameState.player2Deck.length) : 0;
   const opponentDeckSize = game ? (isPlayer1 ? game.gameState.player2Deck.length : game.gameState.player1Deck.length) : 0;
   const isMyTurn = game ? game.activePlayer === user?.id : false;
