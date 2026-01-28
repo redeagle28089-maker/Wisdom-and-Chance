@@ -1395,7 +1395,10 @@ export default function GameBoardPage() {
   const [showCombatLogDialog, setShowCombatLogDialog] = useState(false);
   const [showCombatHistoryDialog, setShowCombatHistoryDialog] = useState(false);
   const [selectedHistoryRound, setSelectedHistoryRound] = useState<number | null>(null);
+  const [combatPhaseTimer, setCombatPhaseTimer] = useState(30);
+  const [combatPhaseTimerActive, setCombatPhaseTimerActive] = useState(false);
   const combatTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const combatPhaseTimerRef = useRef<NodeJS.Timeout | null>(null);
   const chatScrollRef = useRef<HTMLDivElement>(null);
   const previousHandRef = useRef<string[] | null>(null);
   const previousBattlefieldRef = useRef<string[] | null>(null);
@@ -1803,17 +1806,75 @@ export default function GameBoardPage() {
     executeAITurn();
   }, [game, gameId, allCards, updateGameMutation, updateGameMutation.isPending, toast]);
 
-  // Cleanup timer on unmount
+  // Cleanup timers on unmount
   useEffect(() => {
     return () => {
       if (combatTimerRef.current) {
         clearInterval(combatTimerRef.current);
       }
+      if (combatPhaseTimerRef.current) {
+        clearInterval(combatPhaseTimerRef.current);
+      }
     };
   }, []);
 
+  // Start 30-second combat phase timer in practice mode when entering combat phase
+  useEffect(() => {
+    const isPractice = game?.gameType === "practice";
+    const isInCombatPhase = game?.currentPhase === "combat";
+    
+    if (isPractice && isInCombatPhase && !combatPhaseTimerActive) {
+      // Start the 30-second countdown
+      setCombatPhaseTimer(30);
+      setCombatPhaseTimerActive(true);
+      
+      if (combatPhaseTimerRef.current) {
+        clearInterval(combatPhaseTimerRef.current);
+      }
+      
+      combatPhaseTimerRef.current = setInterval(() => {
+        setCombatPhaseTimer(prev => {
+          if (prev <= 1) {
+            if (combatPhaseTimerRef.current) {
+              clearInterval(combatPhaseTimerRef.current);
+              combatPhaseTimerRef.current = null;
+            }
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    
+    // Reset timer state when leaving combat phase
+    if (!isInCombatPhase && combatPhaseTimerActive) {
+      setCombatPhaseTimerActive(false);
+      if (combatPhaseTimerRef.current) {
+        clearInterval(combatPhaseTimerRef.current);
+        combatPhaseTimerRef.current = null;
+      }
+    }
+  }, [game?.gameType, game?.currentPhase, combatPhaseTimerActive]);
+
   // Ref to hold the handleCalculation function (defined after loading check)
   const handleCalculationRef = useRef<(() => void) | null>(null);
+  
+  // Ref to hold the handleCombat function for auto-advance when timer expires
+  const handleCombatRef = useRef<(() => void) | null>(null);
+  
+  // When combat phase timer expires in practice mode, auto-reveal cards
+  useEffect(() => {
+    const isPractice = game?.gameType === "practice";
+    const isInCombatPhase = game?.currentPhase === "combat";
+    
+    if (isPractice && combatPhaseTimer === 0 && combatPhaseTimerActive && isInCombatPhase) {
+      // Timer expired - clear state and trigger reveal
+      setCombatPhaseTimerActive(false);
+      if (handleCombatRef.current) {
+        handleCombatRef.current();
+      }
+    }
+  }, [combatPhaseTimer, combatPhaseTimerActive, game?.gameType, game?.currentPhase]);
   
   // State for triggering auto-advance after timer expires
   const [pendingCalculation, setPendingCalculation] = useState(false);
@@ -2039,12 +2100,25 @@ export default function GameBoardPage() {
     toast({ title: "Cards revealed! Review combat results." });
   };
 
+  // Assign handleCombat to ref for auto-advance
+  handleCombatRef.current = handleCombat;
+
   const skipCombatTimer = () => {
     if (combatTimerRef.current) {
       clearInterval(combatTimerRef.current);
       combatTimerRef.current = null;
     }
     setCombatTimer(0);
+  };
+
+  const skipCombatPhaseTimer = () => {
+    if (combatPhaseTimerRef.current) {
+      clearInterval(combatPhaseTimerRef.current);
+      combatPhaseTimerRef.current = null;
+    }
+    setCombatPhaseTimerActive(false);
+    setCombatPhaseTimer(0);
+    handleCombat();
   };
 
   const handleCalculation = () => {
@@ -2305,10 +2379,26 @@ export default function GameBoardPage() {
                 </Button>
               )}
               {game.currentPhase === "combat" && isMyTurn && (
-                <Button onClick={handleCombat} className="bg-gradient-to-r from-red-600 to-orange-600" data-testid="button-combat">
-                  <Swords className="w-4 h-4 mr-2" />
-                  Reveal Cards
-                </Button>
+                <div className="flex items-center gap-3">
+                  {game.gameType === "practice" && combatPhaseTimerActive && (
+                    <div className="flex items-center gap-2">
+                      <div className="bg-slate-800/80 border border-amber-500/50 rounded-lg px-3 py-1.5 flex items-center gap-2">
+                        <Eye className="w-4 h-4 text-amber-400" />
+                        <span className="text-amber-300 font-mono text-sm">
+                          Review: {combatPhaseTimer}s
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  <Button 
+                    onClick={game.gameType === "practice" && combatPhaseTimerActive ? skipCombatPhaseTimer : handleCombat} 
+                    className="bg-gradient-to-r from-red-600 to-orange-600" 
+                    data-testid="button-combat"
+                  >
+                    <Swords className="w-4 h-4 mr-2" />
+                    {game.gameType === "practice" && combatPhaseTimerActive ? "Skip & Reveal" : "Reveal Cards"}
+                  </Button>
+                </div>
               )}
               {game.currentPhase === "calculation" && isMyTurn && !showCombatResults && (
                 <Button onClick={handleCalculation} className="bg-gradient-to-r from-yellow-600 to-orange-600" data-testid="button-calculate">
