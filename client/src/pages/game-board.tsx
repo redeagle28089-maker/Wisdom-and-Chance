@@ -12,8 +12,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { Heart, Swords, Trophy, Flag, ArrowRight, Shield, Flame, Droplet, Mountain, Wind, Leaf, RotateCcw, LogIn, MessageSquare, Eye, Send, X, Zap, Sparkles, Plus, Scroll, History } from "lucide-react";
-import type { Game, Card as CardType, Element, BattlefieldCard } from "@shared/schema";
-import { GAME_CONSTANTS } from "@shared/schema";
+import type { Game, Card as CardType, Element, BattlefieldCard, GameMode } from "@shared/schema";
+import { GAME_CONSTANTS, GAME_MODE_CONFIG } from "@shared/schema";
 import { getCardIdFromInstance } from "@/lib/card-utils";
 
 import fireCardArt from "@assets/generated_images/fire_element_card_art.png";
@@ -1511,6 +1511,12 @@ export default function GameBoardPage() {
   const myDeckSize = game ? (isPlayer1 ? game.gameState.player1Deck.length : game.gameState.player2Deck.length) : 0;
   const opponentDeckSize = game ? (isPlayer1 ? game.gameState.player2Deck.length : game.gameState.player1Deck.length) : 0;
   const isMyTurn = game ? game.activePlayer === user?.id : false;
+  
+  // Get game mode config (draw/deploy counts)
+  const gameMode: GameMode = game?.gameMode || "standard";
+  const modeConfig = GAME_MODE_CONFIG[gameMode];
+  const cardsToDraw = modeConfig.cardsToDraw;
+  const cardsToDeploy = modeConfig.cardsToDeploy;
 
   useEffect(() => {
     if (!game) return;
@@ -1595,7 +1601,7 @@ export default function GameBoardPage() {
         const aiDeck = [...game.gameState.player2Deck];
         const aiHand = [...game.gameState.player2Hand];
         
-        if (aiDeck.length < GAME_CONSTANTS.CARDS_TO_DRAW) {
+        if (aiDeck.length < cardsToDraw) {
           updateGameMutation.mutate({
             status: "completed",
             winnerId: game.player1Id,
@@ -1603,7 +1609,7 @@ export default function GameBoardPage() {
           return;
         }
         
-        for (let i = 0; i < GAME_CONSTANTS.CARDS_TO_DRAW; i++) {
+        for (let i = 0; i < cardsToDraw; i++) {
           aiHand.push(aiDeck.shift()!);
         }
         
@@ -1622,7 +1628,7 @@ export default function GameBoardPage() {
       } else if (game.currentPhase === "deployment") {
         const aiHand = [...game.gameState.player2Hand];
         
-        if (aiHand.length < GAME_CONSTANTS.CARDS_TO_DEPLOY) {
+        if (aiHand.length < cardsToDeploy) {
           updateGameMutation.mutate({
             status: "completed",
             winnerId: game.player1Id,
@@ -1634,7 +1640,7 @@ export default function GameBoardPage() {
         
         if (aiDifficulty === "easy") {
           const shuffled = [...aiHand].sort(() => Math.random() - 0.5);
-          selectedCardIds = shuffled.slice(0, GAME_CONSTANTS.CARDS_TO_DEPLOY);
+          selectedCardIds = shuffled.slice(0, cardsToDeploy);
         } else if (aiDifficulty === "medium") {
           const cardsWithPower = aiHand.map(cardId => {
             const baseCardId = getCardIdFromInstance(cardId);
@@ -1642,7 +1648,7 @@ export default function GameBoardPage() {
             return { cardId, power: card?.power || 0 };
           });
           cardsWithPower.sort((a, b) => b.power - a.power);
-          selectedCardIds = cardsWithPower.slice(0, GAME_CONSTANTS.CARDS_TO_DEPLOY).map(c => c.cardId);
+          selectedCardIds = cardsWithPower.slice(0, cardsToDeploy).map(c => c.cardId);
         } else {
           const cardsWithPower = aiHand.map(cardId => {
             const baseCardId = getCardIdFromInstance(cardId);
@@ -1657,7 +1663,7 @@ export default function GameBoardPage() {
           if (topCards.length > 0 && bottomCards.length > 0) {
             selectedCardIds = [topCards[0].cardId, bottomCards[Math.floor(Math.random() * bottomCards.length)].cardId];
           } else {
-            selectedCardIds = cardsWithPower.slice(0, GAME_CONSTANTS.CARDS_TO_DEPLOY).map(c => c.cardId);
+            selectedCardIds = cardsWithPower.slice(0, cardsToDeploy).map(c => c.cardId);
           }
         }
         
@@ -1674,7 +1680,7 @@ export default function GameBoardPage() {
         };
         
         const playerBF = game.gameState.player1Battlefield;
-        const nextPhase = playerBF.length === GAME_CONSTANTS.CARDS_TO_DEPLOY ? "combat" : "deployment";
+        const nextPhase = playerBF.length === cardsToDeploy ? "combat" : "deployment";
         
         updateGameMutation.mutate({
           currentPhase: nextPhase,
@@ -1835,7 +1841,7 @@ export default function GameBoardPage() {
     
     if (selectedCards.includes(cardId)) {
       setSelectedCards(selectedCards.filter((id) => id !== cardId));
-    } else if (selectedCards.length < GAME_CONSTANTS.CARDS_TO_DEPLOY) {
+    } else if (selectedCards.length < cardsToDeploy) {
       setSelectedCards([...selectedCards, cardId]);
     }
   };
@@ -1846,12 +1852,12 @@ export default function GameBoardPage() {
     const myDeck = isPlayer1 ? [...game.gameState.player1Deck] : [...game.gameState.player2Deck];
     const myNewHand = [...myHand];
     
-    if (myDeck.length < GAME_CONSTANTS.CARDS_TO_DRAW) {
+    if (myDeck.length < cardsToDraw) {
       toast({ title: "Not enough cards to draw!", variant: "destructive" });
       return;
     }
 
-    for (let i = 0; i < GAME_CONSTANTS.CARDS_TO_DRAW; i++) {
+    for (let i = 0; i < cardsToDraw; i++) {
       myNewHand.push(myDeck.shift()!);
     }
 
@@ -1874,8 +1880,8 @@ export default function GameBoardPage() {
       const aiDeck = [...newGameState.player2Deck];
       const aiHand = [...newGameState.player2Hand];
       
-      if (aiDeck.length >= GAME_CONSTANTS.CARDS_TO_DRAW) {
-        for (let i = 0; i < GAME_CONSTANTS.CARDS_TO_DRAW; i++) {
+      if (aiDeck.length >= cardsToDraw) {
+        for (let i = 0; i < cardsToDraw; i++) {
           aiHand.push(aiDeck.shift()!);
         }
         newGameState.player2Hand = aiHand;
@@ -1891,8 +1897,8 @@ export default function GameBoardPage() {
   };
 
   const handleDeploy = () => {
-    if (selectedCards.length !== GAME_CONSTANTS.CARDS_TO_DEPLOY) {
-      toast({ title: `Select ${GAME_CONSTANTS.CARDS_TO_DEPLOY} cards to deploy`, variant: "destructive" });
+    if (selectedCards.length !== cardsToDeploy) {
+      toast({ title: `Select ${cardsToDeploy} cards to deploy`, variant: "destructive" });
       return;
     }
 
@@ -1918,12 +1924,12 @@ export default function GameBoardPage() {
       const aiHand = [...newGameState.player2Hand];
       const aiDifficulty = game.aiDifficulty || "medium";
       
-      if (aiHand.length >= GAME_CONSTANTS.CARDS_TO_DEPLOY) {
+      if (aiHand.length >= cardsToDeploy) {
         let aiSelectedCards: string[] = [];
         
         if (aiDifficulty === "easy") {
           const shuffled = [...aiHand].sort(() => Math.random() - 0.5);
-          aiSelectedCards = shuffled.slice(0, GAME_CONSTANTS.CARDS_TO_DEPLOY);
+          aiSelectedCards = shuffled.slice(0, cardsToDeploy);
         } else if (aiDifficulty === "medium") {
           const cardsWithPower = aiHand.map(cardId => {
             const baseCardId = getCardIdFromInstance(cardId);
@@ -1931,7 +1937,7 @@ export default function GameBoardPage() {
             return { cardId, power: card?.power || 0 };
           });
           cardsWithPower.sort((a, b) => b.power - a.power);
-          aiSelectedCards = cardsWithPower.slice(0, GAME_CONSTANTS.CARDS_TO_DEPLOY).map(c => c.cardId);
+          aiSelectedCards = cardsWithPower.slice(0, cardsToDeploy).map(c => c.cardId);
         } else {
           const cardsWithPower = aiHand.map(cardId => {
             const baseCardId = getCardIdFromInstance(cardId);
@@ -1946,7 +1952,7 @@ export default function GameBoardPage() {
           if (topCards.length > 0 && bottomCards.length > 0) {
             aiSelectedCards = [topCards[0].cardId, bottomCards[Math.floor(Math.random() * bottomCards.length)].cardId];
           } else {
-            aiSelectedCards = cardsWithPower.slice(0, GAME_CONSTANTS.CARDS_TO_DEPLOY).map(c => c.cardId);
+            aiSelectedCards = cardsWithPower.slice(0, cardsToDeploy).map(c => c.cardId);
           }
         }
         
@@ -1959,7 +1965,7 @@ export default function GameBoardPage() {
     }
 
     const opponentBF = isPlayer1 ? newGameState.player2Battlefield : newGameState.player1Battlefield;
-    const bothDeployed = opponentBF.length === GAME_CONSTANTS.CARDS_TO_DEPLOY;
+    const bothDeployed = opponentBF.length === cardsToDeploy;
     const nextPhase = bothDeployed ? "combat" : "deployment";
     
     const opponentId = isPlayer1 ? game.player2Id! : game.player1Id;
@@ -2270,12 +2276,12 @@ export default function GameBoardPage() {
               {game.currentPhase === "deployment" && isMyTurn && (
                 <Button 
                   onClick={handleDeploy} 
-                  disabled={selectedCards.length !== GAME_CONSTANTS.CARDS_TO_DEPLOY}
+                  disabled={selectedCards.length !== cardsToDeploy}
                   className="bg-gradient-to-r from-purple-600 to-pink-600"
                   data-testid="button-deploy"
                 >
                   <Shield className="w-4 h-4 mr-2" />
-                  Deploy ({selectedCards.length}/{GAME_CONSTANTS.CARDS_TO_DEPLOY})
+                  Deploy ({selectedCards.length}/{cardsToDeploy})
                 </Button>
               )}
               {game.currentPhase === "combat" && isMyTurn && (
@@ -2344,7 +2350,7 @@ export default function GameBoardPage() {
               <span>Deck: {myDeckSize}</span>
               {game.currentPhase === "deployment" && isMyTurn && (
                 <Badge className="bg-purple-500/50 text-xs ml-2">
-                  Select {GAME_CONSTANTS.CARDS_TO_DEPLOY - selectedCards.length} more
+                  Select {cardsToDeploy - selectedCards.length} more
                 </Badge>
               )}
             </div>
@@ -2359,7 +2365,7 @@ export default function GameBoardPage() {
                   key={cardId} 
                   card={card} 
                   selected={selectedCards.includes(cardId)}
-                  playable={isPlayable && !selectedCards.includes(cardId) && selectedCards.length < GAME_CONSTANTS.CARDS_TO_DEPLOY}
+                  playable={isPlayable && !selectedCards.includes(cardId) && selectedCards.length < cardsToDeploy}
                   isNewlyPlayed={newlyDrawnCards.has(cardId)}
                   onClick={() => handleCardSelect(cardId)}
                   onPreview={() => setPreviewCard(card)}
