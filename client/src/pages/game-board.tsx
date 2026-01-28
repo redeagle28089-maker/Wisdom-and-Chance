@@ -174,7 +174,7 @@ function generateCombatLog(
   let player1CardsDrawn = 0;
   let player2CardsDrawn = 0;
 
-  // Phase 1: Quick Strike (attacks first, deals damage before normal combat)
+  // Phase 1: Quick Strike (bypasses combat, deals direct HP damage regardless of combat outcome)
   const player1QuickStrikers = player1Breakdown.filter(b => b.traitInfo?.trait === "Quick Strike");
   const player2QuickStrikers = player2Breakdown.filter(b => b.traitInfo?.trait === "Quick Strike");
   
@@ -182,7 +182,7 @@ function generateCombatLog(
     log.push({
       step: step++,
       phase: "quick_strike",
-      description: "Quick Strike Phase - Fast attackers deal damage first!",
+      description: "Quick Strike Phase - Direct HP damage (bypasses combat calculation)!",
       icon: "zap",
       actor: "system"
     });
@@ -193,7 +193,7 @@ function generateCombatLog(
       log.push({
         step: step++,
         phase: "quick_strike",
-        description: `[P1] ${b.card.name} strikes first! Deals ${damage} damage to P2.`,
+        description: `[P1] ${b.card.name}'s Quick Strike (${damage}) bypasses combat - ${damage} direct HP damage to P2!`,
         icon: "zap",
         actor: "player1",
         cardName: b.card.name,
@@ -209,7 +209,7 @@ function generateCombatLog(
       log.push({
         step: step++,
         phase: "quick_strike",
-        description: `[P2] ${b.card.name} strikes first! Deals ${damage} damage to P1.`,
+        description: `[P2] ${b.card.name}'s Quick Strike (${damage}) bypasses combat - ${damage} direct HP damage to P1!`,
         icon: "zap",
         actor: "player2",
         cardName: b.card.name,
@@ -1072,7 +1072,7 @@ function CombatResultPanel({
               {yourQuickStrike > 0 && (
                 <div className="flex items-center gap-1 text-yellow-300">
                   <Zap className="w-3 h-3" />
-                  <span>Quick Strike: {yourQuickStrike} dmg to enemy</span>
+                  <span>Quick Strike: {yourQuickStrike} direct HP dmg (bypasses combat)</span>
                 </div>
               )}
               {yourGuardianBlock > 0 && (
@@ -1104,7 +1104,7 @@ function CombatResultPanel({
               {enemyQuickStrike > 0 && (
                 <div className="flex items-center gap-1 text-yellow-300">
                   <Zap className="w-3 h-3" />
-                  <span>Quick Strike: {enemyQuickStrike} dmg to you</span>
+                  <span>Quick Strike: {enemyQuickStrike} direct HP dmg (bypasses combat)</span>
                 </div>
               )}
               {enemyGuardianBlock > 0 && (
