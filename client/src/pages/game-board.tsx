@@ -708,11 +708,11 @@ function MiniCard({
   if (faceDown) {
     return (
       <div 
-        className={`w-16 h-24 rounded-lg bg-gradient-to-br from-purple-800 to-purple-900 border-2 border-purple-500/50 flex items-center justify-center shadow-lg transition-all duration-300 ${isOnBattlefield ? 'animate-pulse' : ''}`}
+        className={`w-24 h-36 rounded-lg bg-gradient-to-br from-purple-800 to-purple-900 border-2 border-purple-500/50 flex items-center justify-center shadow-lg transition-all duration-300 ${isOnBattlefield ? 'animate-pulse' : ''}`}
         onClick={handleClick}
       >
-        <div className="w-10 h-10 rounded-full bg-purple-600/30 flex items-center justify-center border border-purple-400/30">
-          <span className="text-purple-300 text-xl font-bold">?</span>
+        <div className="w-14 h-14 rounded-full bg-purple-600/30 flex items-center justify-center border border-purple-400/30">
+          <span className="text-purple-300 text-2xl font-bold">?</span>
         </div>
       </div>
     );
@@ -720,7 +720,7 @@ function MiniCard({
 
   return (
     <div 
-      className={`relative w-16 h-24 rounded-lg ${config.bgColor} border-2 transition-all duration-200 cursor-pointer group
+      className={`relative w-24 h-36 rounded-lg ${config.bgColor} border-2 transition-all duration-200 cursor-pointer group
         ${selected 
           ? 'border-yellow-400 ring-2 ring-yellow-400/50 shadow-lg shadow-yellow-500/30 -translate-y-2 scale-105' 
           : playable 
@@ -748,23 +748,23 @@ function MiniCard({
       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30 rounded-lg" />
       
       {playable && !selected && (
-        <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-green-400 rounded-full animate-[slowPulse_2s_ease-in-out_infinite] z-20 opacity-80" />
+        <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-400 rounded-full animate-[slowPulse_2s_ease-in-out_infinite] z-20 opacity-80" />
       )}
       
       {/* Power/Rank badge - top left (always visible) */}
-      <div className="absolute top-1 left-1 w-5 h-5 bg-slate-900/90 rounded flex items-center justify-center border border-white/30 z-10">
-        <span className="text-white font-bold text-[10px]">{card.power}</span>
+      <div className="absolute top-1.5 left-1.5 w-7 h-7 bg-slate-900/90 rounded flex items-center justify-center border border-white/30 z-10">
+        <span className="text-white font-bold text-sm">{card.power}</span>
       </div>
       
       {/* Trait value badge - top right (always visible with icon) */}
       {(() => {
         const TraitIcon = card.trait ? traitIconsMap[card.trait] || Zap : null;
         return (
-          <div className={`absolute top-1 right-1 h-5 px-0.5 rounded flex items-center justify-center gap-0.5 z-10 ${
+          <div className={`absolute top-1.5 right-1.5 h-7 px-1 rounded flex items-center justify-center gap-0.5 z-10 ${
             card.trait ? 'bg-purple-600/90 border border-purple-400/50' : 'bg-slate-700/80 border border-slate-500/30'
           }`}>
-            <span className={`font-bold text-[8px] ${card.trait ? 'text-white' : 'text-slate-400'}`}>{card.trait ? (card.traitValue ?? 1) : 0}</span>
-            {TraitIcon && <TraitIcon className="w-2.5 h-2.5 text-white" />}
+            <span className={`font-bold text-xs ${card.trait ? 'text-white' : 'text-slate-400'}`}>{card.trait ? (card.traitValue ?? 1) : 0}</span>
+            {TraitIcon && <TraitIcon className="w-4 h-4 text-white" />}
           </div>
         );
       })()}
@@ -773,12 +773,12 @@ function MiniCard({
       {(() => {
         const buffStyle = card.buffColor && buffDebuffColorMap[card.buffColor];
         return (
-          <div className={`absolute bottom-5 left-1 w-5 h-4 rounded flex items-center justify-center z-10 ${
+          <div className={`absolute bottom-7 left-1.5 w-7 h-6 rounded flex items-center justify-center z-10 ${
             card.buffModifier > 0 
               ? buffStyle ? `${buffStyle.bg} ${buffStyle.border}` : 'bg-cyan-500/90 border border-cyan-300/50'
               : 'bg-slate-700/80 border border-slate-500/30'
           }`}>
-            <span className={`font-bold text-[7px] ${card.buffModifier > 0 ? 'text-white' : 'text-slate-400'}`}>+{card.buffModifier}</span>
+            <span className={`font-bold text-[10px] ${card.buffModifier > 0 ? 'text-white' : 'text-slate-400'}`}>+{card.buffModifier}</span>
           </div>
         );
       })()}
@@ -787,22 +787,22 @@ function MiniCard({
       {(() => {
         const debuffStyle = card.debuffColor && buffDebuffColorMap[card.debuffColor];
         return (
-          <div className={`absolute bottom-5 right-1 w-5 h-4 rounded flex items-center justify-center z-10 ${
+          <div className={`absolute bottom-7 right-1.5 w-7 h-6 rounded flex items-center justify-center z-10 ${
             card.debuffModifier > 0 
               ? debuffStyle ? `${debuffStyle.bg} ${debuffStyle.border}` : 'bg-orange-500/90 border border-orange-300/50'
               : 'bg-slate-700/80 border border-slate-500/30'
           }`}>
-            <span className={`font-bold text-[7px] ${card.debuffModifier > 0 ? 'text-white' : 'text-slate-400'}`}>-{card.debuffModifier}</span>
+            <span className={`font-bold text-[10px] ${card.debuffModifier > 0 ? 'text-white' : 'text-slate-400'}`}>-{card.debuffModifier}</span>
           </div>
         );
       })()}
       
       {/* Card name at bottom */}
-      <div className="absolute bottom-0 left-0 right-0 bg-slate-900/90 py-0.5 text-center rounded-b-lg z-10">
-        <p className="text-white text-[7px] truncate px-0.5 font-medium">{card.name.split(' ')[0]}</p>
+      <div className="absolute bottom-0 left-0 right-0 bg-slate-900/90 py-1 text-center rounded-b-lg z-10">
+        <p className="text-white text-[10px] truncate px-1 font-medium">{card.name.split(' ')[0]}</p>
       </div>
       {isHovered && (
-        <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 bg-slate-900/95 px-2 py-0.5 rounded text-[9px] text-white whitespace-nowrap z-20 border border-purple-500/30">
+        <div className="absolute -bottom-7 left-1/2 -translate-x-1/2 bg-slate-900/95 px-2 py-1 rounded text-xs text-white whitespace-nowrap z-20 border border-purple-500/30">
           Hold to preview
         </div>
       )}
