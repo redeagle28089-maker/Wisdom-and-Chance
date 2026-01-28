@@ -1661,7 +1661,13 @@ export default function GameBoardPage() {
           const bottomCards = cardsWithPower.slice(mid);
           
           if (topCards.length > 0 && bottomCards.length > 0) {
-            selectedCardIds = [topCards[0].cardId, bottomCards[Math.floor(Math.random() * bottomCards.length)].cardId];
+            // Mix high and low power cards based on cardsToDeploy
+            const numFromTop = Math.ceil(cardsToDeploy / 2);
+            const numFromBottom = cardsToDeploy - numFromTop;
+            const selectedTop = topCards.slice(0, numFromTop).map(c => c.cardId);
+            const shuffledBottom = [...bottomCards].sort(() => Math.random() - 0.5);
+            const selectedBottom = shuffledBottom.slice(0, numFromBottom).map(c => c.cardId);
+            selectedCardIds = [...selectedTop, ...selectedBottom];
           } else {
             selectedCardIds = cardsWithPower.slice(0, cardsToDeploy).map(c => c.cardId);
           }
@@ -1950,7 +1956,13 @@ export default function GameBoardPage() {
           const bottomCards = cardsWithPower.slice(mid);
           
           if (topCards.length > 0 && bottomCards.length > 0) {
-            aiSelectedCards = [topCards[0].cardId, bottomCards[Math.floor(Math.random() * bottomCards.length)].cardId];
+            // Mix high and low power cards based on cardsToDeploy
+            const numFromTop = Math.ceil(cardsToDeploy / 2);
+            const numFromBottom = cardsToDeploy - numFromTop;
+            const selectedTop = topCards.slice(0, numFromTop).map(c => c.cardId);
+            const shuffledBottom = [...bottomCards].sort(() => Math.random() - 0.5);
+            const selectedBottom = shuffledBottom.slice(0, numFromBottom).map(c => c.cardId);
+            aiSelectedCards = [...selectedTop, ...selectedBottom];
           } else {
             aiSelectedCards = cardsWithPower.slice(0, cardsToDeploy).map(c => c.cardId);
           }
