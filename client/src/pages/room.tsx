@@ -25,9 +25,7 @@ import {
   Clock,
   Eye
 } from "lucide-react";
-import type { Deck, Commander, Element, InsertGame, Game, GameState } from "@shared/schema";
-import { GAME_CONSTANTS } from "@shared/schema";
-import { createCardInstances } from "@/lib/card-utils";
+import type { Deck, Game } from "@shared/schema";
 
 interface RoomDetails {
   id: string;
@@ -93,15 +91,6 @@ function getInitials(user: { firstName: string | null; lastName: string | null }
   return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 }
 
-function shuffleArray<T>(array: T[]): T[] {
-  const shuffled = [...array];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-  return shuffled;
-}
-
 export default function RoomPage() {
   const { toast } = useToast();
   const [, params] = useRoute("/room/:id");
@@ -121,8 +110,8 @@ export default function RoomPage() {
     refetchInterval: 3000,
   });
 
-  const { data: decks = [] } = useQuery<Deck[]>({
-    queryKey: ["/api/decks"],
+  const { data: userDecks = [] } = useQuery<Deck[]>({
+    queryKey: ["/api/user-decks"],
     enabled: isAuthenticated,
   });
 
@@ -239,61 +228,14 @@ export default function RoomPage() {
 
   const startGameMutation = useMutation({
     mutationFn: async () => {
-      if (!room || !room.hostDeckId || !room.guestDeckId) {
-        throw new Error("Both players need to select a deck");
+      const res = await apiRequest("POST", `/api/rooms/${roomId}/start`);
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to start game");
       }
-
-      const hostDeck = decks.find(d => d.id === room.hostDeckId);
-      const guestDeck = decks.find(d => d.id === room.guestDeckId);
-
-      if (!hostDeck || !guestDeck) {
-        throw new Error("Could not find selected decks");
-      }
-
-      const player1Deck = shuffleArray(createCardInstances([...hostDeck.cardIds]));
-      const player2Deck = shuffleArray(createCardInstances([...guestDeck.cardIds]));
-
-      const player1Hand = player1Deck.splice(0, GAME_CONSTANTS.STARTING_HAND_SIZE);
-      const player2Hand = player2Deck.splice(0, GAME_CONSTANTS.STARTING_HAND_SIZE);
-
-      const initialGameState: GameState = {
-        player1Hand,
-        player2Hand,
-        player1Deck,
-        player2Deck,
-        player1Battlefield: [],
-        player2Battlefield: [],
-        player1Yard: [],
-        player2Yard: [],
-      };
-
-      const gameData: InsertGame = {
-        player1Id: room.hostId,
-        player2Id: room.guestId,
-        player1DeckId: room.hostDeckId,
-        player2DeckId: room.guestDeckId,
-        player1HP: GAME_CONSTANTS.STARTING_HP,
-        player2HP: GAME_CONSTANTS.STARTING_HP,
-        player1VictoryPoints: 0,
-        player2VictoryPoints: 0,
-        player1WithdrawalPoints: 0,
-        player2WithdrawalPoints: 0,
-        currentPhase: "draw",
-        currentTurn: 1,
-        activePlayer: room.hostId,
-        status: "in_progress",
-        gameType: "multiplayer",
-        aiDifficulty: null,
-        winnerId: null,
-        gameState: initialGameState,
-        gameHistory: [],
-      };
-
-      const res = await apiRequest("POST", "/api/games", gameData);
       return res.json() as Promise<Game>;
     },
     onSuccess: (game) => {
-      sendRoomMessage(roomId!, `Game started!`);
       navigate(`/game/${game.id}`);
     },
     onError: (error: any) => {
@@ -317,7 +259,7 @@ export default function RoomPage() {
     }
   };
 
-  const playerDecks = decks.filter(d => d.playerId === user?.id);
+  const playerDecks = userDecks;
   const isHost = room?.hostId === user?.id;
   const isGuest = room?.guestId === user?.id;
   const isSpectator = !isHost && !isGuest;

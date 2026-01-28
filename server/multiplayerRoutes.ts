@@ -14,10 +14,13 @@ import {
   dailyChallenges,
   playerChallenges,
   playerStats,
-  users
+  users,
+  userDecks,
+  GAME_CONSTANTS
 } from "@shared/schema";
 import { eq, and, or, desc, sql, gte, lt } from "drizzle-orm";
 import { getWebSocketServer } from "./websocket";
+import { storage } from "./storage";
 
 export function registerMultiplayerRoutes(app: Express) {
   app.get("/api/friends", async (req, res) => {
@@ -441,6 +444,120 @@ export function registerMultiplayerRoutes(app: Express) {
     });
 
     res.json({ message: ready ? "Marked ready" : "Marked not ready" });
+  });
+
+  // Start game from room - server-side to access both players' decks
+  app.post("/api/rooms/:id/start", async (req, res) => {
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const userId = (req.user as any).claims.sub;
+    const { id } = req.params;
+
+    const [room] = await db.select().from(gameRooms).where(eq(gameRooms.id, id));
+
+    if (!room) {
+      return res.status(404).json({ message: "Room not found" });
+    }
+
+    // Only host can start
+    if (room.hostId !== userId) {
+      return res.status(403).json({ message: "Only the host can start the game" });
+    }
+
+    // Both players must be ready
+    if (!room.hostReady || !room.guestReady) {
+      return res.status(400).json({ message: "Both players must be ready" });
+    }
+
+    // Both players must have decks selected
+    if (!room.hostDeckId || !room.guestDeckId) {
+      return res.status(400).json({ message: "Both players must select a deck" });
+    }
+
+    // Fetch both decks from database
+    const [hostDeck] = await db.select().from(userDecks).where(eq(userDecks.id, room.hostDeckId));
+    const [guestDeck] = await db.select().from(userDecks).where(eq(userDecks.id, room.guestDeckId));
+
+    if (!hostDeck || !guestDeck) {
+      return res.status(400).json({ message: "Could not find selected decks" });
+    }
+
+    // Helper to shuffle array
+    function shuffleArray<T>(array: T[]): T[] {
+      const shuffled = [...array];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      return shuffled;
+    }
+
+    // Helper to create card instances with unique IDs
+    function createCardInstances(cardIds: string[]): string[] {
+      const cardCounts: Record<string, number> = {};
+      return cardIds.map(cardId => {
+        const baseId = cardId.includes("::") ? cardId.split("::")[0] : cardId;
+        cardCounts[baseId] = (cardCounts[baseId] || 0) + 1;
+        return `${baseId}::${cardCounts[baseId]}`;
+      });
+    }
+
+    // Prepare decks and hands
+    const player1Deck = shuffleArray(createCardInstances([...hostDeck.cardIds]));
+    const player2Deck = shuffleArray(createCardInstances([...guestDeck.cardIds]));
+    const player1Hand = player1Deck.splice(0, GAME_CONSTANTS.STARTING_HAND_SIZE);
+    const player2Hand = player2Deck.splice(0, GAME_CONSTANTS.STARTING_HAND_SIZE);
+
+    const initialGameState = {
+      player1Hand,
+      player2Hand,
+      player1Deck,
+      player2Deck,
+      player1Battlefield: [],
+      player2Battlefield: [],
+      player1Yard: [],
+      player2Yard: [],
+    };
+
+    const gameData = {
+      player1Id: room.hostId,
+      player2Id: room.guestId,
+      player1DeckId: room.hostDeckId,
+      player2DeckId: room.guestDeckId,
+      player1HP: GAME_CONSTANTS.STARTING_HP,
+      player2HP: GAME_CONSTANTS.STARTING_HP,
+      player1VictoryPoints: 0,
+      player2VictoryPoints: 0,
+      player1WithdrawalPoints: 0,
+      player2WithdrawalPoints: 0,
+      currentPhase: "draw",
+      currentTurn: 1,
+      activePlayer: room.hostId,
+      status: "in_progress",
+      gameType: "multiplayer",
+      aiDifficulty: null,
+      winnerId: null,
+      gameState: initialGameState,
+      gameHistory: [],
+    };
+
+    const game = await storage.createGame(gameData as any);
+
+    // Update room with game ID
+    await db.update(gameRooms)
+      .set({ gameId: game.id, status: "in_progress", updatedAt: new Date() })
+      .where(eq(gameRooms.id, id));
+
+    // Notify all room members via WebSocket
+    const wsServer = getWebSocketServer();
+    wsServer?.sendToRoom(id, {
+      type: "game_start",
+      payload: { roomId: id, gameId: game.id },
+    });
+
+    res.status(201).json(game);
   });
 
   app.post("/api/rooms/:id/spectate", async (req, res) => {

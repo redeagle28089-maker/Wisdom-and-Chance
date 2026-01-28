@@ -8,6 +8,13 @@ A tactical trading card game simulator built with React, Express, and TypeScript
 **Current State:** Fully functional TCG with Google authentication, multiplayer rooms, friend system, and real-time gameplay.
 
 ## Recent Changes
+- **January 2026:** Multiplayer Deck Selection Fix
+  - Fixed critical bug where saved decks weren't appearing in multiplayer room deck selector
+  - Room page now fetches from /api/user-decks (database) instead of /api/decks (in-memory)
+  - Added server-side game start endpoint (POST /api/rooms/:id/start)
+  - Game initialization moved to server where both players' decks can be accessed
+  - Players can now properly select their saved decks and start multiplayer games
+
 - **January 2026:** Combat System Fixes & Combat Log
   - Fixed AI combat calculation bug (AI was calculating 0 power for all cards)
   - Card instance IDs (format: cardId::N) now properly resolved to base card IDs
