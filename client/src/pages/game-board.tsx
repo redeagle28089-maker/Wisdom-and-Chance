@@ -1964,7 +1964,7 @@ export default function GameBoardPage() {
       currentPhase: "deployment",
       gameState: newGameState,
     });
-    toast({ title: "Drew 2 cards!" });
+    toast({ title: `Drew ${cardsToDraw} cards!` });
   };
 
   const handleDeploy = () => {
