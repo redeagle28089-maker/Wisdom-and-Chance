@@ -1701,14 +1701,10 @@ export default function GameBoardPage() {
           activePlayer: nextPhase === "deployment" ? game.player1Id : "player-ai",
         });
       } else if (game.currentPhase === "combat") {
-        const newGameState = { ...game.gameState };
-        newGameState.player1Battlefield = newGameState.player1Battlefield.map(bf => ({ ...bf, faceDown: false }));
-        newGameState.player2Battlefield = newGameState.player2Battlefield.map(bf => ({ ...bf, faceDown: false }));
-        
-        updateGameMutation.mutate({
-          currentPhase: "calculation",
-          gameState: newGameState,
-        });
+        // In practice mode, don't auto-advance from combat phase
+        // Wait for the 30-second timer or player to click "Skip & Reveal"
+        // The timer useEffect and handleCombat will handle the transition
+        return;
       } else if (game.currentPhase === "calculation") {
         const p1Cards = game.gameState.player1Battlefield.map(bf => getCardById(bf.cardId)).filter(Boolean) as CardType[];
         const p2Cards = game.gameState.player2Battlefield.map(bf => getCardById(bf.cardId)).filter(Boolean) as CardType[];
@@ -2382,7 +2378,7 @@ export default function GameBoardPage() {
                   Deploy ({selectedCards.length}/{cardsToDeploy})
                 </Button>
               )}
-              {game.currentPhase === "combat" && isMyTurn && (
+              {game.currentPhase === "combat" && (isMyTurn || game.gameType === "practice") && (
                 <div className="flex items-center gap-3">
                   {game.gameType === "practice" && combatPhaseTimerActive && (
                     <div className="flex items-center gap-2">
