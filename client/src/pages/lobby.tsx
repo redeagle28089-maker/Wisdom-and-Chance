@@ -21,8 +21,11 @@ import {
   LogIn,
   RefreshCw,
   Eye,
-  User
+  User,
+  Layers
 } from "lucide-react";
+import type { GameMode } from "@shared/schema";
+import { GAME_MODES, GAME_MODE_CONFIG } from "@shared/schema";
 
 interface GameRoom {
   id: string;
@@ -65,6 +68,7 @@ export default function LobbyPage() {
   const [roomPassword, setRoomPassword] = useState("");
   const [joinPassword, setJoinPassword] = useState("");
   const [joiningRoomId, setJoiningRoomId] = useState<string | null>(null);
+  const [selectedGameMode, setSelectedGameMode] = useState<GameMode>("standard");
 
   const { data: rooms = [], refetch, isLoading } = useQuery<GameRoom[]>({
     queryKey: ["/api/rooms"],
@@ -77,6 +81,7 @@ export default function LobbyPage() {
         name: roomName,
         isPrivate,
         password: isPrivate ? roomPassword : undefined,
+        gameMode: selectedGameMode,
       });
       return res.json();
     },
@@ -86,6 +91,7 @@ export default function LobbyPage() {
       setRoomName("");
       setIsPrivate(false);
       setRoomPassword("");
+      setSelectedGameMode("standard");
       setIsCreateDialogOpen(false);
       navigate(`/room/${room.id}`);
     },
@@ -235,6 +241,37 @@ export default function LobbyPage() {
                       />
                     </div>
                   )}
+                  <div>
+                    <Label className="text-purple-200 flex items-center gap-2 mb-2">
+                      <Layers className="w-4 h-4 text-cyan-400" />
+                      Game Mode
+                    </Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {GAME_MODES.map((mode) => {
+                        const config = GAME_MODE_CONFIG[mode];
+                        return (
+                          <button
+                            key={mode}
+                            onClick={() => setSelectedGameMode(mode)}
+                            className={`p-3 rounded-lg border-2 text-center transition-all ${
+                              selectedGameMode === mode
+                                ? "border-cyan-500 bg-cyan-500/20"
+                                : "border-purple-500/30 bg-slate-900/50 hover:border-purple-500/50"
+                            }`}
+                            data-testid={`gamemode-${mode}`}
+                          >
+                            <div className={`w-8 h-8 mx-auto mb-1 rounded-lg flex items-center justify-center ${
+                              mode === "standard" ? "bg-gradient-to-br from-blue-500 to-cyan-500" : "bg-gradient-to-br from-orange-500 to-red-500"
+                            }`}>
+                              <span className="text-white font-bold text-sm">{config.cardsToDraw}</span>
+                            </div>
+                            <h3 className="text-white font-medium text-sm">{config.label}</h3>
+                            <p className="text-purple-300 text-[10px] mt-0.5">{config.description}</p>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                   <Button 
                     onClick={() => createRoomMutation.mutate()}
                     disabled={!roomName || createRoomMutation.isPending}

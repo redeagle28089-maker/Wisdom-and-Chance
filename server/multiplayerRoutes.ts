@@ -303,7 +303,7 @@ export function registerMultiplayerRoutes(app: Express) {
     }
 
     const userId = (req.user as any).claims.sub;
-    const { name, isPrivate, password } = req.body;
+    const { name, isPrivate, password, gameMode } = req.body;
 
     if (!name) {
       return res.status(400).json({ message: "Room name is required" });
@@ -317,6 +317,7 @@ export function registerMultiplayerRoutes(app: Express) {
         isPrivate: isPrivate || false,
         password: isPrivate ? password : null,
         status: "waiting",
+        settings: { gameMode: gameMode || "standard" },
       })
       .returning();
 
