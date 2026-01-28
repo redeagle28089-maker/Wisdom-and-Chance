@@ -8,9 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Swords, Crown, Flame, Droplet, Mountain, Wind, Leaf, Play, Layers, History, Trophy, Clock, Eye, Brain, Zap, Target, LogIn } from "lucide-react";
-import type { Deck, Commander, Element, Game, InsertGame, GameState, Card as CardType, AIDifficulty } from "@shared/schema";
+import type { Deck, Commander, Element, Game, InsertGame, GameState, Card as CardType, AIDifficulty, GameMode } from "@shared/schema";
 import type { UserDeck } from "@shared/models/auth";
-import { GAME_CONSTANTS, AI_DIFFICULTY } from "@shared/schema";
+import { GAME_CONSTANTS, AI_DIFFICULTY, GAME_MODES, GAME_MODE_CONFIG } from "@shared/schema";
 import { Link } from "wouter";
 import { createCardInstances } from "@/lib/card-utils";
 
@@ -47,6 +47,7 @@ export default function PracticePage() {
   const [, navigate] = useLocation();
   const [selectedDeckId, setSelectedDeckId] = useState<string | null>(null);
   const [selectedDifficulty, setSelectedDifficulty] = useState<AIDifficulty>("medium");
+  const [selectedGameMode, setSelectedGameMode] = useState<GameMode>("standard");
 
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
 
@@ -151,6 +152,7 @@ export default function PracticePage() {
       activePlayer: user.id,
       status: "in_progress",
       gameType: "practice",
+      gameMode: selectedGameMode,
       aiDifficulty: selectedDifficulty,
       winnerId: null,
       gameState: initialGameState,
@@ -296,6 +298,42 @@ export default function PracticePage() {
                             <Icon className="w-6 h-6 text-white" />
                           </div>
                           <h3 className="text-white font-bold">{config.name}</h3>
+                          <p className="text-purple-300 text-xs mt-1">{config.description}</p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-slate-800/50 border-purple-500/20">
+                <CardHeader>
+                  <CardTitle className="text-white flex items-center gap-2">
+                    <Layers className="w-5 h-5 text-cyan-400" />
+                    Game Mode
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-4">
+                    {GAME_MODES.map((mode) => {
+                      const config = GAME_MODE_CONFIG[mode];
+                      return (
+                        <button
+                          key={mode}
+                          onClick={() => setSelectedGameMode(mode)}
+                          className={`p-4 rounded-lg border-2 text-center transition-all ${
+                            selectedGameMode === mode
+                              ? "border-cyan-500 bg-cyan-500/20"
+                              : "border-purple-500/30 bg-slate-900/50 hover:border-purple-500/50"
+                          }`}
+                          data-testid={`gamemode-${mode}`}
+                        >
+                          <div className={`w-12 h-12 mx-auto mb-2 rounded-lg flex items-center justify-center ${
+                            mode === "standard" ? "bg-gradient-to-br from-blue-500 to-cyan-500" : "bg-gradient-to-br from-orange-500 to-red-500"
+                          }`}>
+                            <span className="text-white font-bold text-lg">{config.cardsToDraw}</span>
+                          </div>
+                          <h3 className="text-white font-bold">{config.label}</h3>
                           <p className="text-purple-300 text-xs mt-1">{config.description}</p>
                         </button>
                       );
