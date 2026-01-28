@@ -2201,6 +2201,14 @@ export default function GameBoardPage() {
                 {spectatorCount} watching
               </Badge>
             )}
+            <Badge 
+              variant="outline" 
+              className={`${gameMode === "accelerated" ? "text-orange-300 border-orange-500/40 bg-orange-500/10" : "text-cyan-300 border-cyan-500/40 bg-cyan-500/10"}`}
+              data-testid="badge-game-mode"
+            >
+              <Zap className="w-3 h-3 mr-1" />
+              {cardsToDraw}/{cardsToDeploy}
+            </Badge>
           </div>
           <PhaseIndicator 
             currentPhase={game.currentPhase} 
