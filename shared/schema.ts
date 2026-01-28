@@ -19,6 +19,9 @@ export type GameStatus = typeof GAME_STATUS[number];
 export const AI_DIFFICULTY = ["easy", "medium", "hard"] as const;
 export type AIDifficulty = typeof AI_DIFFICULTY[number];
 
+export const GAME_MODES = ["standard", "accelerated"] as const;
+export type GameMode = typeof GAME_MODES[number];
+
 export const BUFF_DEBUFF_COLORS = ["Red", "Blue", "Amber", "Green", "Black"] as const;
 export type BuffDebuffColor = typeof BUFF_DEBUFF_COLORS[number];
 
@@ -163,6 +166,7 @@ export const gameSchema = z.object({
   activePlayer: z.string(),
   status: z.enum(GAME_STATUS).default("waiting"),
   gameType: z.enum(["solo", "practice", "multiplayer"]).default("practice"),
+  gameMode: z.enum(GAME_MODES).default("standard"),
   aiDifficulty: z.enum(AI_DIFFICULTY).nullable().default(null),
   winnerId: z.string().nullable(),
   gameState: gameStateSchema,
@@ -191,3 +195,18 @@ export const GAME_CONSTANTS = {
   CARDS_PER_POWER_RANK: 4,
   MAX_COPIES_PER_CARD: 3,
 };
+
+export const GAME_MODE_CONFIG = {
+  standard: {
+    cardsToDraw: 2,
+    cardsToDeploy: 2,
+    label: "Standard",
+    description: "Draw 2 cards, deploy 2 units each turn",
+  },
+  accelerated: {
+    cardsToDraw: 3,
+    cardsToDeploy: 3,
+    label: "Accelerated",
+    description: "Draw 3 cards, deploy 3 units each turn",
+  },
+} as const;
