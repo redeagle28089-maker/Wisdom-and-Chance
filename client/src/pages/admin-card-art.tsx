@@ -111,6 +111,17 @@ export default function AdminCardArtPage() {
   const [selectedImageForSwap, setSelectedImageForSwap] = useState<string | null>(null);
   const [uploadName, setUploadName] = useState("");
   const [saveToDbName, setSaveToDbName] = useState("");
+  
+  // Card filter state
+  const [filterElement, setFilterElement] = useState<Element | "all">("all");
+  const [filterPower, setFilterPower] = useState<number | "all">("all");
+  const [filterTrait, setFilterTrait] = useState<string | "all" | "none">("all");
+  const [filterTraitValueEnabled, setFilterTraitValueEnabled] = useState(false);
+  const [filterTraitValue, setFilterTraitValue] = useState<number>(1);
+  const [filterBuffEnabled, setFilterBuffEnabled] = useState(false);
+  const [filterBuffValue, setFilterBuffValue] = useState<number>(1);
+  const [filterDebuffEnabled, setFilterDebuffEnabled] = useState(false);
+  const [filterDebuffValue, setFilterDebuffValue] = useState<number>(1);
 
   const { data: adminCheck, isLoading: adminLoading } = useQuery<{ isAdmin: boolean }>({
     queryKey: ["/api/admin/check"],
@@ -394,7 +405,32 @@ export default function AdminCardArtPage() {
     }
   };
 
-  const filteredCards = cards.filter((c) => c.element === selectedElement);
+  const filteredCards = cards.filter((c) => {
+    // Element filter
+    if (filterElement !== "all" && c.element !== filterElement) return false;
+    
+    // Power filter
+    if (filterPower !== "all" && c.power !== filterPower) return false;
+    
+    // Trait filter
+    if (filterTrait === "none" && c.trait) return false;
+    if (filterTrait !== "all" && filterTrait !== "none" && c.trait !== filterTrait) return false;
+    
+    // Trait value filter (only applies when a specific trait is selected AND toggle is enabled AND card has that trait)
+    const isSpecificTraitSelected = filterTrait !== "all" && filterTrait !== "none";
+    if (isSpecificTraitSelected && filterTraitValueEnabled && c.trait === filterTrait) {
+      const cardTraitValue = c.traitValue ?? 1;
+      if (cardTraitValue !== filterTraitValue) return false;
+    }
+    
+    // Buff value filter (only if enabled)
+    if (filterBuffEnabled && c.buffModifier !== filterBuffValue) return false;
+    
+    // Debuff value filter (only if enabled)
+    if (filterDebuffEnabled && c.debuffModifier !== filterDebuffValue) return false;
+    
+    return true;
+  });
   const filteredCommanders = commanders.filter((c) => c.element === selectedElement);
 
   if (authLoading || adminLoading) {
@@ -953,16 +989,159 @@ export default function AdminCardArtPage() {
 
             {/* Card Selection for applying generated art */}
             <Card className="bg-slate-800/80 border-purple-500/30">
-              <CardHeader>
+              <CardHeader className="pb-2">
                 <CardTitle className="flex items-center gap-2 text-white">
-                  <ElementIcon className={`w-5 h-5 ${elementConfig[selectedElement].color}`} />
-                  {cardType === "unit" ? "Unit Cards" : "Commanders"} - {selectedElement}
+                  <Database className="w-5 h-5 text-purple-400" />
+                  Manage Cards
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <ScrollArea className="h-[400px] pr-4">
+              <CardContent className="space-y-3">
+                {/* Filter Controls */}
+                <div className="grid grid-cols-2 gap-2">
+                  {/* Element Filter */}
+                  <div className="space-y-1">
+                    <Label className="text-xs text-purple-300">Element</Label>
+                    <Select 
+                      value={filterElement} 
+                      onValueChange={(v) => setFilterElement(v as Element | "all")}
+                    >
+                      <SelectTrigger className="text-xs bg-slate-700/50 border-purple-500/30" data-testid="select-filter-element">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Elements</SelectItem>
+                        <SelectItem value="Fire">Fire</SelectItem>
+                        <SelectItem value="Water">Water</SelectItem>
+                        <SelectItem value="Earth">Earth</SelectItem>
+                        <SelectItem value="Air">Air</SelectItem>
+                        <SelectItem value="Nature">Nature</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  {/* Power Filter */}
+                  <div className="space-y-1">
+                    <Label className="text-xs text-purple-300">Power</Label>
+                    <Select 
+                      value={filterPower.toString()} 
+                      onValueChange={(v) => setFilterPower(v === "all" ? "all" : parseInt(v))}
+                    >
+                      <SelectTrigger className="text-xs bg-slate-700/50 border-purple-500/30" data-testid="select-filter-power">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Powers</SelectItem>
+                        {[1,2,3,4,5,6,7,8,9,10].map(p => (
+                          <SelectItem key={p} value={p.toString()}>Power {p}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                
+                {/* Trait Filter with Value Toggle */}
+                <div className="space-y-1">
+                  <Label className="text-xs text-purple-300">Trait</Label>
+                  <div className="flex flex-wrap gap-2 items-center">
+                    <Select 
+                      value={filterTrait} 
+                      onValueChange={(v) => {
+                        setFilterTrait(v as string | "all" | "none");
+                        if (v === "all" || v === "none") {
+                          setFilterTraitValueEnabled(false);
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="text-xs bg-slate-700/50 border-purple-500/30 flex-1 min-w-[100px]" data-testid="select-filter-trait">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All</SelectItem>
+                        <SelectItem value="none">No Trait</SelectItem>
+                        {TRAITS.map(t => (
+                          <SelectItem key={t} value={t}>{t}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {filterTrait !== "all" && filterTrait !== "none" && (
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={filterTraitValueEnabled}
+                          onCheckedChange={setFilterTraitValueEnabled}
+                          data-testid="switch-filter-trait-value"
+                        />
+                        {filterTraitValueEnabled && (
+                          <Input
+                            type="number"
+                            min={1}
+                            max={5}
+                            value={filterTraitValue}
+                            onChange={(e) => setFilterTraitValue(parseInt(e.target.value) || 1)}
+                            className="text-xs bg-slate-700/50 border-purple-500/30 text-center"
+                            style={{ width: '3.5rem' }}
+                            data-testid="input-filter-trait-value"
+                          />
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Buff/Debuff Filters */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <Label className="text-xs text-cyan-300">Buff Value</Label>
+                      <Switch
+                        checked={filterBuffEnabled}
+                        onCheckedChange={setFilterBuffEnabled}
+                        data-testid="switch-filter-buff"
+                      />
+                    </div>
+                    {filterBuffEnabled && (
+                      <Input
+                        type="number"
+                        min={0}
+                        max={10}
+                        value={filterBuffValue}
+                        onChange={(e) => setFilterBuffValue(parseInt(e.target.value) || 0)}
+                        className="text-xs bg-slate-700/50 border-cyan-500/30 text-center"
+                        data-testid="input-filter-buff-value"
+                      />
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <Label className="text-xs text-orange-300">Debuff Value</Label>
+                      <Switch
+                        checked={filterDebuffEnabled}
+                        onCheckedChange={setFilterDebuffEnabled}
+                        data-testid="switch-filter-debuff"
+                      />
+                    </div>
+                    {filterDebuffEnabled && (
+                      <Input
+                        type="number"
+                        min={0}
+                        max={10}
+                        value={filterDebuffValue}
+                        onChange={(e) => setFilterDebuffValue(parseInt(e.target.value) || 0)}
+                        className="text-xs bg-slate-700/50 border-orange-500/30 text-center"
+                        data-testid="input-filter-debuff-value"
+                      />
+                    )}
+                  </div>
+                </div>
+                
+                {/* Results count */}
+                <div className="text-xs text-slate-400 text-center">
+                  {filteredCards.length} cards match filters
+                </div>
+                
+                {/* Card Grid */}
+                <ScrollArea className="h-[500px] pr-2">
                   <Tabs defaultValue="select">
-                    <TabsList className="w-full mb-4">
+                    <TabsList className="w-full mb-3 sticky top-0 z-10">
                       <TabsTrigger value="select" className="flex-1">Select</TabsTrigger>
                       <TabsTrigger value="preview" className="flex-1">Preview</TabsTrigger>
                     </TabsList>
@@ -970,8 +1149,8 @@ export default function AdminCardArtPage() {
                     <TabsContent value="select" className="space-y-2">
                       {cardType === "unit" ? (
                         filteredCards.length > 0 ? (
-                          <div className="grid grid-cols-2 gap-2">
-                            {filteredCards.slice(0, 40).map((card) => (
+                          <div className="grid grid-cols-2 gap-3">
+                            {filteredCards.map((card) => (
                               <div
                                 key={card.id}
                                 onClick={() => setSelectedCardId(card.id)}
@@ -990,7 +1169,7 @@ export default function AdminCardArtPage() {
                             ))}
                           </div>
                         ) : (
-                          <p className="text-slate-400 text-center py-4">No cards found</p>
+                          <p className="text-slate-400 text-center py-4">No cards match filters</p>
                         )
                       ) : (
                         filteredCommanders.length > 0 ? (
@@ -1005,7 +1184,7 @@ export default function AdminCardArtPage() {
                               }`}
                               data-testid={`commander-select-${commander.id}`}
                             >
-                              <div className="flex items-center justify-between">
+                              <div className="flex items-center justify-between gap-1 flex-wrap">
                                 <span className="text-white font-medium text-sm">{commander.name}</span>
                                 <Badge variant="outline" className="text-xs text-yellow-400 border-yellow-400/50">
                                   Commander
