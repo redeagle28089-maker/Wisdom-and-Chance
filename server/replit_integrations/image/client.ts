@@ -34,11 +34,35 @@ export async function generateText(prompt: string): Promise<string> {
 /**
  * Generate an image and return as base64 data URL.
  * Uses gemini-2.5-flash-image model via Replit AI Integrations.
+ * @param prompt - Text prompt describing the image to generate
+ * @param referenceImageBase64 - Optional reference image as data URL to influence style
  */
-export async function generateImage(prompt: string): Promise<string> {
+export async function generateImage(prompt: string, referenceImageBase64?: string): Promise<string> {
+  const parts: Array<{ text?: string; inlineData?: { data: string; mimeType: string } }> = [];
+  
+  // If reference image is provided, include it in the request
+  if (referenceImageBase64) {
+    // Extract base64 data and mime type from data URL
+    const match = referenceImageBase64.match(/^data:(.+);base64,(.+)$/);
+    if (match) {
+      const mimeType = match[1];
+      const data = match[2];
+      parts.push({
+        inlineData: { data, mimeType }
+      });
+      parts.push({
+        text: `Use this reference image as style inspiration. ${prompt}`
+      });
+    } else {
+      parts.push({ text: prompt });
+    }
+  } else {
+    parts.push({ text: prompt });
+  }
+  
   const response = await ai.models.generateContent({
     model: "gemini-2.5-flash-image",
-    contents: [{ role: "user", parts: [{ text: prompt }] }],
+    contents: [{ role: "user", parts }],
     config: {
       responseModalities: [Modality.TEXT, Modality.IMAGE],
     },

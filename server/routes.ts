@@ -4,7 +4,7 @@ import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { storage } from "./storage";
 import { db } from "./db";
-import { insertCardSchema, insertDeckSchema, insertPlayerSchema, insertGameSchema, ELEMENTS, userDecks, insertUserDeckSchema, GAME_CONSTANTS } from "@shared/schema";
+import { insertCardSchema, insertDeckSchema, insertPlayerSchema, insertGameSchema, ELEMENTS, userDecks, insertUserDeckSchema, GAME_CONSTANTS, cardImages, insertCardImageSchema, TRAITS, BUFF_DEBUFF_COLORS } from "@shared/schema";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import { registerMultiplayerRoutes } from "./multiplayerRoutes";
 import { generateImage, generateText } from "./replit_integrations/image/client";
@@ -19,6 +19,36 @@ const deckSuggestionSchema = z.object({
 const generateArtSchema = z.object({
   prompt: z.string().min(1, "Prompt is required").max(2000, "Prompt too long"),
   element: z.enum(ELEMENTS).optional(),
+  referenceImageBase64: z.string().optional(),
+});
+
+// Enhanced schema for generating card with stats
+const generateCardSchema = z.object({
+  mode: z.enum(["art", "stats", "both"]),
+  prompt: z.string().max(2000).optional(),
+  element: z.enum(ELEMENTS).optional(),
+  referenceImageBase64: z.string().optional(),
+  // Toggleable stat generation options
+  generatePower: z.boolean().default(true),
+  powerValue: z.number().min(1).max(10).optional(),
+  generateTrait: z.boolean().default(false),
+  traitValue: z.enum(TRAITS).optional(),
+  traitModifier: z.number().optional(),
+  generateBuff: z.boolean().default(false),
+  buffColor: z.enum(BUFF_DEBUFF_COLORS).optional(),
+  buffValue: z.number().optional(),
+  generateDebuff: z.boolean().default(false),
+  debuffColor: z.enum(BUFF_DEBUFF_COLORS).optional(),
+  debuffValue: z.number().optional(),
+  cardName: z.string().optional(),
+});
+
+const saveToImageDatabaseSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  imageUrl: z.string().min(1, "Image URL is required"),
+  element: z.enum(ELEMENTS).optional(),
+  cardType: z.enum(["unit", "commander"]).default("unit"),
+  tags: z.array(z.string()).optional(),
 });
 
 const updateImageSchema = z.object({
@@ -556,10 +586,10 @@ IMPORTANT:
         return res.status(400).json({ error: parseResult.error.flatten().fieldErrors });
       }
 
-      const { prompt, element } = parseResult.data;
+      const { prompt, element, referenceImageBase64 } = parseResult.data;
       const fullPrompt = `Create a fantasy trading card game artwork for a ${element || "magical"} themed card. ${prompt}. Style: High quality fantasy digital art, dramatic lighting, epic composition. Do not include any text or UI elements.`;
 
-      const imageDataUrl = await generateImage(fullPrompt);
+      const imageDataUrl = await generateImage(fullPrompt, referenceImageBase64);
       res.json({ imageUrl: imageDataUrl });
     } catch (error) {
       console.error("Error generating card art:", error);
@@ -601,5 +631,262 @@ IMPORTANT:
       return res.status(404).json({ message: "Commander not found" });
     }
     res.json(commander);
+  });
+
+  // =============== Card Image Database Routes ===============
+
+  // Get all images from card image database
+  app.get("/api/admin/card-images", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const images = await db.select().from(cardImages).orderBy(cardImages.createdAt);
+      res.json(images);
+    } catch (error) {
+      console.error("Error fetching card images:", error);
+      res.status(500).json({ error: "Failed to fetch card images" });
+    }
+  });
+
+  // Get single card image
+  app.get("/api/admin/card-images/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const [image] = await db.select().from(cardImages).where(eq(cardImages.id, req.params.id));
+      if (!image) {
+        return res.status(404).json({ error: "Image not found" });
+      }
+      res.json(image);
+    } catch (error) {
+      console.error("Error fetching card image:", error);
+      res.status(500).json({ error: "Failed to fetch card image" });
+    }
+  });
+
+  // Save generated art to image database
+  app.post("/api/admin/card-images", isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const parseResult = saveToImageDatabaseSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ error: parseResult.error.flatten().fieldErrors });
+      }
+
+      const userId = req.user?.claims?.sub;
+      const { name, imageUrl, element, cardType, tags } = parseResult.data;
+
+      const [newImage] = await db.insert(cardImages).values({
+        name,
+        imageUrl,
+        element: element || null,
+        cardType: cardType || "unit",
+        tags: tags || [],
+        createdBy: userId,
+      }).returning();
+
+      res.status(201).json(newImage);
+    } catch (error) {
+      console.error("Error saving card image:", error);
+      res.status(500).json({ error: "Failed to save card image" });
+    }
+  });
+
+  // Update card image metadata
+  app.patch("/api/admin/card-images/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { name, element, cardType, tags } = req.body;
+      
+      const [updated] = await db.update(cardImages)
+        .set({ 
+          ...(name && { name }),
+          ...(element !== undefined && { element }),
+          ...(cardType && { cardType }),
+          ...(tags && { tags }),
+        })
+        .where(eq(cardImages.id, req.params.id))
+        .returning();
+      
+      if (!updated) {
+        return res.status(404).json({ error: "Image not found" });
+      }
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating card image:", error);
+      res.status(500).json({ error: "Failed to update card image" });
+    }
+  });
+
+  // Delete card image from database
+  app.delete("/api/admin/card-images/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const [deleted] = await db.delete(cardImages).where(eq(cardImages.id, req.params.id)).returning();
+      if (!deleted) {
+        return res.status(404).json({ error: "Image not found" });
+      }
+      res.json({ success: true, message: "Image deleted" });
+    } catch (error) {
+      console.error("Error deleting card image:", error);
+      res.status(500).json({ error: "Failed to delete card image" });
+    }
+  });
+
+  // Enhanced card generation with modes (art/stats/both)
+  app.post("/api/admin/generate-card", isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const parseResult = generateCardSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ error: parseResult.error.flatten().fieldErrors });
+      }
+
+      const data = parseResult.data;
+      const result: any = {};
+
+      // Generate art if mode is "art" or "both"
+      if (data.mode === "art" || data.mode === "both") {
+        if (!data.prompt) {
+          return res.status(400).json({ error: "Prompt is required for art generation" });
+        }
+        
+        const fullPrompt = `Create a fantasy trading card game artwork for a ${data.element || "magical"} themed card. ${data.prompt}. Style: High quality fantasy digital art, dramatic lighting, epic composition. Do not include any text or UI elements.`;
+        const imageDataUrl = await generateImage(fullPrompt, data.referenceImageBase64);
+        result.imageUrl = imageDataUrl;
+      }
+
+      // Generate or use stats if mode is "stats" or "both"
+      if (data.mode === "stats" || data.mode === "both") {
+        const stats: any = {
+          element: data.element || "Fire",
+        };
+
+        // Power generation
+        if (data.generatePower) {
+          stats.power = data.powerValue ?? Math.floor(Math.random() * 10) + 1;
+        }
+
+        // Trait generation
+        if (data.generateTrait) {
+          stats.trait = data.traitValue ?? null;
+          stats.traitValue = data.traitModifier ?? null;
+        }
+
+        // Buff generation
+        if (data.generateBuff) {
+          stats.buffModifier = data.buffValue ?? 0;
+          stats.buffColor = data.buffColor ?? null;
+        }
+
+        // Debuff generation
+        if (data.generateDebuff) {
+          stats.debuffModifier = data.debuffValue ?? 0;
+          stats.debuffColor = data.debuffColor ?? null;
+        }
+
+        result.stats = stats;
+
+        // If mode is "both", create the card in the game database
+        if (data.mode === "both" && result.imageUrl) {
+          const cardName = data.cardName || `Generated ${data.element || "Mystic"} Unit`;
+          const newCard = await storage.createCard({
+            name: cardName,
+            element: stats.element,
+            power: stats.power || 5,
+            trait: stats.trait || null,
+            traitValue: stats.traitValue || null,
+            buffModifier: stats.buffModifier || 0,
+            buffColor: stats.buffColor || null,
+            debuffModifier: stats.debuffModifier || 0,
+            debuffColor: stats.debuffColor || null,
+            description: data.prompt,
+            imageUrl: result.imageUrl,
+            isCommander: false,
+          });
+          result.card = newCard;
+        }
+      }
+
+      res.json(result);
+    } catch (error) {
+      console.error("Error generating card:", error);
+      res.status(500).json({ error: "Failed to generate card" });
+    }
+  });
+
+  // Swap image from image database to a card
+  app.post("/api/admin/swap-card-image", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { cardId, imageId } = req.body;
+      
+      if (!cardId || !imageId) {
+        return res.status(400).json({ error: "cardId and imageId are required" });
+      }
+
+      // Get the image from image database
+      const [image] = await db.select().from(cardImages).where(eq(cardImages.id, imageId));
+      if (!image) {
+        return res.status(404).json({ error: "Image not found in image database" });
+      }
+
+      // Update the card with the new image
+      const card = await storage.updateCard(cardId, { imageUrl: image.imageUrl });
+      if (!card) {
+        return res.status(404).json({ error: "Card not found" });
+      }
+
+      res.json({ success: true, card, swappedImage: image });
+    } catch (error) {
+      console.error("Error swapping card image:", error);
+      res.status(500).json({ error: "Failed to swap card image" });
+    }
+  });
+
+  // Swap image from image database to a commander
+  app.post("/api/admin/swap-commander-image", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { commanderId, imageId } = req.body;
+      
+      if (!commanderId || !imageId) {
+        return res.status(400).json({ error: "commanderId and imageId are required" });
+      }
+
+      // Get the image from image database
+      const [image] = await db.select().from(cardImages).where(eq(cardImages.id, imageId));
+      if (!image) {
+        return res.status(404).json({ error: "Image not found in image database" });
+      }
+
+      // Update the commander with the new image
+      const commander = await storage.updateCommander(commanderId, { imageUrl: image.imageUrl });
+      if (!commander) {
+        return res.status(404).json({ error: "Commander not found" });
+      }
+
+      res.json({ success: true, commander, swappedImage: image });
+    } catch (error) {
+      console.error("Error swapping commander image:", error);
+      res.status(500).json({ error: "Failed to swap commander image" });
+    }
+  });
+
+  // Upload image directly to image database (from computer)
+  app.post("/api/admin/upload-card-image", isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const { name, imageBase64, element, cardType, tags } = req.body;
+      
+      if (!name || !imageBase64) {
+        return res.status(400).json({ error: "name and imageBase64 are required" });
+      }
+
+      const userId = req.user?.claims?.sub;
+
+      const [newImage] = await db.insert(cardImages).values({
+        name,
+        imageUrl: imageBase64, // Store as data URL
+        element: element || null,
+        cardType: cardType || "unit",
+        tags: tags || [],
+        createdBy: userId,
+      }).returning();
+
+      res.status(201).json(newImage);
+    } catch (error) {
+      console.error("Error uploading card image:", error);
+      res.status(500).json({ error: "Failed to upload card image" });
+    }
   });
 }

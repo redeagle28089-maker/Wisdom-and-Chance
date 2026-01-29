@@ -25,6 +25,7 @@ import AnalyticsPage from "@/pages/analytics";
 import LiveMatchesPage from "@/pages/live-matches";
 import LoreArchivesPage from "@/pages/lore-archives";
 import AdminCardArtPage from "@/pages/admin-card-art";
+import AdminImageDatabasePage from "@/pages/admin-image-database";
 import NotFound from "@/pages/not-found";
 
 function AppContent() {
@@ -65,6 +66,8 @@ function AppContent() {
               <Route path="/live-matches" component={LiveMatchesPage} />
               <Route path="/lore" component={LoreArchivesPage} />
               <Route path="/admin/card-art" component={AdminCardArtPage} />
+              <Route path="/admin/image-database" component={AdminImageDatabasePage} />
+              <Route path="/admin-card-art" component={AdminCardArtPage} />
               <Route component={NotFound} />
             </Switch>
           </main>
