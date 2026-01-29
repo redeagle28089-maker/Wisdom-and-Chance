@@ -3,8 +3,34 @@ import passport from "passport";
 import session from "express-session";
 import type { Express, RequestHandler } from "express";
 import connectPg from "connect-pg-simple";
-import pRetry from "p-retry";
 import { authStorage } from "./storage";
+
+// Simple retry utility (replaces p-retry to avoid ESM bundling issues)
+async function retry<T>(
+  fn: () => Promise<T>,
+  options: { retries: number; minTimeout: number; maxTimeout: number; factor: number }
+): Promise<T> {
+  let lastError: Error | undefined;
+  let timeout = options.minTimeout;
+  
+  for (let attempt = 1; attempt <= options.retries + 1; attempt++) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      lastError = error;
+      if (attempt <= options.retries) {
+        console.log(
+          `[auth] Attempt ${attempt} failed: ${error.message}. ` +
+          `${options.retries + 1 - attempt} retries left. Waiting ${timeout}ms...`
+        );
+        await new Promise(resolve => setTimeout(resolve, timeout));
+        timeout = Math.min(timeout * options.factor, options.maxTimeout);
+      }
+    }
+  }
+  
+  throw lastError;
+}
 
 // OIDC Configuration Types
 interface OIDCMetadata {
@@ -93,7 +119,7 @@ let jwksCacheExpiry: number = 0;
 async function discoverOIDCMetadata(): Promise<OIDCMetadata> {
   const issuerUrl = process.env.ISSUER_URL ?? "https://replit.com/oidc";
   
-  return await pRetry(
+  return await retry(
     async () => {
       console.log("[auth] Fetching OIDC discovery document...");
       const response = await fetch(`${issuerUrl}/.well-known/openid-configuration`);
@@ -109,12 +135,6 @@ async function discoverOIDCMetadata(): Promise<OIDCMetadata> {
       minTimeout: 1000,
       maxTimeout: 10000,
       factor: 2,
-      onFailedAttempt: (error: any) => {
-        console.log(
-          `[auth] OIDC discovery attempt ${error.attemptNumber} failed: ${error.message}. ` +
-          `${error.retriesLeft} retries left.`
-        );
-      },
     }
   );
 }
