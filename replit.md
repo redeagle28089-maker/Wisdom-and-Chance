@@ -8,6 +8,14 @@ A tactical trading card game simulator built with React, Express, and TypeScript
 **Current State:** Fully functional TCG with Google authentication, multiplayer rooms, friend system, and real-time gameplay.
 
 ## Recent Changes
+- **January 2026:** Production Authentication Fix
+  - Replaced openid-client library with manual OIDC implementation using fetch
+  - Fixed ESM/CJS bundling issues that caused `(0 , X.default) is not a function` errors in production
+  - Implemented full JWT signature verification using JWKS from discovery document
+  - Added proper OIDC claim validation (iss, aud, exp, iat, nonce)
+  - Moved pending auth state from global Map to user session for multi-instance resilience
+  - Added token response validation (token_type, id_token presence)
+
 - **January 2026:** Multiplayer Deck Selection Fix
   - Fixed critical bug where saved decks weren't appearing in multiplayer room deck selector
   - Room page now fetches from /api/user-decks (database) instead of /api/decks (in-memory)
