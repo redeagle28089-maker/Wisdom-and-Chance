@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { Home, BookOpen, Database, Layers, Swords, Trophy, User, GraduationCap, LogIn, LogOut, Users, Gamepad2, Medal, Calendar, Crown, BarChart3, Eye, BookMarked } from "lucide-react";
+import { Home, BookOpen, Database, Layers, Swords, Trophy, User, GraduationCap, LogIn, LogOut, Users, Gamepad2, Medal, Calendar, Crown, BarChart3, Eye, BookMarked, ImageIcon, Palette } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -174,8 +174,20 @@ export function GameSidebar() {
                     data-testid="nav-admin-card-art"
                   >
                     <Link href="/admin/card-art">
-                      <Crown className="w-4 h-4" />
+                      <Palette className="w-4 h-4" />
                       <span>Card Art Generator</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton 
+                    asChild 
+                    isActive={location === "/admin/image-database"}
+                    data-testid="nav-admin-image-database"
+                  >
+                    <Link href="/admin/image-database">
+                      <ImageIcon className="w-4 h-4" />
+                      <span>Image Database</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, Flame, Droplet, Mountain, Wind, Leaf, Hammer, Trash2, Shield, Loader2 } from "lucide-react";
+import { Search, Flame, Droplet, Mountain, Wind, Leaf, Hammer, Trash2, Shield, Loader2, ImageIcon } from "lucide-react";
 import { CardWithPopup, elementConfig } from "@/components/game-card";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -21,7 +21,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import type { Card as CardType, Element } from "@shared/schema";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import type { Card as CardType, Element, CardImage } from "@shared/schema";
 
 export default function CardDatabasePage() {
   const [, navigate] = useLocation();
@@ -29,6 +36,9 @@ export default function CardDatabasePage() {
   const [selectedElement, setSelectedElement] = useState<Element | "all">("all");
   const [selectedPower, setSelectedPower] = useState<number | "all">("all");
   const [deletingCardId, setDeletingCardId] = useState<string | null>(null);
+  const [showSwapDialog, setShowSwapDialog] = useState(false);
+  const [swapCardId, setSwapCardId] = useState<string | null>(null);
+  const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
   const { isAuthenticated } = useAuth();
   const { toast } = useToast();
 
@@ -39,6 +49,11 @@ export default function CardDatabasePage() {
   const { data: adminCheck } = useQuery<{ isAdmin: boolean }>({
     queryKey: ["/api/admin/check"],
     enabled: isAuthenticated,
+  });
+
+  const { data: cardImages = [] } = useQuery<CardImage[]>({
+    queryKey: ["/api/admin/card-images"],
+    enabled: adminCheck?.isAdmin,
   });
 
   const isAdmin = adminCheck?.isAdmin ?? false;
@@ -64,6 +79,30 @@ export default function CardDatabasePage() {
         variant: "destructive",
       });
       setDeletingCardId(null);
+    },
+  });
+
+  const swapImageMutation = useMutation({
+    mutationFn: async ({ cardId, imageId }: { cardId: string; imageId: string }) => {
+      const res = await apiRequest("POST", "/api/admin/swap-card-image", { cardId, imageId });
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Image Swapped",
+        description: "Card image has been updated successfully!",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/cards"] });
+      setShowSwapDialog(false);
+      setSwapCardId(null);
+      setSelectedImageId(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Swap Failed",
+        description: error.message || "Failed to swap image",
+        variant: "destructive",
+      });
     },
   });
 
@@ -181,7 +220,7 @@ export default function CardDatabasePage() {
               {isAdmin && (
                 <Badge className="bg-amber-600/50 text-amber-100 gap-1">
                   <Shield className="w-3 h-3" />
-                  Admin Mode - Click trash icon to delete cards
+                  Admin Mode - Hover cards for delete/swap options
                 </Badge>
               )}
             </div>
@@ -190,42 +229,55 @@ export default function CardDatabasePage() {
                 <div key={card.id} className="relative group">
                   <CardWithPopup card={card} />
                   {isAdmin && (
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          size="icon"
-                          variant="destructive"
-                          className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                          data-testid={`button-delete-card-${card.id}`}
-                          disabled={deletingCardId === card.id}
-                        >
-                          {deletingCardId === card.id ? (
-                            <Loader2 className="w-3 h-3 animate-spin" />
-                          ) : (
-                            <Trash2 className="w-3 h-3" />
-                          )}
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent className="bg-slate-800 border-red-500/30">
-                        <AlertDialogHeader>
-                          <AlertDialogTitle className="text-white">Delete Card</AlertDialogTitle>
-                          <AlertDialogDescription className="text-slate-300">
-                            Are you sure you want to delete "{card.name}"? This will permanently remove the card from the game database. This action cannot be undone.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel className="bg-slate-700 text-white border-slate-600 hover:bg-slate-600">
-                            Cancel
-                          </AlertDialogCancel>
-                          <AlertDialogAction 
-                            className="bg-red-600 hover:bg-red-700"
-                            onClick={() => deleteMutation.mutate(card.id)}
+                    <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                      <Button
+                        size="sm"
+                        variant="default"
+                        data-testid={`button-swap-image-${card.id}`}
+                        onClick={() => {
+                          setSwapCardId(card.id);
+                          setSelectedImageId(null);
+                          setShowSwapDialog(true);
+                        }}
+                      >
+                        <ImageIcon className="w-3 h-3" />
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            data-testid={`button-delete-card-${card.id}`}
+                            disabled={deletingCardId === card.id}
                           >
-                            Delete Card
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                            {deletingCardId === card.id ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <Trash2 className="w-3 h-3" />
+                            )}
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent className="bg-slate-800 border-red-500/30">
+                          <AlertDialogHeader>
+                            <AlertDialogTitle className="text-white">Delete Card</AlertDialogTitle>
+                            <AlertDialogDescription className="text-slate-300">
+                              Are you sure you want to delete "{card.name}"? This will permanently remove the card from the game database. This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel className="bg-slate-700 text-white border-slate-600 hover:bg-slate-600">
+                              Cancel
+                            </AlertDialogCancel>
+                            <AlertDialogAction 
+                              className="bg-red-600 hover:bg-red-700"
+                              onClick={() => deleteMutation.mutate(card.id)}
+                            >
+                              Delete Card
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   )}
                 </div>
               ))}
@@ -233,6 +285,60 @@ export default function CardDatabasePage() {
           </>
         )}
       </div>
+
+      {/* Swap Image Dialog */}
+      <Dialog open={showSwapDialog} onOpenChange={setShowSwapDialog}>
+        <DialogContent className="bg-slate-800 border-purple-500/30 max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-white flex items-center gap-2">
+              <ImageIcon className="w-5 h-5" />
+              Select Image from Database
+            </DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 py-4">
+            {cardImages.map((img) => (
+              <div
+                key={img.id}
+                onClick={() => setSelectedImageId(img.id)}
+                className={`cursor-pointer rounded-lg overflow-hidden border-2 transition-all ${
+                  selectedImageId === img.id 
+                    ? "border-purple-500 ring-2 ring-purple-500/50" 
+                    : "border-slate-600 hover:border-purple-400"
+                }`}
+                data-testid={`swap-select-image-${img.id}`}
+              >
+                <img 
+                  src={img.imageUrl} 
+                  alt={img.name}
+                  className="w-full aspect-[2/3] object-cover"
+                />
+                <div className="p-1 bg-slate-700/80">
+                  <p className="text-xs text-white truncate text-center">{img.name}</p>
+                </div>
+              </div>
+            ))}
+            {cardImages.length === 0 && (
+              <div className="col-span-full text-center py-8 text-slate-400">
+                No images in database. Upload images in Admin &gt; Image Database first.
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSwapDialog(false)} data-testid="button-cancel-swap">Cancel</Button>
+            <Button 
+              onClick={() => {
+                if (swapCardId && selectedImageId) {
+                  swapImageMutation.mutate({ cardId: swapCardId, imageId: selectedImageId });
+                }
+              }}
+              disabled={!selectedImageId || swapImageMutation.isPending}
+              data-testid="button-confirm-swap"
+            >
+              {swapImageMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Apply Image"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -57,6 +57,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import type { Card as CardType, Commander, Element, CardImage } from "@shared/schema";
+import { CardWithPopup, elementConfig as gameCardElementConfig } from "@/components/game-card";
 
 const elementConfig: Record<Element, { icon: typeof Flame; color: string; bg: string }> = {
   Fire: { icon: Flame, color: "text-red-500", bg: "bg-red-600/20" },
@@ -969,28 +970,25 @@ export default function AdminCardArtPage() {
                     <TabsContent value="select" className="space-y-2">
                       {cardType === "unit" ? (
                         filteredCards.length > 0 ? (
-                          filteredCards.slice(0, 40).map((card) => (
-                            <div
-                              key={card.id}
-                              onClick={() => setSelectedCardId(card.id)}
-                              className={`p-3 rounded-lg cursor-pointer transition-all ${
-                                selectedCardId === card.id
-                                  ? "bg-purple-600/30 border border-purple-500"
-                                  : "bg-slate-700/30 hover:bg-slate-700/50 border border-transparent"
-                              }`}
-                              data-testid={`card-select-${card.id}`}
-                            >
-                              <div className="flex items-center justify-between gap-2">
-                                <span className="text-white font-medium text-sm truncate flex-1">{card.name}</span>
-                                <Badge variant="outline" className="text-xs shrink-0">
-                                  Power {card.power}
-                                </Badge>
+                          <div className="grid grid-cols-2 gap-2">
+                            {filteredCards.slice(0, 40).map((card) => (
+                              <div
+                                key={card.id}
+                                onClick={() => setSelectedCardId(card.id)}
+                                className={`relative cursor-pointer rounded-lg transition-all ${
+                                  selectedCardId === card.id
+                                    ? "ring-2 ring-purple-500 ring-offset-2 ring-offset-slate-800"
+                                    : "hover:ring-1 hover:ring-purple-400"
+                                }`}
+                                data-testid={`card-select-${card.id}`}
+                              >
+                                <CardWithPopup card={card} size="md" enablePopup={false} />
+                                {card.imageUrl && (
+                                  <Badge className="absolute top-1 right-8 text-[10px] px-1 py-0 bg-green-600/80">Art</Badge>
+                                )}
                               </div>
-                              {card.imageUrl && (
-                                <Badge className="mt-1 text-xs bg-green-600/50">Has Custom Art</Badge>
-                              )}
-                            </div>
-                          ))
+                            ))}
+                          </div>
                         ) : (
                           <p className="text-slate-400 text-center py-4">No cards found</p>
                         )
