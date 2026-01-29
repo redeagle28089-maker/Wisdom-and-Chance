@@ -1,4 +1,4 @@
-import { Issuer, generators, Client, TokenSet } from "openid-client";
+import crypto from "crypto";
 import passport from "passport";
 import session from "express-session";
 import type { Express, RequestHandler } from "express";
@@ -6,7 +6,72 @@ import connectPg from "connect-pg-simple";
 import pRetry from "p-retry";
 import { authStorage } from "./storage";
 
-// Validate required environment variables for auth
+// OIDC Configuration Types
+interface OIDCMetadata {
+  issuer: string;
+  authorization_endpoint: string;
+  token_endpoint: string;
+  userinfo_endpoint: string;
+  end_session_endpoint: string;
+  jwks_uri: string;
+}
+
+interface TokenResponse {
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+  refresh_token?: string;
+  id_token: string;
+  scope: string;
+}
+
+interface JWTHeader {
+  alg: string;
+  typ: string;
+  kid?: string;
+}
+
+interface JWTClaims {
+  sub: string;
+  iss?: string;
+  aud?: string | string[];
+  exp?: number;
+  iat?: number;
+  nonce?: string;
+  email?: string;
+  first_name?: string;
+  last_name?: string;
+  profile_image_url?: string;
+}
+
+interface JWK {
+  kty: string;
+  kid?: string;
+  use?: string;
+  alg?: string;
+  n?: string;
+  e?: string;
+  x?: string;
+  y?: string;
+  crv?: string;
+}
+
+interface JWKS {
+  keys: JWK[];
+}
+
+// Extend session data type
+declare module "express-session" {
+  interface SessionData {
+    pendingAuth?: {
+      nonce: string;
+      codeVerifier: string;
+      createdAt: number;
+    };
+  }
+}
+
+// Validate required environment variables
 function validateAuthEnvironment(): { valid: boolean; error?: string } {
   if (!process.env.REPL_ID) {
     return { valid: false, error: "REPL_ID environment variable is missing" };
@@ -17,28 +82,27 @@ function validateAuthEnvironment(): { valid: boolean; error?: string } {
   return { valid: true };
 }
 
-// Cache for OIDC issuer and client
-let cachedIssuer: Issuer | null = null;
-let cacheExpiry: number = 0;
+// Cache for OIDC metadata
+let cachedMetadata: OIDCMetadata | null = null;
+let metadataCacheExpiry: number = 0;
 
-async function discoverIssuerWithRetry(): Promise<Issuer> {
-  const isProduction = process.env.REPLIT_DEPLOYMENT === "1";
-  console.log(`[auth] Environment: ${isProduction ? "production" : "development"}`);
-  console.log(`[auth] REPL_ID: ${process.env.REPL_ID ? process.env.REPL_ID.substring(0, 8) + "..." : "MISSING"}`);
-  
-  const validation = validateAuthEnvironment();
-  if (!validation.valid) {
-    console.error(`[auth] Environment validation failed: ${validation.error}`);
-    throw new Error(validation.error);
-  }
+// Cache for JWKS
+let cachedJWKS: JWKS | null = null;
+let jwksCacheExpiry: number = 0;
+
+async function discoverOIDCMetadata(): Promise<OIDCMetadata> {
+  const issuerUrl = process.env.ISSUER_URL ?? "https://replit.com/oidc";
   
   return await pRetry(
     async () => {
-      console.log("[auth] Attempting OIDC discovery...");
-      const issuerUrl = process.env.ISSUER_URL ?? "https://replit.com/oidc";
-      const issuer = await Issuer.discover(issuerUrl);
+      console.log("[auth] Fetching OIDC discovery document...");
+      const response = await fetch(`${issuerUrl}/.well-known/openid-configuration`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch OIDC metadata: ${response.status}`);
+      }
+      const metadata = await response.json() as OIDCMetadata;
       console.log("[auth] OIDC discovery successful");
-      return issuer;
+      return metadata;
     },
     {
       retries: 5,
@@ -55,32 +119,230 @@ async function discoverIssuerWithRetry(): Promise<Issuer> {
   );
 }
 
-async function getIssuer(): Promise<Issuer> {
+async function getOIDCMetadata(): Promise<OIDCMetadata> {
   const now = Date.now();
-  if (cachedIssuer && now < cacheExpiry) {
-    return cachedIssuer;
+  if (cachedMetadata && now < metadataCacheExpiry) {
+    return cachedMetadata;
   }
   
-  const issuer = await discoverIssuerWithRetry();
-  cachedIssuer = issuer;
-  cacheExpiry = now + (3600 * 1000); // Cache for 1 hour
-  return issuer;
+  const validation = validateAuthEnvironment();
+  if (!validation.valid) {
+    throw new Error(validation.error);
+  }
+  
+  const metadata = await discoverOIDCMetadata();
+  cachedMetadata = metadata;
+  metadataCacheExpiry = now + (3600 * 1000); // Cache for 1 hour
+  return metadata;
 }
 
-function createClient(issuer: Issuer, callbackUrl: string): Client {
-  return new issuer.Client({
-    client_id: process.env.REPL_ID!,
-    token_endpoint_auth_method: "none",
-    redirect_uris: [callbackUrl],
-    response_types: ["code"],
-  });
+async function fetchJWKS(jwksUri: string): Promise<JWKS> {
+  const now = Date.now();
+  if (cachedJWKS && now < jwksCacheExpiry) {
+    return cachedJWKS;
+  }
+  
+  console.log("[auth] Fetching JWKS...");
+  const response = await fetch(jwksUri);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch JWKS: ${response.status}`);
+  }
+  const jwks = await response.json() as JWKS;
+  cachedJWKS = jwks;
+  jwksCacheExpiry = now + (3600 * 1000); // Cache for 1 hour
+  console.log("[auth] JWKS fetched successfully, keys:", jwks.keys.length);
+  return jwks;
 }
 
-// Pre-warm OIDC discovery at startup
+// Convert JWK to Node.js crypto key
+function jwkToPublicKey(jwk: JWK): crypto.KeyObject {
+  // For RSA keys
+  if (jwk.kty === "RSA" && jwk.n && jwk.e) {
+    const keyData = {
+      kty: jwk.kty,
+      n: jwk.n,
+      e: jwk.e,
+    };
+    return crypto.createPublicKey({
+      key: keyData,
+      format: "jwk",
+    });
+  }
+  
+  // For EC keys
+  if (jwk.kty === "EC" && jwk.x && jwk.y && jwk.crv) {
+    const keyData = {
+      kty: jwk.kty,
+      crv: jwk.crv,
+      x: jwk.x,
+      y: jwk.y,
+    };
+    return crypto.createPublicKey({
+      key: keyData,
+      format: "jwk",
+    });
+  }
+  
+  throw new Error(`Unsupported JWK key type: ${jwk.kty}`);
+}
+
+// Decode JWT without verification (to get header for key lookup)
+function decodeJWTHeader(token: string): JWTHeader {
+  const parts = token.split(".");
+  if (parts.length !== 3) {
+    throw new Error("Invalid JWT format");
+  }
+  const header = Buffer.from(parts[0], "base64url").toString("utf-8");
+  return JSON.parse(header);
+}
+
+// Decode JWT payload without verification
+function decodeJWTPayload(token: string): JWTClaims {
+  const parts = token.split(".");
+  if (parts.length !== 3) {
+    throw new Error("Invalid JWT format");
+  }
+  const payload = Buffer.from(parts[1], "base64url").toString("utf-8");
+  return JSON.parse(payload);
+}
+
+// Verify JWT signature
+function verifyJWTSignature(token: string, publicKey: crypto.KeyObject, algorithm: string): boolean {
+  const parts = token.split(".");
+  if (parts.length !== 3) {
+    return false;
+  }
+  
+  const signedData = `${parts[0]}.${parts[1]}`;
+  const signature = Buffer.from(parts[2], "base64url");
+  
+  // Map JWT algorithm to Node.js algorithm
+  let nodeAlgorithm: string;
+  switch (algorithm) {
+    case "RS256":
+      nodeAlgorithm = "RSA-SHA256";
+      break;
+    case "RS384":
+      nodeAlgorithm = "RSA-SHA384";
+      break;
+    case "RS512":
+      nodeAlgorithm = "RSA-SHA512";
+      break;
+    case "ES256":
+      nodeAlgorithm = "SHA256";
+      break;
+    case "ES384":
+      nodeAlgorithm = "SHA384";
+      break;
+    case "ES512":
+      nodeAlgorithm = "SHA512";
+      break;
+    default:
+      throw new Error(`Unsupported JWT algorithm: ${algorithm}`);
+  }
+  
+  const verifier = crypto.createVerify(nodeAlgorithm);
+  verifier.update(signedData);
+  
+  return verifier.verify(publicKey, signature);
+}
+
+// Verify and decode JWT with full validation
+async function verifyAndDecodeJWT(
+  token: string, 
+  metadata: OIDCMetadata,
+  expectedNonce?: string
+): Promise<JWTClaims> {
+  // Decode header to get kid and algorithm
+  const header = decodeJWTHeader(token);
+  
+  // Fetch JWKS
+  const jwks = await fetchJWKS(metadata.jwks_uri);
+  
+  // Find the matching key
+  let matchingKey: JWK | undefined;
+  if (header.kid) {
+    matchingKey = jwks.keys.find(k => k.kid === header.kid);
+  }
+  if (!matchingKey && jwks.keys.length === 1) {
+    matchingKey = jwks.keys[0];
+  }
+  if (!matchingKey) {
+    throw new Error("No matching key found in JWKS for token verification");
+  }
+  
+  // Convert JWK to public key
+  const publicKey = jwkToPublicKey(matchingKey);
+  
+  // Verify signature
+  const isValid = verifyJWTSignature(token, publicKey, header.alg);
+  if (!isValid) {
+    throw new Error("JWT signature verification failed");
+  }
+  
+  // Decode payload
+  const claims = decodeJWTPayload(token);
+  
+  // Validate issuer
+  if (claims.iss !== metadata.issuer) {
+    throw new Error(`Invalid issuer: expected ${metadata.issuer}, got ${claims.iss}`);
+  }
+  
+  // Validate audience
+  const clientId = process.env.REPL_ID!;
+  const audience = Array.isArray(claims.aud) ? claims.aud : [claims.aud];
+  if (!audience.includes(clientId)) {
+    throw new Error(`Invalid audience: expected ${clientId}, got ${claims.aud}`);
+  }
+  
+  // Validate expiration
+  const now = Math.floor(Date.now() / 1000);
+  if (claims.exp && claims.exp < now) {
+    throw new Error("Token has expired");
+  }
+  
+  // Validate issued at (with 5 minute clock skew tolerance)
+  if (claims.iat && claims.iat > now + 300) {
+    throw new Error("Token issued in the future");
+  }
+  
+  // Validate nonce if provided
+  if (expectedNonce && claims.nonce !== expectedNonce) {
+    throw new Error("Nonce mismatch");
+  }
+  
+  console.log("[auth] JWT verified successfully for sub:", claims.sub);
+  return claims;
+}
+
+// PKCE helpers
+function generateRandomString(length: number): string {
+  return crypto.randomBytes(length).toString("base64url").slice(0, length);
+}
+
+function generateCodeVerifier(): string {
+  return generateRandomString(64);
+}
+
+function generateCodeChallenge(verifier: string): string {
+  return crypto.createHash("sha256").update(verifier).digest("base64url");
+}
+
+function generateState(): string {
+  return generateRandomString(32);
+}
+
+function generateNonce(): string {
+  return generateRandomString(32);
+}
+
+// Pre-warm OIDC discovery
 export async function preWarmOidc() {
   try {
     console.log("[auth] Pre-warming OIDC discovery...");
-    await getIssuer();
+    const metadata = await getOIDCMetadata();
+    // Also pre-fetch JWKS
+    await fetchJWKS(metadata.jwks_uri);
     console.log("[auth] OIDC pre-warming complete");
   } catch (error: any) {
     console.error("[auth] OIDC pre-warming failed:", error.message);
@@ -114,7 +376,7 @@ export function getSession() {
     secret: getSessionSecret(),
     store: getSessionStore(),
     resave: false,
-    saveUninitialized: false,
+    saveUninitialized: true, // Changed to true to save session before login
     cookie: {
       httpOnly: true,
       secure: true,
@@ -124,18 +386,83 @@ export function getSession() {
   });
 }
 
-async function upsertUser(claims: any) {
+async function upsertUser(claims: JWTClaims) {
   await authStorage.upsertUser({
-    id: claims["sub"],
-    email: claims["email"],
-    firstName: claims["first_name"],
-    lastName: claims["last_name"],
-    profileImageUrl: claims["profile_image_url"],
+    id: claims.sub,
+    email: claims.email || "",
+    firstName: claims.first_name || null,
+    lastName: claims.last_name || null,
+    profileImageUrl: claims.profile_image_url || null,
   });
 }
 
-// Store state and nonce for OIDC flow
-const pendingAuth = new Map<string, { nonce: string; codeVerifier: string }>();
+// Exchange authorization code for tokens
+async function exchangeCodeForTokens(
+  metadata: OIDCMetadata,
+  code: string,
+  codeVerifier: string,
+  redirectUri: string
+): Promise<TokenResponse> {
+  const params = new URLSearchParams({
+    grant_type: "authorization_code",
+    code,
+    redirect_uri: redirectUri,
+    client_id: process.env.REPL_ID!,
+    code_verifier: codeVerifier,
+  });
+
+  const response = await fetch(metadata.token_endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: params.toString(),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Token exchange failed: ${response.status} - ${error}`);
+  }
+
+  const tokens = await response.json() as TokenResponse;
+  
+  // Validate token response
+  if (!tokens.id_token) {
+    throw new Error("Token response missing id_token");
+  }
+  if (tokens.token_type?.toLowerCase() !== "bearer") {
+    throw new Error(`Unexpected token_type: ${tokens.token_type}`);
+  }
+  
+  return tokens;
+}
+
+// Refresh access token
+async function refreshAccessToken(
+  metadata: OIDCMetadata,
+  refreshToken: string
+): Promise<TokenResponse> {
+  const params = new URLSearchParams({
+    grant_type: "refresh_token",
+    refresh_token: refreshToken,
+    client_id: process.env.REPL_ID!,
+  });
+
+  const response = await fetch(metadata.token_endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: params.toString(),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Token refresh failed: ${response.status} - ${error}`);
+  }
+
+  return await response.json() as TokenResponse;
+}
 
 export async function setupAuth(app: Express) {
   app.set("trust proxy", 1);
@@ -152,31 +479,42 @@ export async function setupAuth(app: Express) {
       console.log("[auth] Login initiated from hostname:", req.hostname);
       console.log("[auth] Environment:", isProduction ? "production" : "development");
       
-      const issuer = await getIssuer();
+      const metadata = await getOIDCMetadata();
       const callbackUrl = `https://${req.hostname}/api/callback`;
-      const client = createClient(issuer, callbackUrl);
       
-      const state = generators.state();
-      const nonce = generators.nonce();
-      const codeVerifier = generators.codeVerifier();
-      const codeChallenge = generators.codeChallenge(codeVerifier);
+      const state = generateState();
+      const nonce = generateNonce();
+      const codeVerifier = generateCodeVerifier();
+      const codeChallenge = generateCodeChallenge(codeVerifier);
       
-      pendingAuth.set(state, { nonce, codeVerifier });
-      
-      // Clean up old pending auth entries (older than 10 minutes)
-      setTimeout(() => pendingAuth.delete(state), 10 * 60 * 1000);
-      
-      const authUrl = client.authorizationUrl({
-        scope: "openid email profile offline_access",
-        state,
+      // Store pending auth in session (not global Map)
+      req.session.pendingAuth = {
         nonce,
-        code_challenge: codeChallenge,
-        code_challenge_method: "S256",
-        prompt: "login consent",
+        codeVerifier,
+        createdAt: Date.now(),
+      };
+      
+      // Save session before redirecting
+      await new Promise<void>((resolve, reject) => {
+        req.session.save((err) => {
+          if (err) reject(err);
+          else resolve();
+        });
       });
       
+      const authUrl = new URL(metadata.authorization_endpoint);
+      authUrl.searchParams.set("client_id", process.env.REPL_ID!);
+      authUrl.searchParams.set("redirect_uri", callbackUrl);
+      authUrl.searchParams.set("response_type", "code");
+      authUrl.searchParams.set("scope", "openid email profile offline_access");
+      authUrl.searchParams.set("state", state);
+      authUrl.searchParams.set("nonce", nonce);
+      authUrl.searchParams.set("code_challenge", codeChallenge);
+      authUrl.searchParams.set("code_challenge_method", "S256");
+      authUrl.searchParams.set("prompt", "login consent");
+      
       console.log("[auth] Redirecting to auth URL");
-      res.redirect(authUrl);
+      res.redirect(authUrl.href);
     } catch (error: any) {
       console.error("[auth] Login error:", error?.message || error);
       console.error("[auth] Login error stack:", error?.stack);
@@ -202,38 +540,55 @@ export async function setupAuth(app: Express) {
     try {
       console.log("[auth] Callback received from hostname:", req.hostname);
       
-      const { code, state } = req.query as { code?: string; state?: string };
+      const { code, state, error: authError, error_description } = req.query as { 
+        code?: string; 
+        state?: string; 
+        error?: string;
+        error_description?: string;
+      };
       
-      if (!code || !state) {
-        console.error("[auth] Missing code or state in callback");
+      if (authError) {
+        console.error("[auth] Auth error from provider:", authError, error_description);
+        return res.redirect("/?error=auth_failed&message=" + encodeURIComponent(error_description || authError));
+      }
+      
+      if (!code) {
+        console.error("[auth] Missing code in callback");
         return res.redirect("/?error=auth_failed&message=" + encodeURIComponent("Invalid callback parameters"));
       }
       
-      const pending = pendingAuth.get(state);
+      // Get pending auth from session
+      const pending = req.session.pendingAuth;
       if (!pending) {
-        console.error("[auth] No pending auth for state:", state);
+        console.error("[auth] No pending auth in session");
         return res.redirect("/?error=auth_failed&message=" + encodeURIComponent("Session expired. Please try again."));
       }
       
-      pendingAuth.delete(state);
+      // Check if pending auth is too old (10 minutes max)
+      if (Date.now() - pending.createdAt > 10 * 60 * 1000) {
+        delete req.session.pendingAuth;
+        console.error("[auth] Pending auth expired");
+        return res.redirect("/?error=auth_failed&message=" + encodeURIComponent("Session expired. Please try again."));
+      }
       
-      const issuer = await getIssuer();
+      // Clear pending auth
+      delete req.session.pendingAuth;
+      
+      const metadata = await getOIDCMetadata();
       const callbackUrl = `https://${req.hostname}/api/callback`;
-      const client = createClient(issuer, callbackUrl);
       
-      const tokenSet = await client.callback(callbackUrl, { code, state }, {
-        state,
-        nonce: pending.nonce,
-        code_verifier: pending.codeVerifier,
-      });
+      // Exchange code for tokens
+      const tokens = await exchangeCodeForTokens(metadata, code, pending.codeVerifier, callbackUrl);
       
-      const claims = tokenSet.claims();
+      // Verify ID token with full signature and claim validation
+      const claims = await verifyAndDecodeJWT(tokens.id_token, metadata, pending.nonce);
+      
       await upsertUser(claims);
       
       const user = {
         claims,
-        access_token: tokenSet.access_token,
-        refresh_token: tokenSet.refresh_token,
+        access_token: tokens.access_token,
+        refresh_token: tokens.refresh_token,
         expires_at: claims.exp,
       };
       
@@ -242,6 +597,7 @@ export async function setupAuth(app: Express) {
           console.error("[auth] Login error after callback:", err);
           return res.redirect("/?error=auth_failed");
         }
+        console.log("[auth] Login successful for user:", claims.sub);
         res.redirect("/");
       });
     } catch (error: any) {
@@ -253,12 +609,11 @@ export async function setupAuth(app: Express) {
 
   app.get("/api/logout", async (req, res) => {
     try {
-      const issuer = await getIssuer();
-      const endSessionUrl = issuer.metadata.end_session_endpoint;
+      const metadata = await getOIDCMetadata();
       
       req.logout(() => {
-        if (endSessionUrl) {
-          const logoutUrl = new URL(endSessionUrl);
+        if (metadata.end_session_endpoint) {
+          const logoutUrl = new URL(metadata.end_session_endpoint);
           logoutUrl.searchParams.set("client_id", process.env.REPL_ID!);
           logoutUrl.searchParams.set("post_logout_redirect_uri", `https://${req.hostname}`);
           res.redirect(logoutUrl.href);
@@ -285,14 +640,20 @@ export async function setupAuth(app: Express) {
       issuerUrl: process.env.ISSUER_URL || "https://replit.com/oidc (default)",
       databaseUrlPresent: !!process.env.DATABASE_URL,
       replitDomains: process.env.REPLIT_DOMAINS || "not set",
-      openidClientVersion: "4.x",
+      openidClientVersion: "manual (fetch-based with JWKS verification)",
     };
 
     try {
       console.log("[auth/status] Testing OIDC discovery...");
-      const issuer = await getIssuer();
+      const metadata = await getOIDCMetadata();
       status.oidcDiscovery = "success";
-      status.issuer = issuer.metadata.issuer;
+      status.issuer = metadata.issuer;
+      status.jwksUri = metadata.jwks_uri;
+      
+      // Also test JWKS fetch
+      const jwks = await fetchJWKS(metadata.jwks_uri);
+      status.jwksFetch = "success";
+      status.jwksKeyCount = jwks.keys.length;
     } catch (error: any) {
       status.oidcDiscovery = "failed";
       status.oidcError = error?.message || "Unknown error";
@@ -322,22 +683,24 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
   }
 
   try {
-    const issuer = await getIssuer();
-    const client = createClient(issuer, `https://${req.hostname}/api/callback`);
-    const tokenSet = await client.refresh(refreshToken);
+    const metadata = await getOIDCMetadata();
+    const tokens = await refreshAccessToken(metadata, refreshToken);
     
-    user.claims = tokenSet.claims();
-    user.access_token = tokenSet.access_token;
-    user.refresh_token = tokenSet.refresh_token || refreshToken;
-    user.expires_at = user.claims?.exp;
+    // Verify the refreshed ID token as well
+    const claims = await verifyAndDecodeJWT(tokens.id_token, metadata);
+    
+    user.claims = claims;
+    user.access_token = tokens.access_token;
+    user.refresh_token = tokens.refresh_token || refreshToken;
+    user.expires_at = claims.exp;
     
     return next();
   } catch (error: any) {
-    const isDiscoveryError = error?.message?.includes("getaddrinfo") || 
-                             error?.message?.includes("ENOTFOUND") ||
-                             error?.message?.includes("EAI_AGAIN");
+    const isNetworkError = error?.message?.includes("getaddrinfo") || 
+                           error?.message?.includes("ENOTFOUND") ||
+                           error?.message?.includes("EAI_AGAIN");
     
-    if (isDiscoveryError) {
+    if (isNetworkError) {
       console.error("[auth] Token refresh failed due to service unavailability:", error?.message);
       res.status(503).json({ 
         message: "Authentication service temporarily unavailable. Please try again.",
