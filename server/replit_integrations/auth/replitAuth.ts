@@ -10,6 +10,10 @@ import pRetry from "p-retry";
 import { authStorage } from "./storage";
 
 async function discoverOidcWithRetry() {
+  const isProduction = process.env.REPLIT_DEPLOYMENT === "1";
+  console.log(`[auth] Environment: ${isProduction ? "production" : "development"}`);
+  console.log(`[auth] REPL_ID: ${process.env.REPL_ID ? "present" : "missing"}`);
+  
   return await pRetry(
     async () => {
       console.log("[auth] Attempting OIDC discovery...");
@@ -21,10 +25,10 @@ async function discoverOidcWithRetry() {
       return config;
     },
     {
-      retries: 10,
-      minTimeout: 2000,
-      maxTimeout: 30000,
-      factor: 2,
+      retries: 15,
+      minTimeout: 1000,
+      maxTimeout: 60000,
+      factor: 1.5,
       onFailedAttempt: (error: any) => {
         console.log(
           `[auth] OIDC discovery attempt ${error.attemptNumber} failed: ${error.message}. ` +
@@ -47,11 +51,16 @@ export async function preWarmOidc() {
   }
 }
 
+// Memoize with shorter cache time in production to handle cold starts better
 const getOidcConfig = memoize(
   async () => {
     return await discoverOidcWithRetry();
   },
-  { maxAge: 3600 * 1000 }
+  { 
+    maxAge: 3600 * 1000,
+    // Don't cache errors - allow retry on next request
+    promise: true
+  }
 );
 
 // Session configuration for reuse
@@ -155,8 +164,12 @@ export async function setupAuth(app: Express) {
 
   app.get("/api/login", async (req, res, next) => {
     try {
+      const isProduction = process.env.REPLIT_DEPLOYMENT === "1";
       console.log("[auth] Login initiated from hostname:", req.hostname);
+      console.log("[auth] Environment:", isProduction ? "production" : "development");
       console.log("[auth] Full URL:", req.protocol + "://" + req.hostname + req.originalUrl);
+      console.log("[auth] REPL_ID available:", !!process.env.REPL_ID);
+      
       await ensureStrategy(req.hostname);
       console.log("[auth] Strategy ensured, starting authentication...");
       passport.authenticate(`replitauth:${req.hostname}`, {
@@ -164,9 +177,17 @@ export async function setupAuth(app: Express) {
         scope: ["openid", "email", "profile", "offline_access"],
       })(req, res, next);
     } catch (error: any) {
-      console.error("[auth] Login error:", error);
+      console.error("[auth] Login error:", error?.message || error);
       console.error("[auth] Login error stack:", error?.stack);
-      res.redirect("/?error=auth_failed&message=" + encodeURIComponent("Authentication service temporarily unavailable. Please try again."));
+      console.error("[auth] REPL_ID:", process.env.REPL_ID ? "present" : "MISSING");
+      console.error("[auth] ISSUER_URL:", process.env.ISSUER_URL || "using default");
+      
+      // More specific error message
+      const errorMsg = error?.message?.includes("ENOTFOUND") || error?.message?.includes("getaddrinfo")
+        ? "Cannot reach authentication server. Please try again in a moment."
+        : "Authentication service temporarily unavailable. Please try again.";
+      
+      res.redirect("/?error=auth_failed&message=" + encodeURIComponent(errorMsg));
     }
   });
 
