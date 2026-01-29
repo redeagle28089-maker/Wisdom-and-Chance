@@ -4,15 +4,32 @@ import { Strategy, type VerifyFunction } from "openid-client/passport";
 import passport from "passport";
 import session from "express-session";
 import type { Express, RequestHandler } from "express";
-import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
 import pRetry from "p-retry";
 import { authStorage } from "./storage";
 
+// Validate required environment variables for auth
+function validateAuthEnvironment(): { valid: boolean; error?: string } {
+  if (!process.env.REPL_ID) {
+    return { valid: false, error: "REPL_ID environment variable is missing" };
+  }
+  if (!process.env.SESSION_SECRET) {
+    return { valid: false, error: "SESSION_SECRET environment variable is missing" };
+  }
+  return { valid: true };
+}
+
 async function discoverOidcWithRetry() {
   const isProduction = process.env.REPLIT_DEPLOYMENT === "1";
   console.log(`[auth] Environment: ${isProduction ? "production" : "development"}`);
-  console.log(`[auth] REPL_ID: ${process.env.REPL_ID ? "present" : "missing"}`);
+  console.log(`[auth] REPL_ID: ${process.env.REPL_ID ? process.env.REPL_ID.substring(0, 8) + "..." : "MISSING"}`);
+  
+  // Validate environment before attempting discovery
+  const validation = validateAuthEnvironment();
+  if (!validation.valid) {
+    console.error(`[auth] Environment validation failed: ${validation.error}`);
+    throw new Error(validation.error);
+  }
   
   return await pRetry(
     async () => {
@@ -25,10 +42,10 @@ async function discoverOidcWithRetry() {
       return config;
     },
     {
-      retries: 15,
+      retries: 5,
       minTimeout: 1000,
-      maxTimeout: 60000,
-      factor: 1.5,
+      maxTimeout: 10000,
+      factor: 2,
       onFailedAttempt: (error: any) => {
         console.log(
           `[auth] OIDC discovery attempt ${error.attemptNumber} failed: ${error.message}. ` +
@@ -51,17 +68,22 @@ export async function preWarmOidc() {
   }
 }
 
-// Memoize with shorter cache time in production to handle cold starts better
-const getOidcConfig = memoize(
-  async () => {
-    return await discoverOidcWithRetry();
-  },
-  { 
-    maxAge: 3600 * 1000,
-    // Don't cache errors - allow retry on next request
-    promise: true
+// Cache for OIDC config - simple implementation that doesn't cache failures
+let cachedOidcConfig: Awaited<ReturnType<typeof client.discovery>> | null = null;
+let cacheExpiry: number = 0;
+
+async function getOidcConfig() {
+  const now = Date.now();
+  if (cachedOidcConfig && now < cacheExpiry) {
+    return cachedOidcConfig;
   }
-);
+  
+  // Discovery failed cache was cleared or expired - try again
+  const config = await discoverOidcWithRetry();
+  cachedOidcConfig = config;
+  cacheExpiry = now + (3600 * 1000); // Cache for 1 hour
+  return config;
+}
 
 // Session configuration for reuse
 const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
@@ -182,10 +204,19 @@ export async function setupAuth(app: Express) {
       console.error("[auth] REPL_ID:", process.env.REPL_ID ? "present" : "MISSING");
       console.error("[auth] ISSUER_URL:", process.env.ISSUER_URL || "using default");
       
-      // More specific error message
-      const errorMsg = error?.message?.includes("ENOTFOUND") || error?.message?.includes("getaddrinfo")
-        ? "Cannot reach authentication server. Please try again in a moment."
-        : "Authentication service temporarily unavailable. Please try again.";
+      // Determine specific error message based on error type
+      let errorMsg: string;
+      const msg = error?.message || "";
+      
+      if (msg.includes("REPL_ID") || msg.includes("SESSION_SECRET")) {
+        errorMsg = "Server configuration error. Please contact the app owner.";
+      } else if (msg.includes("ENOTFOUND") || msg.includes("getaddrinfo") || msg.includes("EAI_AGAIN")) {
+        errorMsg = "Cannot reach authentication server. Please try again in a moment.";
+      } else if (msg.includes("timeout") || msg.includes("ETIMEDOUT")) {
+        errorMsg = "Authentication timed out. Please try again.";
+      } else {
+        errorMsg = "Authentication service temporarily unavailable. Please try again.";
+      }
       
       res.redirect("/?error=auth_failed&message=" + encodeURIComponent(errorMsg));
     }
