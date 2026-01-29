@@ -45,6 +45,11 @@ async function buildAll() {
     ...Object.keys(pkg.devDependencies || {}),
   ];
   const externals = allDeps.filter((dep) => !allowlist.includes(dep));
+  
+  // These ESM-only packages must be externalized to avoid bundling issues
+  // Both openid-client and its passport submodule are ESM-only in v6+
+  const forceExternal = ["openid-client", "openid-client/passport"];
+  externals.push(...forceExternal.filter((dep) => !externals.includes(dep)));
 
   await esbuild({
     entryPoints: ["server/index.ts"],

@@ -1,12 +1,30 @@
-import * as client from "openid-client";
-import { Strategy, type VerifyFunction } from "openid-client/passport";
-
 import passport from "passport";
 import session from "express-session";
 import type { Express, RequestHandler } from "express";
 import connectPg from "connect-pg-simple";
 import pRetry from "p-retry";
 import { authStorage } from "./storage";
+
+// Use dynamic import for ESM-only openid-client to handle CJS bundling
+type OpenIdClientModule = typeof import("openid-client");
+type PassportStrategyModule = typeof import("openid-client/passport");
+
+let clientModule: OpenIdClientModule | null = null;
+let passportStrategyModule: PassportStrategyModule | null = null;
+
+async function getOpenIdClient(): Promise<OpenIdClientModule> {
+  if (!clientModule) {
+    clientModule = await import("openid-client");
+  }
+  return clientModule;
+}
+
+async function getPassportStrategy(): Promise<PassportStrategyModule> {
+  if (!passportStrategyModule) {
+    passportStrategyModule = await import("openid-client/passport");
+  }
+  return passportStrategyModule;
+}
 
 // Validate required environment variables for auth
 function validateAuthEnvironment(): { valid: boolean; error?: string } {
@@ -30,6 +48,8 @@ async function discoverOidcWithRetry() {
     console.error(`[auth] Environment validation failed: ${validation.error}`);
     throw new Error(validation.error);
   }
+  
+  const client = await getOpenIdClient();
   
   return await pRetry(
     async () => {
@@ -69,7 +89,7 @@ export async function preWarmOidc() {
 }
 
 // Cache for OIDC config - simple implementation that doesn't cache failures
-let cachedOidcConfig: Awaited<ReturnType<typeof client.discovery>> | null = null;
+let cachedOidcConfig: Awaited<ReturnType<OpenIdClientModule["discovery"]>> | null = null;
 let cacheExpiry: number = 0;
 
 async function getOidcConfig() {
@@ -124,7 +144,7 @@ export function getSession() {
 
 function updateUserSession(
   user: any,
-  tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers
+  tokens: any
 ) {
   user.claims = tokens.claims();
   user.access_token = tokens.access_token;
@@ -148,8 +168,10 @@ export async function setupAuth(app: Express) {
   app.use(passport.initialize());
   app.use(passport.session());
 
-  const verify: VerifyFunction = async (
-    tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers,
+  const { Strategy } = await getPassportStrategy();
+  
+  const verify = async (
+    tokens: any,
     verified: passport.AuthenticateCallback
   ) => {
     const user = {};
@@ -241,6 +263,7 @@ export async function setupAuth(app: Express) {
 
   app.get("/api/logout", async (req, res) => {
     try {
+      const client = await getOpenIdClient();
       const config = await getOidcConfig();
       req.logout(() => {
         res.redirect(
@@ -306,6 +329,7 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
   }
 
   try {
+    const client = await getOpenIdClient();
     const config = await getOidcConfig();
     const tokenResponse = await client.refreshTokenGrant(config, refreshToken);
     updateUserSession(user, tokenResponse);
