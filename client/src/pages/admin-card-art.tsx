@@ -294,6 +294,28 @@ export default function AdminCardArtPage() {
     },
   });
 
+  // Delete game card mutation
+  const deleteCardMutation = useMutation({
+    mutationFn: async (cardId: string) => {
+      const res = await apiRequest("DELETE", `/api/admin/cards/${cardId}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Card Deleted",
+        description: "Card has been removed from the game database.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/cards"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Delete Failed",
+        description: error.message || "Failed to delete card",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Update card with generated art
   const updateCardMutation = useMutation({
     mutationFn: async (cardId: string) => {
@@ -1103,6 +1125,87 @@ export default function AdminCardArtPage() {
             </Card>
           </div>
         </div>
+
+        {/* Manage Game Cards Section */}
+        <Card className="bg-slate-800/80 border-purple-500/30 mt-6">
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between text-white">
+              <div className="flex items-center gap-2">
+                <Database className="w-5 h-5 text-amber-400" />
+                Manage Game Cards
+              </div>
+              <Badge className="bg-amber-600/50">
+                {cards.length} cards in database
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-slate-400 text-sm mb-4">
+              Delete cards from the game database. Use with caution - this action cannot be undone.
+            </p>
+            <ScrollArea className="h-[300px]">
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                {cards.slice(0, 50).map((card) => {
+                  const ElementIcon = elementConfig[card.element]?.icon;
+                  return (
+                    <div 
+                      key={card.id} 
+                      className="relative group bg-slate-700/30 rounded-lg p-2 border border-slate-600/30"
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        {ElementIcon && (
+                          <ElementIcon className={`w-4 h-4 ${elementConfig[card.element]?.color}`} />
+                        )}
+                        <span className="text-white text-xs font-medium truncate flex-1">{card.name}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <Badge variant="outline" className="text-xs">
+                          Power {card.power}
+                        </Badge>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-6 w-6 text-red-400 hover:text-red-300 hover:bg-red-500/20"
+                              data-testid={`admin-delete-card-${card.id}`}
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent className="bg-slate-800 border-red-500/30">
+                            <AlertDialogHeader>
+                              <AlertDialogTitle className="text-white">Delete Card</AlertDialogTitle>
+                              <AlertDialogDescription className="text-slate-300">
+                                Are you sure you want to delete "{card.name}"? This will permanently remove the card from the game. This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel className="bg-slate-700 text-white border-slate-600 hover:bg-slate-600">
+                                Cancel
+                              </AlertDialogCancel>
+                              <AlertDialogAction 
+                                className="bg-red-600 hover:bg-red-700"
+                                onClick={() => deleteCardMutation.mutate(card.id)}
+                              >
+                                Delete Card
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              {cards.length > 50 && (
+                <p className="text-slate-400 text-center mt-4 text-sm">
+                  Showing first 50 cards. Use the Card Database page to manage all {cards.length} cards.
+                </p>
+              )}
+            </ScrollArea>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Swap from Image Database Dialog */}

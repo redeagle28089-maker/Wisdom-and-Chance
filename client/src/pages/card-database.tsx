@@ -1,11 +1,26 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Flame, Droplet, Mountain, Wind, Leaf, Hammer } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Search, Flame, Droplet, Mountain, Wind, Leaf, Hammer, Trash2, Shield, Loader2 } from "lucide-react";
 import { CardWithPopup, elementConfig } from "@/components/game-card";
+import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import type { Card as CardType, Element } from "@shared/schema";
 
 export default function CardDatabasePage() {
@@ -13,9 +28,43 @@ export default function CardDatabasePage() {
   const [search, setSearch] = useState("");
   const [selectedElement, setSelectedElement] = useState<Element | "all">("all");
   const [selectedPower, setSelectedPower] = useState<number | "all">("all");
+  const [deletingCardId, setDeletingCardId] = useState<string | null>(null);
+  const { isAuthenticated } = useAuth();
+  const { toast } = useToast();
 
   const { data: cards = [], isLoading } = useQuery<CardType[]>({
     queryKey: ["/api/cards"],
+  });
+
+  const { data: adminCheck } = useQuery<{ isAdmin: boolean }>({
+    queryKey: ["/api/admin/check"],
+    enabled: isAuthenticated,
+  });
+
+  const isAdmin = adminCheck?.isAdmin ?? false;
+
+  const deleteMutation = useMutation({
+    mutationFn: async (cardId: string) => {
+      setDeletingCardId(cardId);
+      const res = await apiRequest("DELETE", `/api/admin/cards/${cardId}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Card Deleted",
+        description: "The card has been removed from the game database.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/cards"] });
+      setDeletingCardId(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Delete Failed",
+        description: error.message || "Failed to delete card",
+        variant: "destructive",
+      });
+      setDeletingCardId(null);
+    },
   });
 
   const filteredCards = cards.filter((card) => {
@@ -125,12 +174,60 @@ export default function CardDatabasePage() {
           </div>
         ) : (
           <>
-            <p className="text-purple-300 mb-4" data-testid="text-card-count">
-              Showing {displayCards.length} unique cards
-            </p>
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+              <p className="text-purple-300" data-testid="text-card-count">
+                Showing {displayCards.length} unique cards
+              </p>
+              {isAdmin && (
+                <Badge className="bg-amber-600/50 text-amber-100 gap-1">
+                  <Shield className="w-3 h-3" />
+                  Admin Mode - Click trash icon to delete cards
+                </Badge>
+              )}
+            </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
               {displayCards.map((card) => (
-                <CardWithPopup key={card.id} card={card} />
+                <div key={card.id} className="relative group">
+                  <CardWithPopup card={card} />
+                  {isAdmin && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          size="icon"
+                          variant="destructive"
+                          className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                          data-testid={`button-delete-card-${card.id}`}
+                          disabled={deletingCardId === card.id}
+                        >
+                          {deletingCardId === card.id ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-3 h-3" />
+                          )}
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent className="bg-slate-800 border-red-500/30">
+                        <AlertDialogHeader>
+                          <AlertDialogTitle className="text-white">Delete Card</AlertDialogTitle>
+                          <AlertDialogDescription className="text-slate-300">
+                            Are you sure you want to delete "{card.name}"? This will permanently remove the card from the game database. This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel className="bg-slate-700 text-white border-slate-600 hover:bg-slate-600">
+                            Cancel
+                          </AlertDialogCancel>
+                          <AlertDialogAction 
+                            className="bg-red-600 hover:bg-red-700"
+                            onClick={() => deleteMutation.mutate(card.id)}
+                          >
+                            Delete Card
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+                </div>
               ))}
             </div>
           </>
