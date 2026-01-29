@@ -49,3 +49,23 @@ export const insertUserDeckSchema = createInsertSchema(userDecks).omit({
 export const selectUserDeckSchema = createSelectSchema(userDecks);
 export type InsertUserDeck = z.infer<typeof insertUserDeckSchema>;
 export type UserDeck = typeof userDecks.$inferSelect;
+
+// Card image database for storing generated art that hasn't been assigned to cards yet
+export const cardImages = pgTable("card_images", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  imageUrl: text("image_url").notNull(),
+  element: varchar("element"),
+  cardType: varchar("card_type").notNull().default("unit"), // "unit" | "commander"
+  tags: text("tags").array().default([]),
+  createdAt: timestamp("created_at").defaultNow(),
+  createdBy: varchar("created_by").references(() => users.id),
+});
+
+export const insertCardImageSchema = createInsertSchema(cardImages).omit({ 
+  id: true, 
+  createdAt: true 
+});
+export const selectCardImageSchema = createSelectSchema(cardImages);
+export type InsertCardImage = z.infer<typeof insertCardImageSchema>;
+export type CardImage = typeof cardImages.$inferSelect;
