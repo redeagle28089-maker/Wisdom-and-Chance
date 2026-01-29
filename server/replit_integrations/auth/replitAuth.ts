@@ -285,7 +285,7 @@ export async function setupAuth(app: Express) {
       issuerUrl: process.env.ISSUER_URL || "https://replit.com/oidc (default)",
       databaseUrlPresent: !!process.env.DATABASE_URL,
       replitDomains: process.env.REPLIT_DOMAINS || "not set",
-      openidClientVersion: "5.x",
+      openidClientVersion: "4.x",
     };
 
     try {
