@@ -52,12 +52,15 @@ A tactical trading card game simulator built with React, Express, and TypeScript
   - One-click apply to populate deck with AI suggestions
   - Validates deck constraints (4 cards per power rank, max 3 copies)
 
-- **January 2026:** Admin Card Art Generator
+- **January 2026:** Enhanced Admin Card Art Generator & Image Database
   - AI-powered card art generation using Gemini 2.5 Flash Image model
   - Admin-only access restricted to redeagle28089@gmail.com
-  - Generate custom artwork for unit cards and commanders
-  - Element-specific art prompts (Fire, Water, Earth, Air, Nature)
-  - Save generated art directly to cards/commanders
+  - 3 Generation Modes: Art Only, Stats Only, Art + Stats (creates complete card in game DB)
+  - Reference image upload support for style-influenced AI generation
+  - Toggleable stat generation: Power, Trait (with modifier), Buff/Debuff (with color and value)
+  - Card Image Database page to browse, search, filter, and manage stored artwork
+  - Direct image upload from computer to image database
+  - Image swap functionality to apply stored images to cards/commanders
   - Cards now support custom imageUrl with fallback to default element art
 
 - **January 2026:** Engagement & Progression Systems
