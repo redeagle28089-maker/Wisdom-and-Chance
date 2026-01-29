@@ -1,30 +1,10 @@
+import { Issuer, generators, Client, TokenSet } from "openid-client";
 import passport from "passport";
 import session from "express-session";
 import type { Express, RequestHandler } from "express";
 import connectPg from "connect-pg-simple";
 import pRetry from "p-retry";
 import { authStorage } from "./storage";
-
-// Use dynamic import for ESM-only openid-client to handle CJS bundling
-type OpenIdClientModule = typeof import("openid-client");
-type PassportStrategyModule = typeof import("openid-client/passport");
-
-let clientModule: OpenIdClientModule | null = null;
-let passportStrategyModule: PassportStrategyModule | null = null;
-
-async function getOpenIdClient(): Promise<OpenIdClientModule> {
-  if (!clientModule) {
-    clientModule = await import("openid-client");
-  }
-  return clientModule;
-}
-
-async function getPassportStrategy(): Promise<PassportStrategyModule> {
-  if (!passportStrategyModule) {
-    passportStrategyModule = await import("openid-client/passport");
-  }
-  return passportStrategyModule;
-}
 
 // Validate required environment variables for auth
 function validateAuthEnvironment(): { valid: boolean; error?: string } {
@@ -37,29 +17,28 @@ function validateAuthEnvironment(): { valid: boolean; error?: string } {
   return { valid: true };
 }
 
-async function discoverOidcWithRetry() {
+// Cache for OIDC issuer and client
+let cachedIssuer: Issuer | null = null;
+let cacheExpiry: number = 0;
+
+async function discoverIssuerWithRetry(): Promise<Issuer> {
   const isProduction = process.env.REPLIT_DEPLOYMENT === "1";
   console.log(`[auth] Environment: ${isProduction ? "production" : "development"}`);
   console.log(`[auth] REPL_ID: ${process.env.REPL_ID ? process.env.REPL_ID.substring(0, 8) + "..." : "MISSING"}`);
   
-  // Validate environment before attempting discovery
   const validation = validateAuthEnvironment();
   if (!validation.valid) {
     console.error(`[auth] Environment validation failed: ${validation.error}`);
     throw new Error(validation.error);
   }
   
-  const client = await getOpenIdClient();
-  
   return await pRetry(
     async () => {
       console.log("[auth] Attempting OIDC discovery...");
-      const config = await client.discovery(
-        new URL(process.env.ISSUER_URL ?? "https://replit.com/oidc"),
-        process.env.REPL_ID!
-      );
+      const issuerUrl = process.env.ISSUER_URL ?? "https://replit.com/oidc";
+      const issuer = await Issuer.discover(issuerUrl);
       console.log("[auth] OIDC discovery successful");
-      return config;
+      return issuer;
     },
     {
       retries: 5,
@@ -76,36 +55,39 @@ async function discoverOidcWithRetry() {
   );
 }
 
+async function getIssuer(): Promise<Issuer> {
+  const now = Date.now();
+  if (cachedIssuer && now < cacheExpiry) {
+    return cachedIssuer;
+  }
+  
+  const issuer = await discoverIssuerWithRetry();
+  cachedIssuer = issuer;
+  cacheExpiry = now + (3600 * 1000); // Cache for 1 hour
+  return issuer;
+}
+
+function createClient(issuer: Issuer, callbackUrl: string): Client {
+  return new issuer.Client({
+    client_id: process.env.REPL_ID!,
+    token_endpoint_auth_method: "none",
+    redirect_uris: [callbackUrl],
+    response_types: ["code"],
+  });
+}
+
 // Pre-warm OIDC discovery at startup
 export async function preWarmOidc() {
   try {
     console.log("[auth] Pre-warming OIDC discovery...");
-    await getOidcConfig();
+    await getIssuer();
     console.log("[auth] OIDC pre-warming complete");
   } catch (error: any) {
     console.error("[auth] OIDC pre-warming failed:", error.message);
-    // Don't throw - auth will retry on first request
   }
 }
 
-// Cache for OIDC config - simple implementation that doesn't cache failures
-let cachedOidcConfig: Awaited<ReturnType<OpenIdClientModule["discovery"]>> | null = null;
-let cacheExpiry: number = 0;
-
-async function getOidcConfig() {
-  const now = Date.now();
-  if (cachedOidcConfig && now < cacheExpiry) {
-    return cachedOidcConfig;
-  }
-  
-  // Discovery failed cache was cleared or expired - try again
-  const config = await discoverOidcWithRetry();
-  cachedOidcConfig = config;
-  cacheExpiry = now + (3600 * 1000); // Cache for 1 hour
-  return config;
-}
-
-// Session configuration for reuse
+// Session configuration
 const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
 const pgStore = connectPg(session);
 
@@ -142,16 +124,6 @@ export function getSession() {
   });
 }
 
-function updateUserSession(
-  user: any,
-  tokens: any
-) {
-  user.claims = tokens.claims();
-  user.access_token = tokens.access_token;
-  user.refresh_token = tokens.refresh_token;
-  user.expires_at = user.claims?.exp;
-}
-
 async function upsertUser(claims: any) {
   await authStorage.upsertUser({
     id: claims["sub"],
@@ -162,71 +134,53 @@ async function upsertUser(claims: any) {
   });
 }
 
+// Store state and nonce for OIDC flow
+const pendingAuth = new Map<string, { nonce: string; codeVerifier: string }>();
+
 export async function setupAuth(app: Express) {
   app.set("trust proxy", 1);
   app.use(getSession());
   app.use(passport.initialize());
   app.use(passport.session());
 
-  const { Strategy } = await getPassportStrategy();
-  
-  const verify = async (
-    tokens: any,
-    verified: passport.AuthenticateCallback
-  ) => {
-    const user = {};
-    updateUserSession(user, tokens);
-    await upsertUser(tokens.claims());
-    verified(null, user);
-  };
-
-  // Keep track of registered strategies per domain
-  const registeredStrategies = new Set<string>();
-
-  // Helper function to ensure strategy exists for a domain (lazy OIDC discovery)
-  const ensureStrategy = async (domain: string) => {
-    const strategyName = `replitauth:${domain}`;
-    if (!registeredStrategies.has(strategyName)) {
-      // Lazy OIDC discovery - happens per-request, not at startup
-      const config = await getOidcConfig();
-      const strategy = new Strategy(
-        {
-          name: strategyName,
-          config,
-          scope: "openid email profile offline_access",
-          callbackURL: `https://${domain}/api/callback`,
-        },
-        verify
-      );
-      passport.use(strategy);
-      registeredStrategies.add(strategyName);
-    }
-  };
-
   passport.serializeUser((user: Express.User, cb) => cb(null, user));
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
-  app.get("/api/login", async (req, res, next) => {
+  app.get("/api/login", async (req, res) => {
     try {
       const isProduction = process.env.REPLIT_DEPLOYMENT === "1";
       console.log("[auth] Login initiated from hostname:", req.hostname);
       console.log("[auth] Environment:", isProduction ? "production" : "development");
-      console.log("[auth] Full URL:", req.protocol + "://" + req.hostname + req.originalUrl);
-      console.log("[auth] REPL_ID available:", !!process.env.REPL_ID);
       
-      await ensureStrategy(req.hostname);
-      console.log("[auth] Strategy ensured, starting authentication...");
-      passport.authenticate(`replitauth:${req.hostname}`, {
+      const issuer = await getIssuer();
+      const callbackUrl = `https://${req.hostname}/api/callback`;
+      const client = createClient(issuer, callbackUrl);
+      
+      const state = generators.state();
+      const nonce = generators.nonce();
+      const codeVerifier = generators.codeVerifier();
+      const codeChallenge = generators.codeChallenge(codeVerifier);
+      
+      pendingAuth.set(state, { nonce, codeVerifier });
+      
+      // Clean up old pending auth entries (older than 10 minutes)
+      setTimeout(() => pendingAuth.delete(state), 10 * 60 * 1000);
+      
+      const authUrl = client.authorizationUrl({
+        scope: "openid email profile offline_access",
+        state,
+        nonce,
+        code_challenge: codeChallenge,
+        code_challenge_method: "S256",
         prompt: "login consent",
-        scope: ["openid", "email", "profile", "offline_access"],
-      })(req, res, next);
+      });
+      
+      console.log("[auth] Redirecting to auth URL");
+      res.redirect(authUrl);
     } catch (error: any) {
       console.error("[auth] Login error:", error?.message || error);
       console.error("[auth] Login error stack:", error?.stack);
-      console.error("[auth] REPL_ID:", process.env.REPL_ID ? "present" : "MISSING");
-      console.error("[auth] ISSUER_URL:", process.env.ISSUER_URL || "using default");
       
-      // Determine specific error message based on error type
       let errorMsg: string;
       const msg = error?.message || "";
       
@@ -244,16 +198,52 @@ export async function setupAuth(app: Express) {
     }
   });
 
-  app.get("/api/callback", async (req, res, next) => {
+  app.get("/api/callback", async (req, res) => {
     try {
       console.log("[auth] Callback received from hostname:", req.hostname);
-      console.log("[auth] Callback query params:", JSON.stringify(req.query));
-      await ensureStrategy(req.hostname);
-      console.log("[auth] Callback strategy ensured, authenticating...");
-      passport.authenticate(`replitauth:${req.hostname}`, {
-        successReturnToOrRedirect: "/",
-        failureRedirect: "/?error=auth_failed",
-      })(req, res, next);
+      
+      const { code, state } = req.query as { code?: string; state?: string };
+      
+      if (!code || !state) {
+        console.error("[auth] Missing code or state in callback");
+        return res.redirect("/?error=auth_failed&message=" + encodeURIComponent("Invalid callback parameters"));
+      }
+      
+      const pending = pendingAuth.get(state);
+      if (!pending) {
+        console.error("[auth] No pending auth for state:", state);
+        return res.redirect("/?error=auth_failed&message=" + encodeURIComponent("Session expired. Please try again."));
+      }
+      
+      pendingAuth.delete(state);
+      
+      const issuer = await getIssuer();
+      const callbackUrl = `https://${req.hostname}/api/callback`;
+      const client = createClient(issuer, callbackUrl);
+      
+      const tokenSet = await client.callback(callbackUrl, { code, state }, {
+        state,
+        nonce: pending.nonce,
+        code_verifier: pending.codeVerifier,
+      });
+      
+      const claims = tokenSet.claims();
+      await upsertUser(claims);
+      
+      const user = {
+        claims,
+        access_token: tokenSet.access_token,
+        refresh_token: tokenSet.refresh_token,
+        expires_at: claims.exp,
+      };
+      
+      req.login(user, (err) => {
+        if (err) {
+          console.error("[auth] Login error after callback:", err);
+          return res.redirect("/?error=auth_failed");
+        }
+        res.redirect("/");
+      });
     } catch (error: any) {
       console.error("[auth] Callback error:", error);
       console.error("[auth] Callback error stack:", error?.stack);
@@ -263,15 +253,18 @@ export async function setupAuth(app: Express) {
 
   app.get("/api/logout", async (req, res) => {
     try {
-      const client = await getOpenIdClient();
-      const config = await getOidcConfig();
+      const issuer = await getIssuer();
+      const endSessionUrl = issuer.metadata.end_session_endpoint;
+      
       req.logout(() => {
-        res.redirect(
-          client.buildEndSessionUrl(config, {
-            client_id: process.env.REPL_ID!,
-            post_logout_redirect_uri: `${req.protocol}://${req.hostname}`,
-          }).href
-        );
+        if (endSessionUrl) {
+          const logoutUrl = new URL(endSessionUrl);
+          logoutUrl.searchParams.set("client_id", process.env.REPL_ID!);
+          logoutUrl.searchParams.set("post_logout_redirect_uri", `https://${req.hostname}`);
+          res.redirect(logoutUrl.href);
+        } else {
+          res.redirect("/");
+        }
       });
     } catch (error: any) {
       console.error("[auth] Logout error:", error);
@@ -281,7 +274,7 @@ export async function setupAuth(app: Express) {
     }
   });
 
-  // Diagnostic endpoint to check auth configuration in production
+  // Diagnostic endpoint
   app.get("/api/auth/status", async (req, res) => {
     const status: Record<string, any> = {
       environment: process.env.REPLIT_DEPLOYMENT === "1" ? "production" : "development",
@@ -292,14 +285,14 @@ export async function setupAuth(app: Express) {
       issuerUrl: process.env.ISSUER_URL || "https://replit.com/oidc (default)",
       databaseUrlPresent: !!process.env.DATABASE_URL,
       replitDomains: process.env.REPLIT_DOMAINS || "not set",
+      openidClientVersion: "5.x",
     };
 
-    // Try OIDC discovery
     try {
       console.log("[auth/status] Testing OIDC discovery...");
-      const config = await getOidcConfig();
+      const issuer = await getIssuer();
       status.oidcDiscovery = "success";
-      status.issuer = config.serverMetadata().issuer;
+      status.issuer = issuer.metadata.issuer;
     } catch (error: any) {
       status.oidcDiscovery = "failed";
       status.oidcError = error?.message || "Unknown error";
@@ -329,13 +322,17 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
   }
 
   try {
-    const client = await getOpenIdClient();
-    const config = await getOidcConfig();
-    const tokenResponse = await client.refreshTokenGrant(config, refreshToken);
-    updateUserSession(user, tokenResponse);
+    const issuer = await getIssuer();
+    const client = createClient(issuer, `https://${req.hostname}/api/callback`);
+    const tokenSet = await client.refresh(refreshToken);
+    
+    user.claims = tokenSet.claims();
+    user.access_token = tokenSet.access_token;
+    user.refresh_token = tokenSet.refresh_token || refreshToken;
+    user.expires_at = user.claims?.exp;
+    
     return next();
   } catch (error: any) {
-    // Check if this is a transient discovery error vs actual auth failure
     const isDiscoveryError = error?.message?.includes("getaddrinfo") || 
                              error?.message?.includes("ENOTFOUND") ||
                              error?.message?.includes("EAI_AGAIN");
