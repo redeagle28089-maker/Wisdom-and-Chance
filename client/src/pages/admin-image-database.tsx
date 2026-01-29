@@ -72,10 +72,13 @@ export default function AdminImageDatabasePage() {
   const [selectedImage, setSelectedImage] = useState<CardImage | null>(null);
   const [editingName, setEditingName] = useState(false);
   const [newName, setNewName] = useState("");
-  const [uploadName, setUploadName] = useState("");
-  const [uploadElement, setUploadElement] = useState<string>("Fire");
+  const [uploadElement, setUploadElement] = useState<string>("");
   const [uploadType, setUploadType] = useState<string>("unit");
   const [showUploadDialog, setShowUploadDialog] = useState(false);
+  const [useElement, setUseElement] = useState(false);
+  const [bulkFiles, setBulkFiles] = useState<{ file: File; name: string; preview: string }[]>([]);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
 
   const { data: adminCheck, isLoading: adminLoading } = useQuery<{ isAdmin: boolean }>({
     queryKey: ["/api/admin/check"],
@@ -87,34 +90,57 @@ export default function AdminImageDatabasePage() {
     enabled: adminCheck?.isAdmin,
   });
 
-  // Upload image mutation
-  const uploadMutation = useMutation({
-    mutationFn: async (imageBase64: string) => {
-      const res = await apiRequest("POST", "/api/admin/upload-card-image", {
-        name: uploadName,
-        imageBase64,
-        element: uploadElement,
-        cardType: uploadType,
-      });
-      return res.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Image Uploaded",
-        description: "Image has been uploaded to the database!",
-      });
-      setUploadName("");
-      setShowUploadDialog(false);
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/card-images"] });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Upload Failed",
-        description: error.message || "Failed to upload image",
-        variant: "destructive",
-      });
-    },
-  });
+  // Upload single image function
+  const uploadSingleImage = async (name: string, imageBase64: string) => {
+    const res = await apiRequest("POST", "/api/admin/upload-card-image", {
+      name,
+      imageBase64,
+      element: useElement ? uploadElement : null,
+      cardType: uploadType,
+    });
+    return res.json();
+  };
+
+  // Bulk upload handler
+  const handleBulkUpload = async () => {
+    if (bulkFiles.length === 0) return;
+    
+    setIsUploading(true);
+    setUploadProgress(0);
+    
+    let successCount = 0;
+    let failCount = 0;
+    
+    for (let i = 0; i < bulkFiles.length; i++) {
+      const { file, name } = bulkFiles[i];
+      try {
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        
+        await uploadSingleImage(name, base64);
+        successCount++;
+      } catch (error) {
+        failCount++;
+        console.error(`Failed to upload ${name}:`, error);
+      }
+      setUploadProgress(Math.round(((i + 1) / bulkFiles.length) * 100));
+    }
+    
+    setIsUploading(false);
+    setBulkFiles([]);
+    setShowUploadDialog(false);
+    queryClient.invalidateQueries({ queryKey: ["/api/admin/card-images"] });
+    
+    toast({
+      title: "Bulk Upload Complete",
+      description: `Successfully uploaded ${successCount} image${successCount !== 1 ? "s" : ""}${failCount > 0 ? `, ${failCount} failed` : ""}`,
+      variant: failCount > 0 ? "destructive" : "default",
+    });
+  };
 
   // Update image mutation
   const updateMutation = useMutation({
@@ -162,21 +188,44 @@ export default function AdminImageDatabasePage() {
     },
   });
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file && uploadName) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        uploadMutation.mutate(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    } else if (!uploadName) {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const pngFiles = files.filter(f => f.type === "image/png" || f.name.toLowerCase().endsWith(".png"));
+    
+    if (pngFiles.length === 0) {
       toast({
-        title: "Name Required",
-        description: "Please enter a name for the image before uploading.",
+        title: "No PNG Files",
+        description: "Please select PNG files only.",
         variant: "destructive",
       });
+      return;
     }
+    
+    const newFiles = pngFiles.map(file => ({
+      file,
+      name: file.name.replace(/\.png$/i, ""),
+      preview: URL.createObjectURL(file),
+    }));
+    
+    setBulkFiles(prev => [...prev, ...newFiles]);
+    if (e.target) e.target.value = "";
+  };
+
+  const removeFile = (index: number) => {
+    setBulkFiles(prev => {
+      const newFiles = [...prev];
+      URL.revokeObjectURL(newFiles[index].preview);
+      newFiles.splice(index, 1);
+      return newFiles;
+    });
+  };
+
+  const updateFileName = (index: number, newName: string) => {
+    setBulkFiles(prev => {
+      const newFiles = [...prev];
+      newFiles[index] = { ...newFiles[index], name: newName };
+      return newFiles;
+    });
   };
 
   // Filter images
@@ -510,55 +559,28 @@ export default function AdminImageDatabasePage() {
         </DialogContent>
       </Dialog>
 
-      {/* Upload Dialog */}
-      <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
-        <DialogContent className="bg-slate-800 border-purple-500/30">
+      {/* Bulk Upload Dialog */}
+      <Dialog open={showUploadDialog} onOpenChange={(open) => {
+        if (!open && !isUploading) {
+          setBulkFiles([]);
+          setShowUploadDialog(false);
+        }
+      }}>
+        <DialogContent className="bg-slate-800 border-purple-500/30 max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle className="text-white">Upload Image</DialogTitle>
+            <DialogTitle className="text-white">Bulk Upload Images</DialogTitle>
             <DialogDescription className="text-slate-300">
-              Add a new image to your card image database.
+              Select multiple PNG files to upload. Names are auto-filled from filenames.
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label className="text-purple-200">Image Name</Label>
-              <Input
-                value={uploadName}
-                onChange={(e) => setUploadName(e.target.value)}
-                placeholder="Enter image name..."
-                className="bg-slate-700/50 border-purple-500/30 text-white"
-                data-testid="input-upload-name"
-              />
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-purple-200">Element</Label>
-                <Select value={uploadElement} onValueChange={setUploadElement}>
-                  <SelectTrigger className="bg-slate-700/50 border-purple-500/30">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(["Fire", "Water", "Earth", "Air", "Nature"] as Element[]).map((el) => {
-                      const Icon = elementConfig[el].icon;
-                      return (
-                        <SelectItem key={el} value={el}>
-                          <span className="flex items-center gap-2">
-                            <Icon className={`w-4 h-4 ${elementConfig[el].color}`} />
-                            {el}
-                          </span>
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
-              
+          <div className="space-y-4 flex-1 overflow-hidden flex flex-col">
+            {/* Options Row */}
+            <div className="flex flex-wrap gap-4 items-end">
               <div className="space-y-2">
                 <Label className="text-purple-200">Card Type</Label>
                 <Select value={uploadType} onValueChange={setUploadType}>
-                  <SelectTrigger className="bg-slate-700/50 border-purple-500/30">
+                  <SelectTrigger className="w-32 bg-slate-700/50 border-purple-500/30">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -567,30 +589,156 @@ export default function AdminImageDatabasePage() {
                   </SelectContent>
                 </Select>
               </div>
+              
+              <div className="flex items-center gap-3 p-3 bg-slate-700/30 rounded-lg">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={useElement}
+                    onChange={(e) => setUseElement(e.target.checked)}
+                    className="w-4 h-4 rounded border-purple-500/50 bg-slate-700 text-purple-500 focus:ring-purple-500"
+                    data-testid="toggle-use-element"
+                  />
+                  <span className="text-purple-200 text-sm">Assign Element</span>
+                </label>
+                {useElement && (
+                  <Select value={uploadElement || "Fire"} onValueChange={setUploadElement}>
+                    <SelectTrigger className="w-28 bg-slate-700/50 border-purple-500/30">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(["Fire", "Water", "Earth", "Air", "Nature"] as Element[]).map((el) => {
+                        const Icon = elementConfig[el].icon;
+                        return (
+                          <SelectItem key={el} value={el}>
+                            <span className="flex items-center gap-2">
+                              <Icon className={`w-4 h-4 ${elementConfig[el].color}`} />
+                              {el}
+                            </span>
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+              
+              <Button
+                variant="outline"
+                className="gap-2"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading}
+                data-testid="button-select-files"
+              >
+                <Upload className="w-4 h-4" />
+                Select PNGs
+              </Button>
             </div>
             
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*"
+              accept="image/png,.png"
+              multiple
               className="hidden"
-              onChange={handleFileUpload}
+              onChange={handleFileSelect}
             />
+            
+            {/* File List */}
+            {bulkFiles.length > 0 && (
+              <div className="flex-1 overflow-hidden">
+                <div className="flex items-center justify-between mb-2">
+                  <Label className="text-purple-200">{bulkFiles.length} file{bulkFiles.length !== 1 ? "s" : ""} selected</Label>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setBulkFiles([])}
+                    className="text-red-400 hover:text-red-300"
+                    data-testid="button-clear-files"
+                  >
+                    Clear All
+                  </Button>
+                </div>
+                <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
+                  {bulkFiles.map((item, index) => (
+                    <div 
+                      key={index} 
+                      className="flex items-center gap-3 p-2 bg-slate-700/30 rounded-lg"
+                    >
+                      <img 
+                        src={item.preview} 
+                        alt={item.name}
+                        className="w-12 h-12 object-cover rounded"
+                      />
+                      <Input
+                        value={item.name}
+                        onChange={(e) => updateFileName(index, e.target.value)}
+                        className="flex-1 bg-slate-700/50 border-purple-500/30 text-white text-sm"
+                        data-testid={`input-file-name-${index}`}
+                      />
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => removeFile(index)}
+                        className="text-red-400 hover:text-red-300"
+                        data-testid={`button-remove-file-${index}`}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Progress Bar */}
+            {isUploading && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-purple-200">Uploading...</span>
+                  <span className="text-purple-300">{uploadProgress}%</span>
+                </div>
+                <div className="w-full bg-slate-700 rounded-full h-2">
+                  <div 
+                    className="bg-purple-500 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${uploadProgress}%` }}
+                  />
+                </div>
+              </div>
+            )}
+            
+            {bulkFiles.length === 0 && !isUploading && (
+              <div 
+                className="border-2 border-dashed border-purple-500/30 rounded-lg p-8 text-center cursor-pointer hover:border-purple-500/50 transition-colors"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Upload className="w-12 h-12 text-purple-400 mx-auto mb-3" />
+                <p className="text-purple-200">Click to select PNG files</p>
+                <p className="text-slate-400 text-sm mt-1">or drag and drop (multiple files supported)</p>
+              </div>
+            )}
           </div>
           
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowUploadDialog(false)}>Cancel</Button>
+            <Button 
+              variant="outline" 
+              onClick={() => { setBulkFiles([]); setShowUploadDialog(false); }}
+              disabled={isUploading}
+            >
+              Cancel
+            </Button>
             <Button
               className="gap-2"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={!uploadName || uploadMutation.isPending}
+              onClick={handleBulkUpload}
+              disabled={bulkFiles.length === 0 || isUploading}
+              data-testid="button-upload-all"
             >
-              {uploadMutation.isPending ? (
+              {isUploading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <Upload className="w-4 h-4" />
               )}
-              Select & Upload
+              Upload {bulkFiles.length > 0 ? `${bulkFiles.length} Files` : ""}
             </Button>
           </DialogFooter>
         </DialogContent>
