@@ -110,6 +110,7 @@ export default function AdminImageDatabasePage() {
     
     let successCount = 0;
     let failCount = 0;
+    let lastError = "";
     
     for (let i = 0; i < bulkFiles.length; i++) {
       const { file, name } = bulkFiles[i];
@@ -123,9 +124,10 @@ export default function AdminImageDatabasePage() {
         
         await uploadSingleImage(name, base64);
         successCount++;
-      } catch (error) {
+      } catch (error: any) {
         failCount++;
-        console.error(`Failed to upload ${name}:`, error);
+        lastError = error?.message || "Unknown error";
+        console.error(`Failed to upload ${name}:`, lastError);
       }
       setUploadProgress(Math.round(((i + 1) / bulkFiles.length) * 100));
     }
@@ -136,8 +138,10 @@ export default function AdminImageDatabasePage() {
     queryClient.invalidateQueries({ queryKey: ["/api/admin/card-images"] });
     
     toast({
-      title: "Bulk Upload Complete",
-      description: `Successfully uploaded ${successCount} image${successCount !== 1 ? "s" : ""}${failCount > 0 ? `, ${failCount} failed` : ""}`,
+      title: failCount > 0 ? "Upload Partially Failed" : "Bulk Upload Complete",
+      description: failCount > 0 
+        ? `Uploaded ${successCount}, failed ${failCount}. ${lastError ? `Error: ${lastError}` : "Check if images exceed size limit (50MB max per request)."}`
+        : `Successfully uploaded ${successCount} image${successCount !== 1 ? "s" : ""}!`,
       variant: failCount > 0 ? "destructive" : "default",
     });
   };
