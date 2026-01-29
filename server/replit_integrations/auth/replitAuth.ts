@@ -257,6 +257,34 @@ export async function setupAuth(app: Express) {
       });
     }
   });
+
+  // Diagnostic endpoint to check auth configuration in production
+  app.get("/api/auth/status", async (req, res) => {
+    const status: Record<string, any> = {
+      environment: process.env.REPLIT_DEPLOYMENT === "1" ? "production" : "development",
+      hostname: req.hostname,
+      replIdPresent: !!process.env.REPL_ID,
+      replIdPrefix: process.env.REPL_ID ? process.env.REPL_ID.substring(0, 8) : null,
+      sessionSecretPresent: !!process.env.SESSION_SECRET,
+      issuerUrl: process.env.ISSUER_URL || "https://replit.com/oidc (default)",
+      databaseUrlPresent: !!process.env.DATABASE_URL,
+      replitDomains: process.env.REPLIT_DOMAINS || "not set",
+    };
+
+    // Try OIDC discovery
+    try {
+      console.log("[auth/status] Testing OIDC discovery...");
+      const config = await getOidcConfig();
+      status.oidcDiscovery = "success";
+      status.issuer = config.serverMetadata().issuer;
+    } catch (error: any) {
+      status.oidcDiscovery = "failed";
+      status.oidcError = error?.message || "Unknown error";
+      console.error("[auth/status] OIDC discovery failed:", error?.message);
+    }
+
+    res.json(status);
+  });
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
