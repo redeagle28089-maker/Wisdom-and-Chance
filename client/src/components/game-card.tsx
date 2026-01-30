@@ -334,7 +334,7 @@ export function CardWithPopup({ enablePopup = true, ...props }: CardWithPopupPro
         </div>
         
         {/* Artwork - larger for web */}
-        <div className="px-6 py-2 pt-[70px] pb-[70px]">
+        <div className="px-6 py-2 pt-[8px] pb-[8px]">
           <div className="rounded-xl overflow-hidden border-2 border-slate-600">
             <img 
               src={card.imageUrl || config.cardArt} 
