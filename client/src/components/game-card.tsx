@@ -95,7 +95,7 @@ export const buffDebuffColorMap: Record<string, { bg: string; text: string; bord
 
 interface GameCardProps {
   card: CardType;
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "xl";
   showArt?: boolean;
   onClick?: () => void;
   selected?: boolean;
@@ -120,6 +120,7 @@ export function GameCard({
     sm: "w-20 h-30",      // 80×120px - compact size
     md: "w-24 h-36",      // 96×144px - game board standard (default)
     lg: "w-32 h-48",      // 128×192px - larger display
+    xl: "w-36 h-54",      // 144×216px - 50% bigger for Card Database/Deck Builder
   };
 
   if (faceDown) {
@@ -209,7 +210,7 @@ export function GameCard({
 
 interface CommanderCardProps {
   commander: Commander;
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "xl";
   onClick?: () => void;
   selected?: boolean;
 }
@@ -228,6 +229,7 @@ export function CommanderCard({
     sm: "w-24 h-36",      // 96×144px - compact
     md: "w-32 h-48",      // 128×192px - standard (default)
     lg: "w-40 h-60",      // 160×240px - larger display
+    xl: "w-48 h-72",      // 192×288px - 50% bigger for Card Database/Deck Builder
   };
 
   return (
@@ -332,13 +334,13 @@ export function CardWithPopup({ enablePopup = true, ...props }: CardWithPopupPro
           </div>
         </div>
         
-        {/* Artwork - object-cover fills the frame */}
+        {/* Artwork - object-cover fills the frame (50% bigger than before) */}
         <div className="px-6 py-2 pt-[8px] pb-[8px]">
           <div className="rounded-xl overflow-hidden border-2 border-slate-600">
             <img 
               src={card.imageUrl || config.cardArt} 
               alt={card.name}
-              className="w-full h-56 object-cover"
+              className="w-full h-84 object-cover"
             />
           </div>
         </div>
@@ -431,12 +433,12 @@ export function CommanderWithPopup({ enablePopup = true, ...props }: CommanderWi
             </div>
           </div>
 
-          {/* Commander artwork - object-cover fills the frame */}
+          {/* Commander artwork - object-cover fills the frame (50% bigger than before) */}
           <div className="relative">
             <img 
               src={commander.imageUrl || config.commanderArt} 
               alt={commander.name}
-              className="w-full h-56 object-cover"
+              className="w-full h-84 object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-slate-800 via-transparent to-transparent" />
           </div>
@@ -499,7 +501,7 @@ export function DeckBuilderCard({
 }: DeckBuilderCardProps) {
   return (
     <div className="relative group" data-testid={`deck-card-wrapper-${card.id}`}>
-      <CardWithPopup card={card} size="md" />
+      <CardWithPopup card={card} size="xl" />
 
       <div className="absolute bottom-8 left-0 right-0 flex items-center justify-between px-1 pointer-events-none">
         <Badge 

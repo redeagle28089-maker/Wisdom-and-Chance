@@ -227,7 +227,7 @@ export default function CardDatabasePage() {
             <div className="flex flex-wrap gap-4 justify-start">
               {displayCards.map((card) => (
                 <div key={card.id} className="relative group">
-                  <CardWithPopup card={card} size="md" />
+                  <CardWithPopup card={card} size="xl" />
                   {isAdmin && (
                     <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                       <Button

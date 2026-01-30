@@ -380,7 +380,7 @@ export default function DeckBuilderPage() {
                     <CommanderWithPopup
                       key={commander.id}
                       commander={commander}
-                      size="sm"
+                      size="xl"
                       onClick={() => setSelectedCommander(commander.id)}
                       selected={selectedCommander === commander.id}
                     />
