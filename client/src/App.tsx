@@ -4,9 +4,12 @@ import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
-import { ThemeToggle } from "@/components/theme-toggle";
-import { GameSidebar } from "@/components/game-sidebar";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+/**
+ * DROPDOWN NAVIGATION HEADER
+ * TO REVERT TO SIDEBAR: Replace NavHeader with GameSidebar + SidebarProvider setup
+ * See game-sidebar.tsx for the original sidebar code
+ */
+import { NavHeader } from "@/components/nav-header";
 /**
  * MOBILE LANDSCAPE ORIENTATION OVERLAY
  * TO REVERT: Remove this import and the <LandscapeOverlay /> component below
@@ -33,52 +36,40 @@ import AdminCardArtPage from "@/pages/admin-card-art";
 import AdminImageDatabasePage from "@/pages/admin-image-database";
 import NotFound from "@/pages/not-found";
 
+/**
+ * FULL-WIDTH LAYOUT WITH DROPDOWN NAVIGATION
+ * TO REVERT TO SIDEBAR: See game-sidebar.tsx for original SidebarProvider setup
+ */
 function AppContent() {
-  const sidebarStyle = {
-    "--sidebar-width": "16rem",
-    "--sidebar-width-icon": "3rem",
-  };
-
   return (
-    <SidebarProvider style={sidebarStyle as React.CSSProperties}>
-      <div className="flex h-screen w-full bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900">
-        <GameSidebar />
-        <div className="flex flex-col flex-1 overflow-hidden">
-          <header className="flex items-center justify-between gap-4 border-b border-purple-500/20 px-4 py-2 bg-slate-900/80 backdrop-blur">
-            <SidebarTrigger data-testid="button-sidebar-toggle" className="text-purple-200 hover:text-white" />
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-purple-300 hidden md:block">Wisdom & Chance TCG</span>
-              <ThemeToggle />
-            </div>
-          </header>
-          <main className="flex-1 overflow-auto">
-            <Switch>
-              <Route path="/" component={HomePage} />
-              <Route path="/rules" component={RulesPage} />
-              <Route path="/tutorial" component={TutorialPage} />
-              <Route path="/cards" component={CardDatabasePage} />
-              <Route path="/deck-builder" component={DeckBuilderPage} />
-              <Route path="/practice" component={PracticePage} />
-              <Route path="/game/:id" component={GameBoardPage} />
-              <Route path="/profile" component={ProfilePage} />
-              <Route path="/friends" component={FriendsPage} />
-              <Route path="/lobby" component={LobbyPage} />
-              <Route path="/room/:id" component={RoomPage} />
-              <Route path="/achievements" component={AchievementsPage} />
-              <Route path="/leaderboard" component={LeaderboardPage} />
-              <Route path="/challenges" component={DailyChallengesPage} />
-              <Route path="/analytics" component={AnalyticsPage} />
-              <Route path="/live-matches" component={LiveMatchesPage} />
-              <Route path="/lore" component={LoreArchivesPage} />
-              <Route path="/admin/card-art" component={AdminCardArtPage} />
-              <Route path="/admin/image-database" component={AdminImageDatabasePage} />
-              <Route path="/admin-card-art" component={AdminCardArtPage} />
-              <Route component={NotFound} />
-            </Switch>
-          </main>
-        </div>
-      </div>
-    </SidebarProvider>
+    <div className="flex flex-col h-screen w-full bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900">
+      <NavHeader />
+      <main className="flex-1 overflow-auto">
+        <Switch>
+          <Route path="/" component={HomePage} />
+          <Route path="/rules" component={RulesPage} />
+          <Route path="/tutorial" component={TutorialPage} />
+          <Route path="/cards" component={CardDatabasePage} />
+          <Route path="/deck-builder" component={DeckBuilderPage} />
+          <Route path="/practice" component={PracticePage} />
+          <Route path="/game/:id" component={GameBoardPage} />
+          <Route path="/profile" component={ProfilePage} />
+          <Route path="/friends" component={FriendsPage} />
+          <Route path="/lobby" component={LobbyPage} />
+          <Route path="/room/:id" component={RoomPage} />
+          <Route path="/achievements" component={AchievementsPage} />
+          <Route path="/leaderboard" component={LeaderboardPage} />
+          <Route path="/challenges" component={DailyChallengesPage} />
+          <Route path="/analytics" component={AnalyticsPage} />
+          <Route path="/live-matches" component={LiveMatchesPage} />
+          <Route path="/lore" component={LoreArchivesPage} />
+          <Route path="/admin/card-art" component={AdminCardArtPage} />
+          <Route path="/admin/image-database" component={AdminImageDatabasePage} />
+          <Route path="/admin-card-art" component={AdminCardArtPage} />
+          <Route component={NotFound} />
+        </Switch>
+      </main>
+    </div>
   );
 }
 
