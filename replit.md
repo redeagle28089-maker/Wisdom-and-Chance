@@ -8,6 +8,12 @@ A tactical trading card game simulator built with React, Express, and TypeScript
 **Current State:** Fully functional TCG with Google authentication, multiplayer rooms, friend system, and real-time gameplay.
 
 ## Recent Changes
+- **January 2026:** Card Display Size Improvements
+  - Added 'xl' size option to GameCard (144×216px) and CommanderCard (192×288px)
+  - Card Database and Deck Builder now use 'xl' size for 50% larger card displays
+  - Card/commander popup preview images increased 50% in height (h-56 → h-84)
+  - Game mode cards unchanged at original 96×144px size
+
 - **January 2026:** Production Authentication Fix
   - Replaced openid-client library with manual OIDC implementation using fetch
   - Fixed ESM/CJS bundling issues that caused `(0 , X.default) is not a function` errors in production
