@@ -253,12 +253,12 @@ export function CommanderCard({
         <p className="text-slate-400 text-xs">{commander.title}</p>
       </div>
       
-      {/* Commander artwork - object-contain to show entire image */}
-      <div className="relative flex-1 min-h-0 bg-slate-900">
+      {/* Commander artwork - object-cover fills the frame */}
+      <div className="relative flex-1 min-h-0">
         <img 
           src={commander.imageUrl || config.commanderArt} 
           alt={commander.name}
-          className="w-full h-full object-contain"
+          className="w-full h-full object-cover"
         />
       </div>
       
@@ -332,13 +332,13 @@ export function CardWithPopup({ enablePopup = true, ...props }: CardWithPopupPro
           </div>
         </div>
         
-        {/* Artwork - object-contain to show entire image */}
+        {/* Artwork - object-cover fills the frame */}
         <div className="px-6 py-2 pt-[8px] pb-[8px]">
-          <div className="rounded-xl overflow-hidden border-2 border-slate-600 bg-slate-900">
+          <div className="rounded-xl overflow-hidden border-2 border-slate-600">
             <img 
               src={card.imageUrl || config.cardArt} 
               alt={card.name}
-              className="w-full h-56 object-contain"
+              className="w-full h-56 object-cover"
             />
           </div>
         </div>
@@ -431,12 +431,12 @@ export function CommanderWithPopup({ enablePopup = true, ...props }: CommanderWi
             </div>
           </div>
 
-          {/* Commander artwork - object-contain to show entire image */}
-          <div className="relative bg-slate-900">
+          {/* Commander artwork - object-cover fills the frame */}
+          <div className="relative">
             <img 
               src={commander.imageUrl || config.commanderArt} 
               alt={commander.name}
-              className="w-full h-56 object-contain"
+              className="w-full h-56 object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-slate-800 via-transparent to-transparent" />
           </div>
