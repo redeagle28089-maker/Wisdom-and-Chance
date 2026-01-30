@@ -224,10 +224,10 @@ export default function CardDatabasePage() {
                 </Badge>
               )}
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
+            <div className="flex flex-wrap gap-4 justify-start">
               {displayCards.map((card) => (
                 <div key={card.id} className="relative group">
-                  <CardWithPopup card={card} />
+                  <CardWithPopup card={card} size="md" />
                   {isAdmin && (
                     <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                       <Button

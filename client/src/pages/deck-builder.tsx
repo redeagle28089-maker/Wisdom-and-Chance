@@ -426,7 +426,7 @@ export default function DeckBuilderPage() {
               </CardHeader>
               <CardContent>
                 <ScrollArea className="h-[500px]">
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 pb-4">
+                  <div className="flex flex-wrap gap-4 justify-start pb-4">
                     {uniqueCards.map((card) => {
                       const count = deckCards.get(card.id) || 0;
                       const powerCount = powerCounts[card.power];
@@ -621,7 +621,7 @@ export default function DeckBuilderPage() {
                                   
                                   {/* Card Grid */}
                                   <ScrollArea className="h-[250px]">
-                                    <div className="grid grid-cols-6 gap-2">
+                                    <div className="flex flex-wrap gap-2 justify-start">
                                       {viewingCards.map((card, i) => (
                                         <CardWithPopup
                                           key={`${card.id}-${i}`}

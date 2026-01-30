@@ -115,10 +115,11 @@ export function GameCard({
   const config = elementConfig[card.element];
   const TraitIcon = card.trait ? traitIcons[card.trait] : null;
 
+  // Standard card sizes - w-24 (96px) is the game board default
   const sizeClasses = {
-    sm: "w-20",
-    md: "w-full",
-    lg: "w-48",
+    sm: "w-20",      // 80px - compact size
+    md: "w-24",      // 96px - game board standard (default)
+    lg: "w-32",      // 128px - larger display
   };
 
   if (faceDown) {
@@ -222,10 +223,11 @@ export function CommanderCard({
   const config = elementConfig[commander.element];
   const ElementIcon = config.icon;
 
+  // Standard commander sizes - w-32 is the default (slightly wider than cards)
   const sizeClasses = {
-    sm: "w-24",
-    md: "w-full",
-    lg: "w-56",
+    sm: "w-24",      // 96px - compact
+    md: "w-32",      // 128px - standard (default)
+    lg: "w-40",      // 160px - larger display
   };
 
   return (
