@@ -305,92 +305,92 @@ export function CardWithPopup({ enablePopup = true, ...props }: CardWithPopupPro
           <GameCard {...props} onClick={onClick ?? (() => {})} />
         </div>
       </DialogTrigger>
-        <DialogContent 
-          className="max-w-lg w-[95vw] max-h-[90vh] overflow-y-auto p-0 bg-slate-800 border-2 border-slate-600 shadow-2xl rounded-xl"
-          data-testid="card-popup-dialog"
-        >
-          <DialogTitle className="sr-only">{card.name} Card Details</DialogTitle>
-          
-          {/* Header with card name and power */}
-          <div className="flex items-start justify-between p-6 pb-4">
-            <div className="flex-1">
-              <h3 className="text-white font-bold text-2xl" data-testid="card-popup-name">{card.name}</h3>
-              <div className="flex flex-wrap gap-2 mt-3">
-                <Badge className={`${config.headerBg} text-white text-sm px-3 py-1`} data-testid="card-popup-element">
-                  {card.element.toUpperCase()}
-                </Badge>
-                <Badge className="bg-purple-600 text-white text-sm px-3 py-1">
-                  WARRIOR
-                </Badge>
-                <Badge className="bg-orange-500 text-white text-sm px-3 py-1" data-testid="card-popup-rank">
-                  Rank {card.power}
-                </Badge>
-              </div>
-            </div>
-            <div className="bg-slate-700 rounded-xl px-6 py-3 text-center min-w-20" data-testid="card-popup-power">
-              <span className="text-white font-bold text-4xl">{card.power}</span>
-              <p className="text-slate-400 text-sm mt-1">Power</p>
+      <DialogContent 
+        className="max-w-lg w-[95vw] max-h-[90vh] overflow-y-auto p-0 bg-slate-800 border-2 border-slate-600 shadow-2xl rounded-xl"
+        data-testid="card-popup-dialog"
+      >
+        <DialogTitle className="sr-only">{card.name} Card Details</DialogTitle>
+        
+        {/* Header with card name and power */}
+        <div className="flex items-start justify-between p-6 pb-4">
+          <div className="flex-1">
+            <h3 className="text-white font-bold text-2xl" data-testid="card-popup-name">{card.name}</h3>
+            <div className="flex flex-wrap gap-2 mt-3">
+              <Badge className={`${config.headerBg} text-white text-sm px-3 py-1`} data-testid="card-popup-element">
+                {card.element.toUpperCase()}
+              </Badge>
+              <Badge className="bg-purple-600 text-white text-sm px-3 py-1">
+                WARRIOR
+              </Badge>
+              <Badge className="bg-orange-500 text-white text-sm px-3 py-1" data-testid="card-popup-rank">
+                Rank {card.power}
+              </Badge>
             </div>
           </div>
-          
-          {/* Artwork - larger for web */}
-          <div className="px-6 py-2">
-            <div className="rounded-xl overflow-hidden border-2 border-slate-600">
-              <img 
-                src={card.imageUrl || config.cardArt} 
-                alt={card.name}
-                className="w-full h-56 object-cover"
-              />
-            </div>
+          <div className="bg-slate-700 rounded-xl px-6 py-3 text-center min-w-20" data-testid="card-popup-power">
+            <span className="text-white font-bold text-4xl">{card.power}</span>
+            <p className="text-slate-400 text-sm mt-1">Power</p>
           </div>
-          
-          {/* Description */}
-          <div className="px-6 py-3" data-testid="card-popup-description">
-            <p className="text-slate-300 text-base leading-relaxed">
-              {card.description || `A powerful ${card.element} unit wielding elemental forces. Each strike is a testament to mastery over ${card.element.toLowerCase()}, inflicting both physical and magical damage.`}
-            </p>
+        </div>
+        
+        {/* Artwork - larger for web */}
+        <div className="px-6 py-2 pt-[70px] pb-[70px]">
+          <div className="rounded-xl overflow-hidden border-2 border-slate-600">
+            <img 
+              src={card.imageUrl || config.cardArt} 
+              alt={card.name}
+              className="w-full h-56 object-cover"
+            />
           </div>
+        </div>
+        
+        {/* Description */}
+        <div className="px-6 py-3" data-testid="card-popup-description">
+          <p className="text-slate-300 text-base leading-relaxed">
+            {card.description || `A powerful ${card.element} unit wielding elemental forces. Each strike is a testament to mastery over ${card.element.toLowerCase()}, inflicting both physical and magical damage.`}
+          </p>
+        </div>
 
-          {/* Trait section */}
-          {card.trait && (
-            <div className="mx-6 my-2 p-4 bg-slate-700/50 rounded-xl border border-slate-600" data-testid="card-popup-trait">
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  {TraitIcon && <TraitIcon className="w-6 h-6 text-yellow-400" />}
-                  <div>
-                    <h4 className="text-white font-bold text-lg" data-testid="card-popup-trait-name">{card.trait}</h4>
-                    <p className="text-slate-400 text-sm">Special Trait Ability</p>
-                  </div>
+        {/* Trait section */}
+        {card.trait && (
+          <div className="mx-6 my-2 p-4 bg-slate-700/50 rounded-xl border border-slate-600" data-testid="card-popup-trait">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                {TraitIcon && <TraitIcon className="w-6 h-6 text-yellow-400" />}
+                <div>
+                  <h4 className="text-white font-bold text-lg" data-testid="card-popup-trait-name">{card.trait}</h4>
+                  <p className="text-slate-400 text-sm">Special Trait Ability</p>
                 </div>
-                <Badge className="bg-yellow-600 text-white text-lg px-4 py-2 rounded-full" data-testid="card-popup-trait-value">
-                  {card.traitValue || 1}
-                </Badge>
               </div>
+              <Badge className="bg-yellow-600 text-white text-lg px-4 py-2 rounded-full" data-testid="card-popup-trait-value">
+                {card.traitValue || 1}
+              </Badge>
             </div>
-          )}
-
-          {/* Buff/Debuff boxes at bottom (uses card's element colors) */}
-          <div className="flex gap-4 p-6 pt-3">
-            {(() => {
-              const buffStyle = card.buffColor && buffDebuffColorMap[card.buffColor];
-              return (
-                <div className={`flex-1 p-4 rounded-xl ${buffStyle ? buffStyle.bg : config.headerBg}`} data-testid="card-popup-buff">
-                  <span className="text-white font-bold text-2xl">+{card.buffModifier}</span>
-                  <p className="text-white/80 text-sm mt-1">Buff: {card.buffColor?.toLowerCase() || card.element.toLowerCase()}</p>
-                </div>
-              );
-            })()}
-            {(() => {
-              const debuffStyle = card.debuffColor && buffDebuffColorMap[card.debuffColor];
-              return (
-                <div className={`flex-1 p-4 rounded-xl ${debuffStyle ? debuffStyle.bg : 'bg-orange-600'}`} data-testid="card-popup-debuff">
-                  <span className="text-white font-bold text-2xl">-{card.debuffModifier}</span>
-                  <p className="text-white/80 text-sm mt-1">Debuff: {card.debuffColor?.toLowerCase() || card.element.toLowerCase()}</p>
-                </div>
-              );
-            })()}
           </div>
-        </DialogContent>
+        )}
+
+        {/* Buff/Debuff boxes at bottom (uses card's element colors) */}
+        <div className="flex gap-4 p-6 pt-3">
+          {(() => {
+            const buffStyle = card.buffColor && buffDebuffColorMap[card.buffColor];
+            return (
+              <div className={`flex-1 p-4 rounded-xl ${buffStyle ? buffStyle.bg : config.headerBg}`} data-testid="card-popup-buff">
+                <span className="text-white font-bold text-2xl">+{card.buffModifier}</span>
+                <p className="text-white/80 text-sm mt-1">Buff: {card.buffColor?.toLowerCase() || card.element.toLowerCase()}</p>
+              </div>
+            );
+          })()}
+          {(() => {
+            const debuffStyle = card.debuffColor && buffDebuffColorMap[card.debuffColor];
+            return (
+              <div className={`flex-1 p-4 rounded-xl ${debuffStyle ? debuffStyle.bg : 'bg-orange-600'}`} data-testid="card-popup-debuff">
+                <span className="text-white font-bold text-2xl">-{card.debuffModifier}</span>
+                <p className="text-white/80 text-sm mt-1">Debuff: {card.debuffColor?.toLowerCase() || card.element.toLowerCase()}</p>
+              </div>
+            );
+          })()}
+        </div>
+      </DialogContent>
     </Dialog>
   );
 }
