@@ -168,12 +168,12 @@ export function GameCard({
       </div>
       
       {/* Full artwork section - fills remaining space, no overlays */}
-      <div className="flex-1 min-h-0 relative bg-slate-900">
+      <div className="flex-1 min-h-0 relative">
         {showArt ? (
           <img 
             src={card.imageUrl || config.cardArt} 
             alt={card.element}
-            className="absolute inset-0 w-full h-full object-contain"
+            className="absolute inset-0 w-full h-full object-cover"
           />
         ) : (
           <div className={`absolute inset-0 ${config.bgColor} opacity-90`} />
@@ -254,11 +254,11 @@ export function CommanderCard({
       </div>
       
       {/* Commander artwork */}
-      <div className="relative aspect-video bg-slate-900">
+      <div className="relative aspect-video">
         <img 
           src={commander.imageUrl || config.commanderArt} 
           alt={commander.name}
-          className="w-full h-full object-contain"
+          className="w-full h-full object-cover"
         />
       </div>
       
@@ -334,11 +334,11 @@ export function CardWithPopup({ enablePopup = true, ...props }: CardWithPopupPro
         
         {/* Artwork - larger for web */}
         <div className="px-6 py-2 pt-[8px] pb-[8px]">
-          <div className="rounded-xl overflow-hidden border-2 border-slate-600 bg-slate-900">
+          <div className="rounded-xl overflow-hidden border-2 border-slate-600">
             <img 
               src={card.imageUrl || config.cardArt} 
               alt={card.name}
-              className="w-full h-56 object-contain"
+              className="w-full h-56 object-cover"
             />
           </div>
         </div>
@@ -432,11 +432,11 @@ export function CommanderWithPopup({ enablePopup = true, ...props }: CommanderWi
           </div>
 
           {/* Artwork - larger for web */}
-          <div className="relative bg-slate-900">
+          <div className="relative">
             <img 
               src={commander.imageUrl || config.commanderArt} 
               alt={commander.name}
-              className="w-full h-56 object-contain"
+              className="w-full h-56 object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-slate-800 via-transparent to-transparent" />
           </div>
