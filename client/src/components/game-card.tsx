@@ -115,17 +115,17 @@ export function GameCard({
   const config = elementConfig[card.element];
   const TraitIcon = card.trait ? traitIcons[card.trait] : null;
 
-  // Standard card sizes - w-24 (96px) is the game board default
+  // Standard card sizes - w-24 h-36 (96×144px) matches game board sizing
   const sizeClasses = {
-    sm: "w-20",      // 80px - compact size
-    md: "w-24",      // 96px - game board standard (default)
-    lg: "w-32",      // 128px - larger display
+    sm: "w-20 h-30",      // 80×120px - compact size
+    md: "w-24 h-36",      // 96×144px - game board standard (default)
+    lg: "w-32 h-48",      // 128×192px - larger display
   };
 
   if (faceDown) {
     return (
       <div
-        className={`relative ${sizeClasses[size]} aspect-[3/4] rounded-lg border-4 border-purple-600 overflow-hidden shadow-lg bg-gradient-to-br from-purple-900 to-slate-900`}
+        className={`relative ${sizeClasses[size]} rounded-lg border-4 border-purple-600 overflow-hidden shadow-lg bg-gradient-to-br from-purple-900 to-slate-900`}
         data-testid={`card-${card.id}-facedown`}
       >
         <div className="absolute inset-0 flex items-center justify-center">
@@ -145,7 +145,7 @@ export function GameCard({
   return (
     <div
       onClick={disabled ? undefined : onClick}
-      className={`${sizeClasses[size]} aspect-[3/4] rounded-lg border-2 ${config.solidBorder} overflow-hidden shadow-lg transition-all duration-200 bg-slate-900 flex flex-col
+      className={`${sizeClasses[size]} rounded-lg border-2 ${config.solidBorder} overflow-hidden shadow-lg transition-all duration-200 bg-slate-900 flex flex-col
         ${onClick && !disabled ? "cursor-pointer hover-elevate" : ""}
         ${selected ? "ring-2 ring-yellow-400 ring-offset-2 ring-offset-slate-900" : ""}
         ${disabled ? "opacity-50 cursor-not-allowed" : ""}
@@ -223,17 +223,17 @@ export function CommanderCard({
   const config = elementConfig[commander.element];
   const ElementIcon = config.icon;
 
-  // Standard commander sizes - w-32 is the default (slightly wider than cards)
+  // Standard commander sizes - w-32 h-48 (128×192px) matches proportions
   const sizeClasses = {
-    sm: "w-24",      // 96px - compact
-    md: "w-32",      // 128px - standard (default)
-    lg: "w-40",      // 160px - larger display
+    sm: "w-24 h-36",      // 96×144px - compact
+    md: "w-32 h-48",      // 128×192px - standard (default)
+    lg: "w-40 h-60",      // 160×240px - larger display
   };
 
   return (
     <div
       onClick={onClick}
-      className={`relative ${sizeClasses[size]} rounded-xl overflow-hidden shadow-xl transition-all duration-200 bg-slate-800
+      className={`relative ${sizeClasses[size]} rounded-xl overflow-hidden shadow-xl transition-all duration-200 bg-slate-800 flex flex-col
         ${onClick ? "cursor-pointer hover-elevate" : ""}
         ${selected ? "ring-2 ring-yellow-400 ring-offset-2 ring-offset-slate-900" : ""}
       `}
@@ -253,12 +253,12 @@ export function CommanderCard({
         <p className="text-slate-400 text-xs">{commander.title}</p>
       </div>
       
-      {/* Commander artwork */}
-      <div className="relative aspect-video">
+      {/* Commander artwork - object-contain to show entire image */}
+      <div className="relative flex-1 min-h-0 bg-slate-900">
         <img 
           src={commander.imageUrl || config.commanderArt} 
           alt={commander.name}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-contain"
         />
       </div>
       
@@ -332,13 +332,13 @@ export function CardWithPopup({ enablePopup = true, ...props }: CardWithPopupPro
           </div>
         </div>
         
-        {/* Artwork - larger for web */}
+        {/* Artwork - object-contain to show entire image */}
         <div className="px-6 py-2 pt-[8px] pb-[8px]">
-          <div className="rounded-xl overflow-hidden border-2 border-slate-600">
+          <div className="rounded-xl overflow-hidden border-2 border-slate-600 bg-slate-900">
             <img 
               src={card.imageUrl || config.cardArt} 
               alt={card.name}
-              className="w-full h-56 object-cover"
+              className="w-full h-56 object-contain"
             />
           </div>
         </div>
@@ -431,12 +431,12 @@ export function CommanderWithPopup({ enablePopup = true, ...props }: CommanderWi
             </div>
           </div>
 
-          {/* Artwork - larger for web */}
-          <div className="relative">
+          {/* Commander artwork - object-contain to show entire image */}
+          <div className="relative bg-slate-900">
             <img 
               src={commander.imageUrl || config.commanderArt} 
               alt={commander.name}
-              className="w-full h-56 object-cover"
+              className="w-full h-56 object-contain"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-slate-800 via-transparent to-transparent" />
           </div>
