@@ -93,10 +93,10 @@ export function NavHeader() {
         {items.map((item) => (
           <Link key={item.title} href={item.url}>
             <div
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors cursor-pointer
+              className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer hover-elevate active-elevate-2
                 ${location === item.url 
                   ? 'bg-purple-600/30 text-white' 
-                  : 'text-purple-200 hover:bg-purple-500/20 hover:text-white'
+                  : 'text-purple-200'
                 }`}
               data-testid={`nav-${item.title.toLowerCase().replace(/\s+/g, '-')}`}
             >
@@ -110,9 +110,9 @@ export function NavHeader() {
   );
 
   return (
-    <header className="sticky top-0 z-50 flex items-center justify-between gap-4 border-b border-purple-500/20 px-4 py-2 bg-slate-900/95 backdrop-blur">
+    <header className="sticky top-0 z-[9999] flex items-center justify-between gap-4 border-b border-purple-500/20 px-4 py-2 bg-slate-900/95 backdrop-blur">
       {/* Left side: Logo + Title */}
-      <div className="flex items-center gap-3" ref={menuRef}>
+      <div className="relative flex items-center gap-3" ref={menuRef}>
         {/* Clickable Logo */}
         <button
           onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -131,11 +131,11 @@ export function NavHeader() {
 
         {/* Dropdown Menu */}
         {isMenuOpen && (
-          <div className="absolute top-full left-4 mt-2 w-72 max-h-[80vh] overflow-y-auto bg-slate-900 border border-purple-500/30 rounded-xl shadow-2xl shadow-purple-900/50 p-4 z-50">
+          <div className="absolute top-full left-0 mt-2 w-72 max-h-[80vh] overflow-y-auto bg-slate-900 border border-purple-500/30 rounded-xl shadow-2xl shadow-purple-900/50 p-4 z-[9999]">
             {/* Close button for mobile */}
             <button
               onClick={() => setIsMenuOpen(false)}
-              className="absolute top-2 right-2 p-1 text-purple-400 hover:text-white sm:hidden"
+              className="absolute top-2 right-2 p-1 text-purple-400 hover-elevate rounded sm:hidden"
               data-testid="button-close-menu"
             >
               <X className="w-5 h-5" />
@@ -179,7 +179,7 @@ export function NavHeader() {
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    className="w-full border-purple-500/30 text-purple-200 hover:bg-purple-500/20"
+                    className="w-full border-purple-500/30 text-purple-200"
                     data-testid="button-logout"
                     onClick={() => { window.location.href = "/api/logout"; }}
                   >
