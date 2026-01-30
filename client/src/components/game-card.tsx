@@ -137,72 +137,69 @@ export function GameCard({
     );
   }
 
+  // Get buff/debuff colors
+  const buffColorStyle = card.buffColor && buffDebuffColorMap[card.buffColor];
+  const debuffColorStyle = card.debuffColor && buffDebuffColorMap[card.debuffColor];
+
   return (
     <div
       onClick={disabled ? undefined : onClick}
-      className={`relative ${sizeClasses[size]} aspect-[3/4] rounded-lg border-4 ${config.solidBorder} overflow-hidden shadow-lg transition-all duration-200
+      className={`${sizeClasses[size]} aspect-[3/4] rounded-lg border-2 ${config.solidBorder} overflow-hidden shadow-lg transition-all duration-200 bg-slate-900 flex flex-col
         ${onClick && !disabled ? "cursor-pointer hover-elevate" : ""}
         ${selected ? "ring-2 ring-yellow-400 ring-offset-2 ring-offset-slate-900" : ""}
         ${disabled ? "opacity-50 cursor-not-allowed" : ""}
       `}
       data-testid={`card-${card.id}`}
     >
-      {showArt ? (
-        <img 
-          src={card.imageUrl || config.cardArt} 
-          alt={card.element}
-          className="absolute inset-0 w-full h-full object-cover"
-        />
-      ) : (
-        <div className={`absolute inset-0 ${config.bgColor} opacity-90`} />
-      )}
-      
-      {/* Power/Rank badge - top left (always visible) */}
-      <div className="absolute top-1.5 left-1.5 min-w-7 h-7 px-1.5 bg-slate-900/90 rounded flex items-center justify-center text-white font-bold text-sm shadow-lg border border-white/30" data-testid={`card-power-${card.id}`}>
-        {card.power}
+      {/* Header row with power and trait - fixed compact height */}
+      <div className="flex items-center justify-between gap-1 px-1 py-0.5 bg-slate-800 shrink-0">
+        <div className="min-w-5 h-5 px-1 bg-slate-900 rounded flex items-center justify-center text-white font-bold text-xs border border-white/20" data-testid={`card-power-${card.id}`}>
+          {card.power}
+        </div>
+        <div className={`min-w-5 h-5 px-1 rounded flex items-center justify-center font-bold text-[10px] gap-0.5 ${
+          card.trait 
+            ? 'bg-purple-600 text-white' 
+            : 'bg-slate-700 text-slate-400'
+        }`} data-testid={`card-trait-${card.id}`}>
+          <span>{card.trait ? (card.traitValue ?? 1) : 0}</span>
+          {TraitIcon && <TraitIcon className="w-2.5 h-2.5" />}
+        </div>
       </div>
       
-      {/* Trait value badge - top right (always visible - purple when has trait, gray when none; defaults to 1 if trait exists) */}
-      <div className={`absolute top-1.5 right-1.5 min-w-7 h-7 px-1.5 rounded flex items-center justify-center font-bold text-xs shadow-lg gap-0.5 border ${
-        card.trait 
-          ? 'bg-purple-600/90 text-white border-purple-400/50' 
-          : 'bg-slate-700/80 text-slate-400 border-slate-500/30'
-      }`} data-testid={`card-trait-${card.id}`}>
-        <span>{card.trait ? (card.traitValue ?? 1) : 0}</span>
-        {TraitIcon && <TraitIcon className="w-3 h-3" />}
+      {/* Full artwork section - fills remaining space, no overlays */}
+      <div className="flex-1 min-h-0 relative">
+        {showArt ? (
+          <img 
+            src={card.imageUrl || config.cardArt} 
+            alt={card.element}
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        ) : (
+          <div className={`absolute inset-0 ${config.bgColor} opacity-90`} />
+        )}
       </div>
       
-      {/* Buff badge - bottom left (always visible - uses card's buff color) */}
-      {(() => {
-        const buffColorStyle = card.buffColor && buffDebuffColorMap[card.buffColor];
-        return (
-          <div className={`absolute bottom-7 left-1.5 min-w-7 h-6 px-1.5 rounded flex items-center justify-center font-bold text-xs shadow-lg ${
-            card.buffModifier > 0 
-              ? buffColorStyle ? `${buffColorStyle.bg} ${buffColorStyle.text} ${buffColorStyle.border}` : 'bg-cyan-500/90 text-white border border-cyan-300/50'
-              : 'bg-slate-700/80 text-slate-400 border border-slate-500/30'
-          }`} data-testid={`card-buff-${card.id}`}>
-            +{card.buffModifier}
-          </div>
-        );
-      })()}
+      {/* Footer with buff/debuff row - fixed compact height */}
+      <div className="flex items-center gap-0.5 px-0.5 py-0.5 bg-slate-800 shrink-0">
+        <div className={`flex-1 h-4 rounded-sm flex items-center justify-center font-bold text-[10px] ${
+          card.buffModifier > 0 
+            ? buffColorStyle ? `${buffColorStyle.bg} ${buffColorStyle.text}` : 'bg-cyan-600 text-white'
+            : 'bg-slate-700 text-slate-400'
+        }`} data-testid={`card-buff-${card.id}`}>
+          +{card.buffModifier}
+        </div>
+        <div className={`flex-1 h-4 rounded-sm flex items-center justify-center font-bold text-[10px] ${
+          card.debuffModifier > 0 
+            ? debuffColorStyle ? `${debuffColorStyle.bg} ${debuffColorStyle.text}` : 'bg-orange-600 text-white'
+            : 'bg-slate-700 text-slate-400'
+        }`} data-testid={`card-debuff-${card.id}`}>
+          -{card.debuffModifier}
+        </div>
+      </div>
       
-      {/* Debuff badge - bottom right (always visible - uses card's debuff color) */}
-      {(() => {
-        const debuffColorStyle = card.debuffColor && buffDebuffColorMap[card.debuffColor];
-        return (
-          <div className={`absolute bottom-7 right-1.5 min-w-7 h-6 px-1.5 rounded flex items-center justify-center font-bold text-xs shadow-lg ${
-            card.debuffModifier > 0 
-              ? debuffColorStyle ? `${debuffColorStyle.bg} ${debuffColorStyle.text} ${debuffColorStyle.border}` : 'bg-orange-500/90 text-white border border-orange-300/50'
-              : 'bg-slate-700/80 text-slate-400 border border-slate-500/30'
-          }`} data-testid={`card-debuff-${card.id}`}>
-            -{card.debuffModifier}
-          </div>
-        );
-      })()}
-      
-      {/* Card name and UNIT label at bottom */}
-      <div className="absolute bottom-0 left-0 right-0 bg-slate-900/95 py-1 text-center">
-        <p className="text-white font-semibold text-[10px] leading-tight truncate px-1">{card.name}</p>
+      {/* Card name and UNIT label at bottom - fixed compact height */}
+      <div className="bg-slate-900 py-0.5 text-center shrink-0">
+        <p className="text-white font-semibold text-[9px] leading-tight truncate px-1">{card.name}</p>
         <span className="text-purple-300 font-bold text-[8px] tracking-wider">UNIT</span>
       </div>
     </div>
