@@ -503,7 +503,7 @@ export function DeckBuilderCard({
     <div className="relative group" data-testid={`deck-card-wrapper-${card.id}`}>
       <CardWithPopup card={card} size="xl" />
 
-      <div className="absolute bottom-8 left-0 right-0 flex items-center justify-between px-1 pointer-events-none">
+      <div className="absolute bottom-1 left-1 pointer-events-none">
         <Badge 
           variant="secondary" 
           className={`text-xs font-bold pointer-events-auto ${count > 0 ? 'bg-green-600 text-white' : 'bg-slate-700 text-slate-300'}`}
