@@ -145,6 +145,8 @@ export const gameStateSchema = z.object({
   player2Yard: z.array(z.string()),
   lastCombatLog: combatLogSchema.optional(),
   combatHistory: z.array(combatLogSchema).optional(),
+  player1HasDrawn: z.boolean().optional(),
+  player2HasDrawn: z.boolean().optional(),
 });
 
 export type GameState = z.infer<typeof gameStateSchema>;

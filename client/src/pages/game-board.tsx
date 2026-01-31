@@ -1956,10 +1956,58 @@ export default function GameBoardPage() {
       }
     }
 
-    updateGameMutation.mutate({
-      currentPhase: "deployment",
-      gameState: newGameState,
-    });
+    // In multiplayer, both players need to draw before moving to deployment
+    // In practice mode, AI draws simultaneously so we can go straight to deployment
+    const isMultiplayerGame = game.gameType === "multiplayer";
+    
+    if (isMultiplayerGame) {
+      const opponentId = isPlayer1 ? game.player2Id! : game.player1Id;
+      
+      // Default undefined flags to false for backwards compatibility
+      const prevP1Drawn = game.gameState.player1HasDrawn ?? false;
+      const prevP2Drawn = game.gameState.player2HasDrawn ?? false;
+      
+      // Guard against double-draw - if player already drew this phase, ignore
+      if ((isPlayer1 && prevP1Drawn) || (!isPlayer1 && prevP2Drawn)) {
+        toast({ title: "You already drew this turn!", variant: "destructive" });
+        return;
+      }
+      
+      // Track draw state in gameState - if both have drawn, move to deployment
+      if (isPlayer1) {
+        newGameState.player1HasDrawn = true;
+        newGameState.player2HasDrawn = prevP2Drawn;
+      } else {
+        newGameState.player1HasDrawn = prevP1Drawn;
+        newGameState.player2HasDrawn = true;
+      }
+      
+      const bothDrawn = newGameState.player1HasDrawn && newGameState.player2HasDrawn;
+      
+      if (bothDrawn) {
+        // Reset draw flags for next turn
+        newGameState.player1HasDrawn = false;
+        newGameState.player2HasDrawn = false;
+        updateGameMutation.mutate({
+          currentPhase: "deployment",
+          activePlayer: game.player1Id, // Player 1 deploys first
+          gameState: newGameState,
+        });
+      } else {
+        // Switch to other player for their draw
+        updateGameMutation.mutate({
+          currentPhase: "draw",
+          activePlayer: opponentId,
+          gameState: newGameState,
+        });
+      }
+    } else {
+      // Practice mode - go straight to deployment
+      updateGameMutation.mutate({
+        currentPhase: "deployment",
+        gameState: newGameState,
+      });
+    }
     toast({ title: `Drew ${cardsToDraw} cards!` });
   };
 
@@ -2238,9 +2286,18 @@ export default function GameBoardPage() {
   handleCalculationRef.current = handleCalculation;
 
   const handleEndPhase = () => {
+    // In multiplayer, new turns always start with player1 drawing first
+    // In practice mode, toggle between players (but typically player1 is always active)
+    const isMultiplayerGame = game.gameType === "multiplayer";
     updateGameMutation.mutate({
       currentPhase: "draw",
-      activePlayer: game.activePlayer === game.player1Id ? game.player2Id! : game.player1Id,
+      currentTurn: game.currentTurn + 1,
+      activePlayer: isMultiplayerGame ? game.player1Id : game.player1Id,
+      gameState: {
+        ...game.gameState,
+        player1HasDrawn: false,
+        player2HasDrawn: false,
+      },
     });
   };
 
@@ -2361,6 +2418,15 @@ export default function GameBoardPage() {
         <div className="flex justify-center items-center gap-4">
           <Card className="bg-purple-900/50 border-purple-500/30 p-4">
             <div className="flex items-center gap-4">
+              {/* Multiplayer waiting message when it's not your turn */}
+              {game.gameType === "multiplayer" && !isMyTurn && (
+                <div className="flex items-center gap-2 text-amber-300" data-testid="text-waiting-opponent">
+                  <div className="animate-pulse w-2 h-2 rounded-full bg-amber-400"></div>
+                  <span className="text-sm">
+                    Waiting for opponent to {game.currentPhase === "draw" ? "draw cards" : game.currentPhase === "deployment" ? "deploy cards" : "take action"}...
+                  </span>
+                </div>
+              )}
               {game.currentPhase === "draw" && isMyTurn && (
                 <Button onClick={handleDraw} className="bg-gradient-to-r from-cyan-600 to-blue-600" data-testid="button-draw">
                   <ArrowRight className="w-4 h-4 mr-2" />

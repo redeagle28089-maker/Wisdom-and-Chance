@@ -519,6 +519,8 @@ export function registerMultiplayerRoutes(app: Express) {
       player2Battlefield: [],
       player1Yard: [],
       player2Yard: [],
+      player1HasDrawn: false,
+      player2HasDrawn: false,
     };
 
     const gameData = {
