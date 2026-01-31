@@ -235,52 +235,44 @@ export function CommanderCard({
   return (
     <div
       onClick={onClick}
-      className={`relative ${sizeClasses[size]} rounded-xl overflow-hidden shadow-xl transition-all duration-200 bg-slate-800 flex flex-col
+      className={`relative ${sizeClasses[size]} rounded-xl overflow-hidden shadow-xl transition-all duration-200 bg-slate-800
         ${onClick ? "cursor-pointer hover-elevate" : ""}
         ${selected ? "ring-2 ring-yellow-400 ring-offset-2 ring-offset-slate-900" : ""}
       `}
       data-testid={`commander-${commander.id}`}
     >
-      {/* Header bar with element color */}
-      <div className={`${config.headerBg} px-3 py-2 flex items-center gap-2`}>
-        <ElementIcon className="w-4 h-4 text-white" />
-        <span className="text-white text-xs font-bold uppercase tracking-wide">
+      {/* Full artwork as background - fills entire card */}
+      <img 
+        src={commander.imageUrl || config.commanderArt} 
+        alt={commander.name}
+        className="absolute inset-0 w-full h-full object-cover"
+      />
+      
+      {/* Top header bar with element - compact overlay */}
+      <div className={`absolute top-0 left-0 right-0 ${config.headerBg} px-2 py-1 flex items-center gap-1.5 bg-opacity-90`}>
+        <ElementIcon className="w-3 h-3 text-white" />
+        <span className="text-white text-[10px] font-bold uppercase tracking-wide truncate">
           {commander.element} Commander
         </span>
       </div>
       
-      {/* Commander name */}
-      <div className="px-3 py-2 bg-slate-800">
-        <h3 className="text-white font-bold text-sm">{commander.name}</h3>
-        <p className="text-slate-400 text-xs">{commander.title}</p>
-      </div>
-      
-      {/* Commander artwork - object-cover fills the frame */}
-      <div className="relative flex-1 min-h-0">
-        <img 
-          src={commander.imageUrl || config.commanderArt} 
-          alt={commander.name}
-          className="w-full h-full object-cover"
-        />
-      </div>
-      
-      {/* Description */}
-      <div className="px-3 py-2 bg-slate-800">
-        <p className="text-slate-300 text-xs leading-relaxed line-clamp-2">
-          {commander.description}
-        </p>
-      </div>
-      
-      {/* Abilities list */}
-      <div className="px-3 py-2 bg-slate-900/50 space-y-1.5">
-        {commander.abilities.slice(0, 3).map((ability, index) => (
-          <div key={index} className="flex items-start gap-2">
-            <span className="text-white text-xs font-medium flex-1">{ability.name}</span>
-            <Badge className="bg-purple-600 text-white text-[10px] px-1.5 py-0 h-4">
-              P {ability.victoryCost || ability.withdrawalCost || 1}
+      {/* Bottom overlay with name and abilities - gradient fade */}
+      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/95 via-black/80 to-transparent pt-8 pb-2 px-2">
+        {/* Commander name and title */}
+        <h3 className="text-white font-bold text-sm leading-tight truncate">{commander.name}</h3>
+        <p className="text-slate-300 text-[10px] truncate mb-1.5">{commander.title}</p>
+        
+        {/* Abilities as compact row of badges */}
+        <div className="flex flex-wrap gap-1">
+          {commander.abilities.slice(0, 3).map((ability, index) => (
+            <Badge 
+              key={index} 
+              className="bg-purple-600/90 text-white text-[8px] px-1.5 py-0 h-4 truncate max-w-full"
+            >
+              {ability.name}
             </Badge>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   );
