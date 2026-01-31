@@ -374,7 +374,7 @@ export default function DeckBuilderPage() {
                   Choose Commander
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-6 pt-[155px] pb-[155px]">
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                   {commanders.map((commander) => (
                     <CommanderWithPopup
