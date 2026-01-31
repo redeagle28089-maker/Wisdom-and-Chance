@@ -187,6 +187,14 @@ export default function RoomPage() {
     return unsubscribe;
   }, [subscribe, navigate]);
 
+  // Fallback: if room has gameId set (game started), navigate to it
+  // This handles cases where WebSocket event is missed
+  useEffect(() => {
+    if (room?.gameId && room?.status === "in_progress") {
+      navigate(`/game/${room.gameId}`);
+    }
+  }, [room?.gameId, room?.status, navigate]);
+
   const leaveRoomMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest("POST", `/api/rooms/${roomId}/leave`);

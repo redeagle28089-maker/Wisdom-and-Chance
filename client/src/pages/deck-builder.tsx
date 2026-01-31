@@ -379,7 +379,7 @@ export default function DeckBuilderPage() {
                   {commanders.map((commander) => (
                     <div 
                       key={commander.id}
-                      className="commander-container flex items-center justify-center"
+                      className="commander-container flex items-center justify-center p-2 border-2 border-dashed border-purple-500/50 rounded-xl"
                       data-testid={`commander-container-${commander.id}`}
                     >
                       <CommanderWithPopup
