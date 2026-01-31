@@ -415,7 +415,9 @@ export function registerMultiplayerRoutes(app: Express) {
 
     const userId = (req.user as any).claims.sub;
     const { id } = req.params;
-    const { ready, deckId } = req.body;
+    // Default ready to true if not specified (since calling this endpoint implies wanting to be ready)
+    const ready = req.body.ready !== false; // Only false if explicitly false
+    const deckId = req.body.deckId;
 
     const [room] = await db.select().from(gameRooms).where(eq(gameRooms.id, id));
 
