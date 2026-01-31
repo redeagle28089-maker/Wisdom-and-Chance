@@ -377,13 +377,18 @@ export default function DeckBuilderPage() {
               <CardContent className="p-6 pt-[155px] pb-[155px]">
                 <div className="flex flex-wrap justify-evenly items-center gap-6">
                   {commanders.map((commander) => (
-                    <CommanderWithPopup
+                    <div 
                       key={commander.id}
-                      commander={commander}
-                      size="xl"
-                      onClick={() => setSelectedCommander(commander.id)}
-                      selected={selectedCommander === commander.id}
-                    />
+                      className="commander-container flex items-center justify-center"
+                      data-testid={`commander-container-${commander.id}`}
+                    >
+                      <CommanderWithPopup
+                        commander={commander}
+                        size="xl"
+                        onClick={() => setSelectedCommander(commander.id)}
+                        selected={selectedCommander === commander.id}
+                      />
+                    </div>
                   ))}
                 </div>
               </CardContent>
