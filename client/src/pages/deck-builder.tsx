@@ -375,7 +375,7 @@ export default function DeckBuilderPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-6 pt-[155px] pb-[155px]">
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                <div className="flex flex-wrap justify-evenly items-center gap-6">
                   {commanders.map((commander) => (
                     <CommanderWithPopup
                       key={commander.id}
