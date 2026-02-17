@@ -523,6 +523,8 @@ export function registerMultiplayerRoutes(app: Express) {
       player2Yard: [],
       player1HasDrawn: false,
       player2HasDrawn: false,
+      player1CommanderId: hostDeck.commanderId,
+      player2CommanderId: guestDeck.commanderId,
     };
 
     const gameData = {

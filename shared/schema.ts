@@ -147,6 +147,37 @@ export const gameStateSchema = z.object({
   combatHistory: z.array(combatLogSchema).optional(),
   player1HasDrawn: z.boolean().optional(),
   player2HasDrawn: z.boolean().optional(),
+  player1CommanderId: z.string().optional(),
+  player2CommanderId: z.string().optional(),
+  player1AbilityBuffs: z.array(z.object({
+    targetElement: z.string(),
+    amount: z.number(),
+    type: z.string(),
+  })).optional(),
+  player2AbilityBuffs: z.array(z.object({
+    targetElement: z.string(),
+    amount: z.number(),
+    type: z.string(),
+  })).optional(),
+  player1ExtraDeploy: z.number().optional(),
+  player2ExtraDeploy: z.number().optional(),
+  player1BlockedEffects: z.boolean().optional(),
+  player2BlockedEffects: z.boolean().optional(),
+  player1NegateAndHalve: z.boolean().optional(),
+  player2NegateAndHalve: z.boolean().optional(),
+  player1ProtectedElement: z.string().optional(),
+  player2ProtectedElement: z.string().optional(),
+  abilityLog: z.array(z.object({
+    turn: z.number(),
+    phase: z.string(),
+    playerId: z.string(),
+    abilityId: z.string(),
+    abilityName: z.string(),
+    commanderName: z.string(),
+    victoryCost: z.number(),
+    withdrawalCost: z.number(),
+    effectDescription: z.string(),
+  })).optional(),
 });
 
 export type GameState = z.infer<typeof gameStateSchema>;

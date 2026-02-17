@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { Heart, Swords, Trophy, Flag, ArrowRight, Shield, Flame, Droplet, Mountain, Wind, Leaf, RotateCcw, LogIn, MessageSquare, Eye, Send, X, Zap, Sparkles, Plus, Scroll, History } from "lucide-react";
-import type { Game, Card as CardType, Element, BattlefieldCard, GameMode } from "@shared/schema";
+import type { Game, Card as CardType, Element, BattlefieldCard, GameMode, Commander, CommanderAbility } from "@shared/schema";
 import { GAME_CONSTANTS, GAME_MODE_CONFIG } from "@shared/schema";
 import { getCardIdFromInstance } from "@/lib/card-utils";
 
@@ -106,39 +106,82 @@ interface CombatSummary {
   log: CombatLogEntry[];
 }
 
+interface AbilityBuff {
+  targetElement: string;
+  amount: number;
+  type: string;
+}
+
 function calculateBattlePower(
   friendlyCards: CardType[],
   enemyCards: CardType[],
-  getCardById: (id: string) => CardType | undefined
+  getCardById: (id: string) => CardType | undefined,
+  friendlyAbilityBuffs?: AbilityBuff[],
+  enemyBlockedEffects?: boolean,
+  enemyNegateAndHalve?: boolean,
+  friendlyProtectedElement?: string,
 ): CardPowerBreakdown[] {
   return friendlyCards.map(card => {
     const basePower = card.power;
     const buffBonuses: { fromCard: CardType; amount: number }[] = [];
     const debuffPenalties: { fromCard: CardType; amount: number }[] = [];
     
+    // If enemy used negate_and_halve, halve non-matching element cards
+    let halvedPower = basePower;
+    if (enemyNegateAndHalve) {
+      halvedPower = Math.floor(basePower / 2);
+    }
+    
     // Buffs from OTHER friendly cards that match this card's element
-    friendlyCards.forEach(friendlyCard => {
-      if (friendlyCard.id !== card.id && friendlyCard.buffModifier > 0 && friendlyCard.buffColor) {
-        const buffElement = colorToElement[friendlyCard.buffColor];
-        if (buffElement === card.element) {
-          buffBonuses.push({ fromCard: friendlyCard, amount: friendlyCard.buffModifier });
+    // Skip if enemy blocked our effects
+    if (!enemyBlockedEffects) {
+      friendlyCards.forEach(friendlyCard => {
+        if (friendlyCard.id !== card.id && friendlyCard.buffModifier > 0 && friendlyCard.buffColor) {
+          const buffElement = colorToElement[friendlyCard.buffColor];
+          if (buffElement === card.element) {
+            buffBonuses.push({ fromCard: friendlyCard, amount: friendlyCard.buffModifier });
+          }
         }
-      }
-    });
+      });
+    }
+    
+    // Commander ability buffs (buff, heal, growth types)
+    if (friendlyAbilityBuffs) {
+      friendlyAbilityBuffs.forEach(ab => {
+        if (ab.amount > 0 && (ab.targetElement === "all" || ab.targetElement === card.element.toLowerCase())) {
+          buffBonuses.push({ fromCard: card, amount: ab.amount });
+        }
+      });
+    }
+    
+    const isProtected = friendlyProtectedElement && card.element.toLowerCase() === friendlyProtectedElement.toLowerCase();
     
     // Debuffs from enemy cards that target this card's element
-    enemyCards.forEach(enemyCard => {
-      if (enemyCard.debuffModifier > 0 && enemyCard.debuffColor) {
-        const debuffElement = colorToElement[enemyCard.debuffColor];
-        if (debuffElement === card.element) {
-          debuffPenalties.push({ fromCard: enemyCard, amount: enemyCard.debuffModifier });
+    // Skip if enemy used negate_and_halve (enemy effects are negated) or card is protected
+    if (!enemyNegateAndHalve && !isProtected) {
+      enemyCards.forEach(enemyCard => {
+        if (enemyCard.debuffModifier > 0 && enemyCard.debuffColor) {
+          const debuffElement = colorToElement[enemyCard.debuffColor];
+          if (debuffElement === card.element) {
+            debuffPenalties.push({ fromCard: enemyCard, amount: enemyCard.debuffModifier });
+          }
         }
-      }
-    });
+      });
+    }
+    
+    // Commander ability debuffs applied to this card by opponent (skip if protected)
+    if (friendlyAbilityBuffs && !isProtected) {
+      friendlyAbilityBuffs.forEach(ab => {
+        if (ab.amount < 0 && (ab.targetElement === "all" || ab.targetElement === card.element.toLowerCase())) {
+          debuffPenalties.push({ fromCard: card, amount: Math.abs(ab.amount) });
+        }
+      });
+    }
     
     const totalBuffs = buffBonuses.reduce((sum, b) => sum + b.amount, 0);
     const totalDebuffs = debuffPenalties.reduce((sum, d) => sum + d.amount, 0);
-    const finalPower = Math.max(0, basePower + totalBuffs - totalDebuffs);
+    const effectiveBase = enemyNegateAndHalve ? halvedPower : basePower;
+    const finalPower = Math.max(0, effectiveBase + totalBuffs - totalDebuffs);
     
     const traitInfo = card.trait && card.traitValue !== null 
       ? { trait: card.trait, value: card.traitValue }
@@ -146,7 +189,7 @@ function calculateBattlePower(
     
     return {
       card,
-      basePower,
+      basePower: effectiveBase,
       buffBonuses,
       debuffPenalties,
       traitInfo,
@@ -1369,6 +1412,70 @@ function BattlefieldZone({
   );
 }
 
+function AbilityCard({ 
+  ability, 
+  commanderElement,
+  canAfford,
+  isCorrectPhase,
+  isMyTurn,
+  onActivate,
+}: {
+  ability: CommanderAbility;
+  commanderElement: Element;
+  canAfford: boolean;
+  isCorrectPhase: boolean;
+  isMyTurn: boolean;
+  onActivate: () => void;
+}) {
+  const config = elementConfig[commanderElement];
+  const isPlayable = canAfford && isCorrectPhase && isMyTurn;
+  
+  return (
+    <div 
+      className={`relative w-32 rounded-lg border-2 p-2 transition-all duration-200 cursor-pointer
+        ${isPlayable 
+          ? 'border-yellow-400 shadow-lg shadow-yellow-500/20 hover:-translate-y-1' 
+          : 'border-slate-600/50 opacity-60'
+        }
+        bg-gradient-to-br from-slate-800 to-slate-900
+      `}
+      onClick={() => isPlayable && onActivate()}
+      data-testid={`ability-card-${ability.id}`}
+    >
+      <div className={`text-xs font-bold ${config.color} mb-1 truncate`}>
+        {ability.name}
+      </div>
+      
+      <p className="text-[10px] text-slate-300 leading-tight mb-2 line-clamp-3">
+        {ability.description}
+      </p>
+      
+      <div className="flex items-center gap-1 flex-wrap">
+        {ability.victoryCost > 0 && (
+          <Badge className="bg-green-600/80 text-[9px] px-1 py-0">
+            <Trophy className="w-2.5 h-2.5 mr-0.5" />
+            -{ability.victoryCost}
+          </Badge>
+        )}
+        {ability.withdrawalCost > 0 && (
+          <Badge className="bg-blue-600/80 text-[9px] px-1 py-0">
+            <Flag className="w-2.5 h-2.5 mr-0.5" />
+            -{ability.withdrawalCost}
+          </Badge>
+        )}
+      </div>
+      
+      <div className={`mt-1 text-[9px] uppercase tracking-wider ${isCorrectPhase ? 'text-yellow-400' : 'text-slate-500'}`}>
+        {ability.phase} phase
+      </div>
+      
+      {isPlayable && (
+        <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full animate-pulse" />
+      )}
+    </div>
+  );
+}
+
 export default function GameBoardPage() {
   const { toast } = useToast();
   const [, params] = useRoute("/game/:id");
@@ -1394,6 +1501,8 @@ export default function GameBoardPage() {
   const [combatSummary, setCombatSummary] = useState<CombatSummary | null>(null);
   const [showCombatLogDialog, setShowCombatLogDialog] = useState(false);
   const [showCombatHistoryDialog, setShowCombatHistoryDialog] = useState(false);
+  const [abilityHandOpen, setAbilityHandOpen] = useState(true);
+  const [showAbilityLogDialog, setShowAbilityLogDialog] = useState(false);
   const [selectedHistoryRound, setSelectedHistoryRound] = useState<number | null>(null);
   const [combatPhaseTimer, setCombatPhaseTimer] = useState(30);
   const [combatPhaseTimerActive, setCombatPhaseTimerActive] = useState(false);
@@ -1416,6 +1525,10 @@ export default function GameBoardPage() {
 
   const { data: allCards = [] } = useQuery<CardType[]>({
     queryKey: ["/api/cards"],
+  });
+
+  const { data: allCommanders = [] } = useQuery<Commander[]>({
+    queryKey: ["/api/commanders"],
   });
 
   useEffect(() => {
@@ -1518,12 +1631,18 @@ export default function GameBoardPage() {
   const myDeckSize = game ? (isPlayer1 ? game.gameState.player1Deck.length : game.gameState.player2Deck.length) : 0;
   const opponentDeckSize = game ? (isPlayer1 ? game.gameState.player2Deck.length : game.gameState.player1Deck.length) : 0;
   const isMyTurn = game ? game.activePlayer === user?.id : false;
+  const myVP = game ? (isPlayer1 ? game.player1VictoryPoints : game.player2VictoryPoints) : 0;
+  const myWP = game ? (isPlayer1 ? game.player1WithdrawalPoints : game.player2WithdrawalPoints) : 0;
+  const myCommanderId = game ? (isPlayer1 ? game.gameState.player1CommanderId : game.gameState.player2CommanderId) : undefined;
+  const myCommander = myCommanderId ? allCommanders.find(c => c.id === myCommanderId) : undefined;
   
   // Get game mode config (draw/deploy counts)
   const gameMode: GameMode = game?.gameMode || "standard";
   const modeConfig = GAME_MODE_CONFIG[gameMode];
   const cardsToDraw = modeConfig.cardsToDraw;
-  const cardsToDeploy = modeConfig.cardsToDeploy;
+  const baseCardsToDeploy = modeConfig.cardsToDeploy;
+  const myExtraDeploy = game ? (isPlayer1 ? (game.gameState.player1ExtraDeploy || 0) : (game.gameState.player2ExtraDeploy || 0)) : 0;
+  const cardsToDeploy = baseCardsToDeploy + myExtraDeploy;
 
   useEffect(() => {
     if (!game) return;
@@ -1701,16 +1820,108 @@ export default function GameBoardPage() {
           activePlayer: nextPhase === "deployment" ? game.player1Id : "player-ai",
         });
       } else if (game.currentPhase === "combat") {
-        // In practice mode, don't auto-advance from combat phase
-        // Wait for the 30-second timer or player to click "Skip & Reveal"
-        // The timer useEffect and handleCombat will handle the transition
+        const aiCommanderId = game.gameState.player2CommanderId;
+        const aiCommander = aiCommanderId ? allCommanders.find(c => c.id === aiCommanderId) : undefined;
+        if (aiCommander) {
+          const aiVP = game.player2VictoryPoints;
+          const aiWP = game.player2WithdrawalPoints;
+          const combatAbilities = aiCommander.abilities.filter(a => 
+            a.phase === game.currentPhase && 
+            aiVP >= a.victoryCost && 
+            aiWP >= a.withdrawalCost
+          );
+          if (combatAbilities.length > 0) {
+            const ability = combatAbilities[0];
+            const newVP = aiVP - ability.victoryCost;
+            const newWP = aiWP - ability.withdrawalCost;
+            const updatedGameState = { ...game.gameState };
+            const aiEffect = ability.effect;
+            let aiEffectDesc = `AI used ${ability.name}: ${ability.description}`;
+            
+            switch (aiEffect.type) {
+              case "buff_element_unit": {
+                const bv = aiEffect.value || 4;
+                const te = (aiEffect.target || aiCommander.element).toLowerCase();
+                const cb = updatedGameState.player2AbilityBuffs || [];
+                updatedGameState.player2AbilityBuffs = [...cb, { targetElement: te, amount: bv, type: "buff" }];
+                aiEffectDesc = `AI buffed ${te} units with +${bv} power!`;
+                break;
+              }
+              case "debuff_enemy": {
+                const dv = aiEffect.value || 3;
+                const ob = updatedGameState.player1AbilityBuffs || [];
+                updatedGameState.player1AbilityBuffs = [...ob, { targetElement: "all", amount: -dv, type: "debuff" }];
+                aiEffectDesc = `AI debuffed your units by -${dv} power!`;
+                break;
+              }
+              case "block_effects":
+                updatedGameState.player1BlockedEffects = true;
+                aiEffectDesc = `AI blocked your card effects this combat!`;
+                break;
+              case "negate_and_halve":
+                updatedGameState.player2NegateAndHalve = true;
+                aiEffectDesc = `AI negated your effects and halved your non-matching units!`;
+                break;
+              case "protect_element": {
+                const pe = (aiEffect.target || aiCommander.element).toLowerCase();
+                updatedGameState.player2ProtectedElement = pe;
+                aiEffectDesc = `AI protected ${pe} units from debuffs!`;
+                break;
+              }
+              case "healing_factor": {
+                const hv = aiEffect.value || 4;
+                const ht = (aiEffect.target || aiCommander.element).toLowerCase();
+                const hb = updatedGameState.player2AbilityBuffs || [];
+                updatedGameState.player2AbilityBuffs = [...hb, { targetElement: ht, amount: hv, type: "heal" }];
+                aiEffectDesc = `AI applied +${hv} healing factor to ${ht} units!`;
+                break;
+              }
+              case "growth_buff": {
+                const gv = aiEffect.value || 2;
+                const gt = (aiEffect.target || aiCommander.element).toLowerCase();
+                const gb = updatedGameState.player2AbilityBuffs || [];
+                updatedGameState.player2AbilityBuffs = [...gb, { targetElement: gt, amount: gv, type: "growth" }];
+                aiEffectDesc = `AI applied +${gv} growth buff to ${gt} units!`;
+                break;
+              }
+            }
+            
+            const abilityLog = [...(updatedGameState.abilityLog || [])];
+            abilityLog.push({
+              turn: game.currentTurn,
+              phase: game.currentPhase,
+              playerId: "player-ai",
+              abilityId: ability.id,
+              abilityName: ability.name,
+              commanderName: aiCommander.name,
+              victoryCost: ability.victoryCost,
+              withdrawalCost: ability.withdrawalCost,
+              effectDescription: aiEffectDesc,
+            });
+            updatedGameState.abilityLog = abilityLog;
+            
+            updateGameMutation.mutate({
+              player2VictoryPoints: newVP,
+              player2WithdrawalPoints: newWP,
+              gameState: updatedGameState,
+            });
+            toast({ title: aiEffectDesc });
+          }
+        }
         return;
       } else if (game.currentPhase === "calculation") {
         const p1Cards = game.gameState.player1Battlefield.map(bf => getCardById(bf.cardId)).filter(Boolean) as CardType[];
         const p2Cards = game.gameState.player2Battlefield.map(bf => getCardById(bf.cardId)).filter(Boolean) as CardType[];
         
-        const player1Breakdown = calculateBattlePower(p1Cards, p2Cards, getCardById);
-        const player2Breakdown = calculateBattlePower(p2Cards, p1Cards, getCardById);
+        const gs = game.gameState;
+        const player1Breakdown = calculateBattlePower(
+          p1Cards, p2Cards, getCardById,
+          gs.player1AbilityBuffs, gs.player1BlockedEffects, gs.player2NegateAndHalve, gs.player1ProtectedElement
+        );
+        const player2Breakdown = calculateBattlePower(
+          p2Cards, p1Cards, getCardById,
+          gs.player2AbilityBuffs, gs.player2BlockedEffects, gs.player1NegateAndHalve, gs.player2ProtectedElement
+        );
         
         const p1Power = player1Breakdown.reduce((sum, b) => sum + b.finalPower, 0);
         const p2Power = player2Breakdown.reduce((sum, b) => sum + b.finalPower, 0);
@@ -1769,6 +1980,16 @@ export default function GameBoardPage() {
           player2Yard: p2Yard,
           lastCombatLog: combatLog,
           combatHistory: [...(game.gameState.combatHistory || []), combatLog],
+          player1AbilityBuffs: [],
+          player2AbilityBuffs: [],
+          player1ExtraDeploy: 0,
+          player2ExtraDeploy: 0,
+          player1BlockedEffects: false,
+          player2BlockedEffects: false,
+          player1NegateAndHalve: false,
+          player2NegateAndHalve: false,
+          player1ProtectedElement: undefined,
+          player2ProtectedElement: undefined,
         };
         
         let status = game.status;
@@ -1804,7 +2025,7 @@ export default function GameBoardPage() {
     };
     
     executeAITurn();
-  }, [game, gameId, allCards, updateGameMutation, updateGameMutation.isPending, toast]);
+  }, [game, gameId, allCards, allCommanders, updateGameMutation, updateGameMutation.isPending, toast]);
 
   // Cleanup timers on unmount
   useEffect(() => {
@@ -1902,6 +2123,228 @@ export default function GameBoardPage() {
       </div>
     );
   }
+
+  const handleActivateAbility = (ability: CommanderAbility) => {
+    if (!game || !myCommander || !isMyTurn) return;
+    if (ability.phase !== game.currentPhase) {
+      toast({ title: `This ability can only be used during ${ability.phase} phase`, variant: "destructive" });
+      return;
+    }
+    
+    const currentVP = isPlayer1 ? game.player1VictoryPoints : game.player2VictoryPoints;
+    const currentWP = isPlayer1 ? game.player1WithdrawalPoints : game.player2WithdrawalPoints;
+    
+    if (currentVP < ability.victoryCost || currentWP < ability.withdrawalCost) {
+      toast({ title: "Not enough points to use this ability!", variant: "destructive" });
+      return;
+    }
+    
+    const newVP = currentVP - ability.victoryCost;
+    const newWP = currentWP - ability.withdrawalCost;
+    
+    const newGameState = { ...game.gameState };
+    let effectDescription = "";
+    
+    const effect = ability.effect;
+    const myHandKey = isPlayer1 ? 'player1Hand' : 'player2Hand';
+    const myDeckKey = isPlayer1 ? 'player1Deck' : 'player2Deck';
+    const myBFKey = isPlayer1 ? 'player1Battlefield' : 'player2Battlefield';
+    
+    const myBuffsKey = isPlayer1 ? 'player1AbilityBuffs' : 'player2AbilityBuffs';
+    const oppBuffsKey = isPlayer1 ? 'player2AbilityBuffs' : 'player1AbilityBuffs';
+    const myExtraDeployKey = isPlayer1 ? 'player1ExtraDeploy' : 'player2ExtraDeploy';
+    const myBlockedKey = isPlayer1 ? 'player1BlockedEffects' : 'player2BlockedEffects';
+    const oppBlockedKey = isPlayer1 ? 'player2BlockedEffects' : 'player1BlockedEffects';
+    const myNegateKey = isPlayer1 ? 'player1NegateAndHalve' : 'player2NegateAndHalve';
+    const myProtectKey = isPlayer1 ? 'player1ProtectedElement' : 'player2ProtectedElement';
+
+    switch (effect.type) {
+      case "direct_damage": {
+        const dmg = effect.value || 4;
+        effectDescription = `Dealt ${dmg} direct damage to opponent!`;
+        break;
+      }
+      case "element_power_damage": {
+        const elementCards = (newGameState[myBFKey] as BattlefieldCard[])
+          .map(bf => getCardById(bf.cardId))
+          .filter(c => c && c.element === myCommander.element);
+        const totalPower = elementCards.reduce((sum, c) => sum + (c?.power || 0), 0);
+        effectDescription = `Dealt ${totalPower} damage (total ${myCommander.element} power) to opponent!`;
+        break;
+      }
+      case "buff_element_unit": {
+        const buffValue = effect.value || 4;
+        const targetEl = (effect.target || myCommander.element).toLowerCase();
+        const currentBuffs = (newGameState as any)[myBuffsKey] || [];
+        (newGameState as any)[myBuffsKey] = [...currentBuffs, { targetElement: targetEl, amount: buffValue, type: "buff" }];
+        effectDescription = `Buffed ${targetEl} units with +${buffValue} power this battle!`;
+        break;
+      }
+      case "extra_deploy": {
+        const current = ((newGameState as any)[myExtraDeployKey] as number) || 0;
+        (newGameState as any)[myExtraDeployKey] = current + (effect.value || 1);
+        effectDescription = `Can deploy ${effect.value || 1} extra ${effect.target} unit this turn!`;
+        break;
+      }
+      case "cycle_element_cards": {
+        const cycleHand = [...(newGameState[myHandKey] as string[])];
+        const elementName = effect.target || myCommander.element.toLowerCase();
+        const elementCards = cycleHand.filter(cardId => {
+          const card = getCardById(cardId);
+          return card && card.element.toLowerCase() === elementName.toLowerCase();
+        });
+        const count = elementCards.length;
+        const remainingHand = cycleHand.filter(id => !elementCards.includes(id));
+        const cycleDeck = [...(newGameState[myDeckKey] as string[]), ...elementCards];
+        for (let i = cycleDeck.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [cycleDeck[i], cycleDeck[j]] = [cycleDeck[j], cycleDeck[i]];
+        }
+        const drawn = cycleDeck.splice(0, Math.min(count, cycleDeck.length));
+        (newGameState as any)[myHandKey] = [...remainingHand, ...drawn];
+        (newGameState as any)[myDeckKey] = cycleDeck;
+        effectDescription = `Cycled ${count} ${elementName} cards from hand into deck, drew ${drawn.length} new cards!`;
+        break;
+      }
+      case "block_effects": {
+        (newGameState as any)[oppBlockedKey] = true;
+        effectDescription = `Blocked effects of enemy non-${myCommander.element} units this combat!`;
+        break;
+      }
+      case "negate_and_halve": {
+        (newGameState as any)[myNegateKey] = true;
+        effectDescription = `Negated all enemy effects and halved non-${myCommander.element} enemy strength!`;
+        break;
+      }
+      case "healing_factor": {
+        const healValue = effect.value || 4;
+        const targetEl2 = (effect.target || myCommander.element).toLowerCase();
+        const currentBuffs2 = (newGameState as any)[myBuffsKey] || [];
+        (newGameState as any)[myBuffsKey] = [...currentBuffs2, { targetElement: targetEl2, amount: healValue, type: "heal" }];
+        effectDescription = `Applied +${healValue} healing factor to ${targetEl2} units!`;
+        break;
+      }
+      case "draw_cards": {
+        const drawCount = effect.value || 2;
+        const drawDeck = [...(newGameState[myDeckKey] as string[])];
+        const drawHand = [...(newGameState[myHandKey] as string[])];
+        const actualDraw = Math.min(drawCount, drawDeck.length);
+        for (let i = 0; i < actualDraw; i++) {
+          drawHand.push(drawDeck.shift()!);
+        }
+        (newGameState as any)[myHandKey] = drawHand;
+        (newGameState as any)[myDeckKey] = drawDeck;
+        effectDescription = `Drew ${actualDraw} extra cards!`;
+        break;
+      }
+      case "protect_element": {
+        const protectEl = (effect.target || myCommander.element).toLowerCase();
+        (newGameState as any)[myProtectKey] = protectEl;
+        effectDescription = `Protected ${protectEl} units from damage this combat!`;
+        break;
+      }
+      case "debuff_enemy": {
+        const debuffValue = effect.value || 3;
+        const currentOppBuffs = (newGameState as any)[oppBuffsKey] || [];
+        (newGameState as any)[oppBuffsKey] = [...currentOppBuffs, { targetElement: "all", amount: -debuffValue, type: "debuff" }];
+        effectDescription = `Debuffed all enemy units by -${debuffValue} power!`;
+        break;
+      }
+      case "swap_units": {
+        const swapBF = [...(newGameState[myBFKey] as BattlefieldCard[])];
+        const swapHand = [...(newGameState[myHandKey] as string[])];
+        if (swapBF.length > 0 && swapHand.length > 0) {
+          const removedBF = swapBF.pop()!;
+          const addedFromHand = swapHand.pop()!;
+          swapHand.push(removedBF.cardId);
+          swapBF.push({ cardId: addedFromHand, faceDown: true });
+          (newGameState as any)[myBFKey] = swapBF;
+          (newGameState as any)[myHandKey] = swapHand;
+          const swappedOut = getCardById(removedBF.cardId);
+          const swappedIn = getCardById(addedFromHand);
+          effectDescription = `Swapped ${swappedOut?.name || 'unit'} with ${swappedIn?.name || 'unit'} from hand!`;
+        } else {
+          effectDescription = `No units available to swap!`;
+        }
+        break;
+      }
+      case "revive_unit": {
+        const myYardKey = isPlayer1 ? 'player1Yard' : 'player2Yard';
+        const yard = [...(newGameState[myYardKey] as string[])];
+        const reviveHand = [...(newGameState[myHandKey] as string[])];
+        if (yard.length > 0) {
+          const revived = yard.pop()!;
+          reviveHand.push(revived);
+          (newGameState as any)[myYardKey] = yard;
+          (newGameState as any)[myHandKey] = reviveHand;
+          const revivedCard = getCardById(revived);
+          effectDescription = `Revived ${revivedCard?.name || 'a unit'} from the discard pile!`;
+        } else {
+          effectDescription = `No units in discard pile to revive!`;
+        }
+        break;
+      }
+      case "growth_buff": {
+        const growthValue = effect.value || 2;
+        const growthEl = (effect.target || myCommander.element).toLowerCase();
+        const currentGrowthBuffs = (newGameState as any)[myBuffsKey] || [];
+        (newGameState as any)[myBuffsKey] = [...currentGrowthBuffs, { targetElement: growthEl, amount: growthValue, type: "growth" }];
+        effectDescription = `Applied +${growthValue} growth buff to ${growthEl} units!`;
+        break;
+      }
+      default:
+        effectDescription = `Used ability: ${ability.name}`;
+    }
+    
+    const abilityLogEntry = {
+      turn: game.currentTurn,
+      phase: game.currentPhase,
+      playerId: user?.id || "",
+      abilityId: ability.id,
+      abilityName: ability.name,
+      commanderName: myCommander.name,
+      victoryCost: ability.victoryCost,
+      withdrawalCost: ability.withdrawalCost,
+      effectDescription,
+    };
+    
+    newGameState.abilityLog = [...(newGameState.abilityLog || []), abilityLogEntry];
+    
+    const updates: Partial<Game> = {
+      gameState: newGameState,
+    };
+    
+    if (isPlayer1) {
+      updates.player1VictoryPoints = newVP;
+      updates.player1WithdrawalPoints = newWP;
+    } else {
+      updates.player2VictoryPoints = newVP;
+      updates.player2WithdrawalPoints = newWP;
+    }
+    
+    if (effect.type === "direct_damage") {
+      const dmg = effect.value || 4;
+      if (isPlayer1) {
+        updates.player2HP = game.player2HP - dmg;
+      } else {
+        updates.player1HP = game.player1HP - dmg;
+      }
+    }
+    if (effect.type === "element_power_damage") {
+      const elementCards = (newGameState[myBFKey] as BattlefieldCard[])
+        .map(bf => getCardById(bf.cardId))
+        .filter(c => c && c.element === myCommander.element);
+      const totalPower = elementCards.reduce((sum, c) => sum + (c?.power || 0), 0);
+      if (isPlayer1) {
+        updates.player2HP = game.player2HP - totalPower;
+      } else {
+        updates.player1HP = game.player1HP - totalPower;
+      }
+    }
+    
+    updateGameMutation.mutate(updates);
+    toast({ title: `${ability.name}: ${effectDescription}` });
+  };
 
   const handleCardSelect = (cardId: string) => {
     if (game.currentPhase !== "deployment" || !isMyTurn) return;
@@ -2112,8 +2555,15 @@ export default function GameBoardPage() {
     const p1Cards = newGameState.player1Battlefield.map(bf => getCardById(bf.cardId)).filter(Boolean) as CardType[];
     const p2Cards = newGameState.player2Battlefield.map(bf => getCardById(bf.cardId)).filter(Boolean) as CardType[];
     
-    const player1Breakdown = calculateBattlePower(p1Cards, p2Cards, getCardById);
-    const player2Breakdown = calculateBattlePower(p2Cards, p1Cards, getCardById);
+    const gs2 = newGameState;
+    const player1Breakdown = calculateBattlePower(
+      p1Cards, p2Cards, getCardById,
+      gs2.player1AbilityBuffs, gs2.player1BlockedEffects, gs2.player2NegateAndHalve, gs2.player1ProtectedElement
+    );
+    const player2Breakdown = calculateBattlePower(
+      p2Cards, p1Cards, getCardById,
+      gs2.player2AbilityBuffs, gs2.player2BlockedEffects, gs2.player1NegateAndHalve, gs2.player2ProtectedElement
+    );
     
     const player1Total = player1Breakdown.reduce((sum, b) => sum + b.finalPower, 0);
     const player2Total = player2Breakdown.reduce((sum, b) => sum + b.finalPower, 0);
@@ -2178,8 +2628,15 @@ export default function GameBoardPage() {
     if (!player1Breakdown || !player2Breakdown) {
       const p1Cards = game.gameState.player1Battlefield.map(bf => getCardById(bf.cardId)).filter(Boolean) as CardType[];
       const p2Cards = game.gameState.player2Battlefield.map(bf => getCardById(bf.cardId)).filter(Boolean) as CardType[];
-      player1Breakdown = calculateBattlePower(p1Cards, p2Cards, getCardById);
-      player2Breakdown = calculateBattlePower(p2Cards, p1Cards, getCardById);
+      const gs3 = game.gameState;
+      player1Breakdown = calculateBattlePower(
+        p1Cards, p2Cards, getCardById,
+        gs3.player1AbilityBuffs, gs3.player1BlockedEffects, gs3.player2NegateAndHalve, gs3.player1ProtectedElement
+      );
+      player2Breakdown = calculateBattlePower(
+        p2Cards, p1Cards, getCardById,
+        gs3.player2AbilityBuffs, gs3.player2BlockedEffects, gs3.player1NegateAndHalve, gs3.player2ProtectedElement
+      );
     }
     
     const p1Power = player1Breakdown.reduce((sum, b) => sum + b.finalPower, 0);
@@ -2221,6 +2678,16 @@ export default function GameBoardPage() {
       player2Battlefield: [],
       player1Yard: p1Yard,
       player2Yard: p2Yard,
+      player1AbilityBuffs: [],
+      player2AbilityBuffs: [],
+      player1ExtraDeploy: 0,
+      player2ExtraDeploy: 0,
+      player1BlockedEffects: false,
+      player2BlockedEffects: false,
+      player1NegateAndHalve: false,
+      player2NegateAndHalve: false,
+      player1ProtectedElement: undefined,
+      player2ProtectedElement: undefined,
     };
 
     let status = game.status;
@@ -2495,6 +2962,17 @@ export default function GameBoardPage() {
               Combat Log
             </Button>
           )}
+          {game.gameState.abilityLog && game.gameState.abilityLog.length > 0 && (
+            <Button 
+              size="lg"
+              onClick={() => setShowAbilityLogDialog(true)}
+              className="bg-amber-600 text-white font-bold border-2 border-amber-400 shadow-lg shadow-amber-500/50"
+              data-testid="button-view-ability-log"
+            >
+              <Scroll className="w-5 h-5 mr-2" />
+              Ability Log
+            </Button>
+          )}
         </div>
 
         <BattlefieldZone 
@@ -2553,6 +3031,56 @@ export default function GameBoardPage() {
             )}
           </div>
         </div>
+        {myCommander && (
+          <div className="bg-gradient-to-t from-amber-900/10 to-slate-800/30 rounded-xl border-2 border-amber-500/20 p-3">
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Scroll className="w-4 h-4 text-amber-400" />
+                <span className="text-amber-300 text-xs font-medium uppercase tracking-wider">
+                  {myCommander.name}'s Abilities
+                </span>
+                <Badge variant="outline" className="text-amber-300 border-amber-500/30 text-[10px]">
+                  {myCommander.element}
+                </Badge>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 text-xs text-slate-400">
+                  <Trophy className="w-3 h-3 text-green-400" />
+                  <span className="text-green-400 font-bold" data-testid="text-my-victory-points">{myVP}</span>
+                  <Flag className="w-3 h-3 text-blue-400 ml-1" />
+                  <span className="text-blue-400 font-bold" data-testid="text-my-withdrawal-points">{myWP}</span>
+                </div>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => setAbilityHandOpen(!abilityHandOpen)}
+                  data-testid="button-toggle-ability-hand"
+                >
+                  {abilityHandOpen ? <X className="w-4 h-4" /> : <Scroll className="w-4 h-4" />}
+                </Button>
+              </div>
+            </div>
+            {abilityHandOpen && (
+              <div className="flex gap-2 flex-wrap justify-center min-h-[80px] items-center" data-testid="ability-hand-cards">
+                {myCommander.abilities.map((ability) => {
+                  const canAfford = myVP >= ability.victoryCost && myWP >= ability.withdrawalCost;
+                  const isCorrectPhase = ability.phase === game.currentPhase;
+                  return (
+                    <AbilityCard
+                      key={ability.id}
+                      ability={ability}
+                      commanderElement={myCommander.element}
+                      canAfford={canAfford}
+                      isCorrectPhase={isCorrectPhase}
+                      isMyTurn={isMyTurn}
+                      onActivate={() => handleActivateAbility(ability)}
+                    />
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
       </div>
       <CardPreviewDialog 
         card={previewCard} 
@@ -2823,6 +3351,44 @@ export default function GameBoardPage() {
               </div>
             </ScrollArea>
           )}
+        </DialogContent>
+      </Dialog>
+      <Dialog open={showAbilityLogDialog} onOpenChange={setShowAbilityLogDialog}>
+        <DialogContent className="bg-slate-900 border-amber-500/50 max-w-2xl max-h-[85vh] overflow-hidden" data-testid="dialog-ability-log">
+          <DialogHeader>
+            <DialogTitle className="text-white flex items-center gap-2 text-xl">
+              <Scroll className="w-6 h-6 text-amber-500" />
+              Commander Ability Log
+            </DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="max-h-[70vh] pr-4">
+            <div className="space-y-2">
+              {(game.gameState.abilityLog || []).map((entry, index) => (
+                <div key={index} className="bg-slate-800/80 border border-amber-500/20 rounded-lg p-3" data-testid={`ability-log-entry-${index}`}>
+                  <div className="flex items-center justify-between gap-2 mb-1 flex-wrap">
+                    <Badge variant="outline" className="text-amber-300 border-amber-500/30 text-xs">
+                      Turn {entry.turn} - {entry.phase}
+                    </Badge>
+                    <div className="flex items-center gap-1">
+                      {entry.victoryCost > 0 && (
+                        <Badge className="bg-green-600/60 text-[10px]">
+                          <Trophy className="w-2.5 h-2.5 mr-0.5" />-{entry.victoryCost}
+                        </Badge>
+                      )}
+                      {entry.withdrawalCost > 0 && (
+                        <Badge className="bg-blue-600/60 text-[10px]">
+                          <Flag className="w-2.5 h-2.5 mr-0.5" />-{entry.withdrawalCost}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-amber-300 font-bold text-sm">{entry.abilityName}</div>
+                  <div className="text-slate-400 text-xs">{entry.commanderName}</div>
+                  <div className="text-slate-300 text-xs mt-1">{entry.effectDescription}</div>
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
         </DialogContent>
       </Dialog>
       {/* Combat History Dialog */}

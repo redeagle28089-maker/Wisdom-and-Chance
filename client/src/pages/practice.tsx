@@ -134,6 +134,8 @@ export default function PracticePage() {
       player2Battlefield: [],
       player1Yard: [],
       player2Yard: [],
+      player1CommanderId: selectedDeck.commanderId,
+      player2CommanderId: aiCommander.id,
     };
 
     const gameData: InsertGame = {
