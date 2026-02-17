@@ -112,6 +112,20 @@ interface AbilityBuff {
   type: string;
 }
 
+function mapBattlefieldToCards(
+  battlefield: BattlefieldCard[],
+  getCardById: (id: string) => CardType | undefined
+): CardType[] {
+  return battlefield.map(bf => {
+    const card = getCardById(bf.cardId);
+    if (!card) return null;
+    if (bf.modifiedPower !== undefined && bf.modifiedPower !== null) {
+      return { ...card, power: bf.modifiedPower };
+    }
+    return card;
+  }).filter(Boolean) as CardType[];
+}
+
 function calculateBattlePower(
   friendlyCards: CardType[],
   enemyCards: CardType[],
@@ -1418,6 +1432,7 @@ function AbilityCard({
   canAfford,
   isCorrectPhase,
   isMyTurn,
+  usedThisTurn,
   onActivate,
 }: {
   ability: CommanderAbility;
@@ -1425,6 +1440,7 @@ function AbilityCard({
   canAfford: boolean;
   isCorrectPhase: boolean;
   isMyTurn: boolean;
+  usedThisTurn: boolean;
   onActivate: () => void;
 }) {
   const config = elementConfig[commanderElement];
@@ -1432,16 +1448,25 @@ function AbilityCard({
   
   return (
     <div 
-      className={`relative w-32 rounded-lg border-2 p-2 transition-all duration-200 cursor-pointer
-        ${isPlayable 
-          ? 'border-yellow-400 shadow-lg shadow-yellow-500/20 hover:-translate-y-1' 
-          : 'border-slate-600/50 opacity-60'
+      className={`relative w-36 rounded-lg border-2 p-2.5 transition-all duration-200 cursor-pointer
+        ${usedThisTurn 
+          ? 'border-amber-500/40 opacity-70 bg-gradient-to-br from-amber-900/30 to-slate-900' 
+          : isPlayable 
+            ? 'border-yellow-400 shadow-lg shadow-yellow-500/20 hover:-translate-y-1 bg-gradient-to-br from-slate-800 to-slate-900' 
+            : 'border-slate-600/50 opacity-50 bg-gradient-to-br from-slate-800 to-slate-900'
         }
-        bg-gradient-to-br from-slate-800 to-slate-900
       `}
-      onClick={() => isPlayable && onActivate()}
+      onClick={() => isPlayable && !usedThisTurn && onActivate()}
       data-testid={`ability-card-${ability.id}`}
     >
+      {usedThisTurn && (
+        <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+          <div className="bg-amber-600/90 text-amber-100 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded transform -rotate-12 shadow-lg">
+            Used
+          </div>
+        </div>
+      )}
+      
       <div className={`text-xs font-bold ${config.color} mb-1 truncate`}>
         {ability.name}
       </div>
@@ -1454,13 +1479,18 @@ function AbilityCard({
         {ability.victoryCost > 0 && (
           <Badge className="bg-green-600/80 text-[9px] px-1 py-0">
             <Trophy className="w-2.5 h-2.5 mr-0.5" />
-            -{ability.victoryCost}
+            -{ability.victoryCost} Adv
           </Badge>
         )}
         {ability.withdrawalCost > 0 && (
           <Badge className="bg-blue-600/80 text-[9px] px-1 py-0">
             <Flag className="w-2.5 h-2.5 mr-0.5" />
-            -{ability.withdrawalCost}
+            -{ability.withdrawalCost} Wth
+          </Badge>
+        )}
+        {ability.victoryCost === 0 && ability.withdrawalCost === 0 && (
+          <Badge className="bg-slate-600/80 text-[9px] px-1 py-0">
+            Free
           </Badge>
         )}
       </div>
@@ -1469,7 +1499,7 @@ function AbilityCard({
         {ability.phase} phase
       </div>
       
-      {isPlayable && (
+      {isPlayable && !usedThisTurn && (
         <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full animate-pulse" />
       )}
     </div>
@@ -1501,7 +1531,8 @@ export default function GameBoardPage() {
   const [combatSummary, setCombatSummary] = useState<CombatSummary | null>(null);
   const [showCombatLogDialog, setShowCombatLogDialog] = useState(false);
   const [showCombatHistoryDialog, setShowCombatHistoryDialog] = useState(false);
-  const [abilityHandOpen, setAbilityHandOpen] = useState(true);
+  const [handView, setHandView] = useState<"units" | "abilities">("units");
+  const [usedAbilitiesThisTurn, setUsedAbilitiesThisTurn] = useState<Set<string>>(new Set());
   const [showAbilityLogDialog, setShowAbilityLogDialog] = useState(false);
   const [selectedHistoryRound, setSelectedHistoryRound] = useState<number | null>(null);
   const [combatPhaseTimer, setCombatPhaseTimer] = useState(30);
@@ -1703,6 +1734,11 @@ export default function GameBoardPage() {
   }, [myBattlefield, game, gameId]);
 
   useEffect(() => {
+    if (!game) return;
+    setUsedAbilitiesThisTurn(new Set());
+  }, [game?.currentTurn]);
+
+  useEffect(() => {
     if (!game || !gameId) return;
     if (game.gameType !== "practice") return;
     if (game.status === "completed") return;
@@ -1884,6 +1920,76 @@ export default function GameBoardPage() {
                 aiEffectDesc = `AI applied +${gv} growth buff to ${gt} units!`;
                 break;
               }
+              case "prevent_ward": {
+                const pe2 = (aiEffect.target || aiCommander.element).toLowerCase();
+                updatedGameState.player2ProtectedElement = pe2;
+                aiEffectDesc = `AI protected ${pe2} units from the medical ward!`;
+                break;
+              }
+              case "destroy_unit": {
+                const p1BF = [...updatedGameState.player1Battlefield];
+                const p1Yard = [...updatedGameState.player1Yard];
+                const nonElTargets = p1BF.filter(bf => {
+                  const c = getCardById(bf.cardId);
+                  return c && c.element.toLowerCase() !== aiCommander.element.toLowerCase();
+                });
+                if (nonElTargets.length > 0) {
+                  const t = nonElTargets[0];
+                  const tc = getCardById(t.cardId);
+                  updatedGameState.player1Battlefield = p1BF.filter(bf => bf.cardId !== t.cardId);
+                  p1Yard.push(t.cardId);
+                  updatedGameState.player1Yard = p1Yard;
+                  aiEffectDesc = `AI destroyed ${tc?.name || 'your unit'}!`;
+                }
+                break;
+              }
+              case "add_shield": {
+                const sv = aiEffect.value || 4;
+                const st = (aiEffect.target || aiCommander.element).toLowerCase();
+                const sb = updatedGameState.player2AbilityBuffs || [];
+                updatedGameState.player2AbilityBuffs = [...sb, { targetElement: st, amount: sv, type: "shield" }];
+                aiEffectDesc = `AI added +${sv} shield to ${st} units!`;
+                break;
+              }
+              case "reduce_power": {
+                const rv = aiEffect.value || 4;
+                const rb = updatedGameState.player1AbilityBuffs || [];
+                updatedGameState.player1AbilityBuffs = [...rb, { targetElement: "all", amount: -rv, type: "reduce" }];
+                aiEffectDesc = `AI reduced your units' power by ${rv}!`;
+                break;
+              }
+              case "first_strike": {
+                const ft = (aiEffect.target || aiCommander.element).toLowerCase();
+                const fb = updatedGameState.player2AbilityBuffs || [];
+                updatedGameState.player2AbilityBuffs = [...fb, { targetElement: ft, amount: 3, type: "first_strike" }];
+                aiEffectDesc = `AI's ${aiCommander.element} units attack first!`;
+                break;
+              }
+              case "add_evasion": {
+                const ev = aiEffect.value || 4;
+                const et = (aiEffect.target || aiCommander.element).toLowerCase();
+                const eb = updatedGameState.player2AbilityBuffs || [];
+                updatedGameState.player2AbilityBuffs = [...eb, { targetElement: et, amount: ev, type: "evasion" }];
+                aiEffectDesc = `AI added +${ev} evasion to ${et} units!`;
+                break;
+              }
+              case "set_power": {
+                const spv = aiEffect.value || 1;
+                const p1BF2 = [...updatedGameState.player1Battlefield];
+                const nonEl2 = p1BF2.filter(bf => {
+                  const c = getCardById(bf.cardId);
+                  return c && c.element.toLowerCase() !== aiCommander.element.toLowerCase();
+                });
+                if (nonEl2.length > 0) {
+                  const t2 = nonEl2[0];
+                  const tc2 = getCardById(t2.cardId);
+                  updatedGameState.player1Battlefield = p1BF2.map(bf => 
+                    bf.cardId === t2.cardId ? { ...bf, modifiedPower: spv } : bf
+                  );
+                  aiEffectDesc = `AI reduced ${tc2?.name || 'your unit'}'s power to ${spv}!`;
+                }
+                break;
+              }
             }
             
             const abilityLog = [...(updatedGameState.abilityLog || [])];
@@ -1910,8 +2016,8 @@ export default function GameBoardPage() {
         }
         return;
       } else if (game.currentPhase === "calculation") {
-        const p1Cards = game.gameState.player1Battlefield.map(bf => getCardById(bf.cardId)).filter(Boolean) as CardType[];
-        const p2Cards = game.gameState.player2Battlefield.map(bf => getCardById(bf.cardId)).filter(Boolean) as CardType[];
+        const p1Cards = mapBattlefieldToCards(game.gameState.player1Battlefield, getCardById);
+        const p2Cards = mapBattlefieldToCards(game.gameState.player2Battlefield, getCardById);
         
         const gs = game.gameState;
         const player1Breakdown = calculateBattlePower(
@@ -2292,6 +2398,116 @@ export default function GameBoardPage() {
         effectDescription = `Applied +${growthValue} growth buff to ${growthEl} units!`;
         break;
       }
+      case "prevent_ward": {
+        const protEl = (effect.target || myCommander.element).toLowerCase();
+        (newGameState as any)[myProtectKey] = protEl;
+        effectDescription = `Protected ${protEl} units from going to the medical ward this turn!`;
+        break;
+      }
+      case "destroy_unit": {
+        const oppBFKey = isPlayer1 ? 'player2Battlefield' : 'player1Battlefield';
+        const oppYardKey = isPlayer1 ? 'player2Yard' : 'player1Yard';
+        const oppBF = [...(newGameState[oppBFKey] as BattlefieldCard[])];
+        const oppYard = [...(newGameState[oppYardKey] as string[])];
+        const nonElementCards = oppBF.filter(bf => {
+          const c = getCardById(bf.cardId);
+          return c && c.element.toLowerCase() !== myCommander.element.toLowerCase();
+        });
+        if (nonElementCards.length > 0) {
+          const target = nonElementCards[0];
+          const targetCard = getCardById(target.cardId);
+          const newOppBF = oppBF.filter(bf => bf.cardId !== target.cardId);
+          oppYard.push(target.cardId);
+          (newGameState as any)[oppBFKey] = newOppBF;
+          (newGameState as any)[oppYardKey] = oppYard;
+          effectDescription = `Destroyed ${targetCard?.name || 'enemy unit'} and sent it to the medical ward!`;
+        } else {
+          effectDescription = `No valid enemy units to destroy!`;
+        }
+        break;
+      }
+      case "add_shield": {
+        const shieldValue = effect.value || 4;
+        const shieldEl = (effect.target || myCommander.element).toLowerCase();
+        const currentShieldBuffs = (newGameState as any)[myBuffsKey] || [];
+        (newGameState as any)[myBuffsKey] = [...currentShieldBuffs, { targetElement: shieldEl, amount: shieldValue, type: "shield" }];
+        effectDescription = `Added +${shieldValue} shield to ${shieldEl} units!`;
+        break;
+      }
+      case "reduce_power": {
+        const reduceValue = effect.value || 4;
+        const currentReduceDebuffs = (newGameState as any)[oppBuffsKey] || [];
+        const oppElement = myCommander.element.toLowerCase();
+        (newGameState as any)[oppBuffsKey] = [...currentReduceDebuffs, { targetElement: "all_non_" + oppElement, amount: -reduceValue, type: "reduce" }];
+        effectDescription = `Reduced a non-${myCommander.element} enemy unit's power by ${reduceValue}!`;
+        break;
+      }
+      case "first_strike": {
+        const fsEl = (effect.target || myCommander.element).toLowerCase();
+        const currentFSBuffs = (newGameState as any)[myBuffsKey] || [];
+        (newGameState as any)[myBuffsKey] = [...currentFSBuffs, { targetElement: fsEl, amount: 3, type: "first_strike" }];
+        effectDescription = `${myCommander.element} units attack first with +3 power bonus!`;
+        break;
+      }
+      case "add_evasion": {
+        const evasionValue = effect.value || 4;
+        const evasionEl = (effect.target || myCommander.element).toLowerCase();
+        const currentEvasionBuffs = (newGameState as any)[myBuffsKey] || [];
+        (newGameState as any)[myBuffsKey] = [...currentEvasionBuffs, { targetElement: evasionEl, amount: evasionValue, type: "evasion" }];
+        effectDescription = `Added +${evasionValue} evasion to ${evasionEl} units!`;
+        break;
+      }
+      case "set_power": {
+        const setPowerValue = effect.value || 1;
+        const oppBFKey2 = isPlayer1 ? 'player2Battlefield' : 'player1Battlefield';
+        const oppBF2 = [...(newGameState[oppBFKey2] as BattlefieldCard[])];
+        const nonElCards = oppBF2.filter(bf => {
+          const c = getCardById(bf.cardId);
+          return c && c.element.toLowerCase() !== myCommander.element.toLowerCase();
+        });
+        if (nonElCards.length > 0) {
+          const target = nonElCards[0];
+          const targetCard = getCardById(target.cardId);
+          const newBF = oppBF2.map(bf => {
+            if (bf.cardId === target.cardId) {
+              return { ...bf, modifiedPower: setPowerValue };
+            }
+            return bf;
+          });
+          (newGameState as any)[oppBFKey2] = newBF;
+          effectDescription = `Reduced ${targetCard?.name || 'enemy unit'}'s power to ${setPowerValue}!`;
+        } else {
+          effectDescription = `No valid enemy units to target!`;
+        }
+        break;
+      }
+      case "restore_from_ward": {
+        const restoreCount = effect.value || 3;
+        const myYardKey2 = isPlayer1 ? 'player1Yard' : 'player2Yard';
+        const yard2 = [...(newGameState[myYardKey2] as string[])];
+        const myDeck2 = [...(newGameState[myDeckKey] as string[])];
+        const toRestore = Math.min(restoreCount, yard2.length);
+        for (let i = 0; i < toRestore; i++) {
+          const restored = yard2.pop()!;
+          myDeck2.push(restored);
+        }
+        for (let i = myDeck2.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [myDeck2[i], myDeck2[j]] = [myDeck2[j], myDeck2[i]];
+        }
+        (newGameState as any)[myYardKey2] = yard2;
+        (newGameState as any)[myDeckKey] = myDeck2;
+        effectDescription = `Returned ${toRestore} unit(s) from medical ward to deck!`;
+        break;
+      }
+      case "heal_and_buff": {
+        const healAmount = effect.value || 4;
+        const healBuffEl = (effect.target || myCommander.element).toLowerCase();
+        const currentHealBuffs = (newGameState as any)[myBuffsKey] || [];
+        (newGameState as any)[myBuffsKey] = [...currentHealBuffs, { targetElement: healBuffEl, amount: 2, type: "heal_buff" }];
+        effectDescription = `Healed ${healAmount} HP and buffed ${healBuffEl} units with +2 power!`;
+        break;
+      }
       default:
         effectDescription = `Used ability: ${ability.name}`;
     }
@@ -2341,8 +2557,17 @@ export default function GameBoardPage() {
         updates.player1HP = game.player1HP - totalPower;
       }
     }
+    if (effect.type === "heal_and_buff") {
+      const healHP = effect.value || 4;
+      if (isPlayer1) {
+        updates.player1HP = Math.min(30, game.player1HP + healHP);
+      } else {
+        updates.player2HP = Math.min(30, game.player2HP + healHP);
+      }
+    }
     
     updateGameMutation.mutate(updates);
+    setUsedAbilitiesThisTurn(prev => { const next = new Set(Array.from(prev)); next.add(ability.id); return next; });
     toast({ title: `${ability.name}: ${effectDescription}` });
   };
 
@@ -2552,8 +2777,8 @@ export default function GameBoardPage() {
     newGameState.player2Battlefield = newGameState.player2Battlefield.map((bf) => ({ ...bf, faceDown: false }));
 
     // Calculate power breakdowns for combat results display
-    const p1Cards = newGameState.player1Battlefield.map(bf => getCardById(bf.cardId)).filter(Boolean) as CardType[];
-    const p2Cards = newGameState.player2Battlefield.map(bf => getCardById(bf.cardId)).filter(Boolean) as CardType[];
+    const p1Cards = mapBattlefieldToCards(newGameState.player1Battlefield, getCardById);
+    const p2Cards = mapBattlefieldToCards(newGameState.player2Battlefield, getCardById);
     
     const gs2 = newGameState;
     const player1Breakdown = calculateBattlePower(
@@ -2626,8 +2851,8 @@ export default function GameBoardPage() {
 
     
     if (!player1Breakdown || !player2Breakdown) {
-      const p1Cards = game.gameState.player1Battlefield.map(bf => getCardById(bf.cardId)).filter(Boolean) as CardType[];
-      const p2Cards = game.gameState.player2Battlefield.map(bf => getCardById(bf.cardId)).filter(Boolean) as CardType[];
+      const p1Cards = mapBattlefieldToCards(game.gameState.player1Battlefield, getCardById);
+      const p2Cards = mapBattlefieldToCards(game.gameState.player2Battlefield, getCardById);
       const gs3 = game.gameState;
       player1Breakdown = calculateBattlePower(
         p1Cards, p2Cards, getCardById,
@@ -2995,74 +3220,108 @@ export default function GameBoardPage() {
           />
         )}
 
-        <div className="bg-gradient-to-t from-green-900/10 to-slate-800/30 rounded-xl border-2 border-green-500/20 p-4">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-green-300 text-xs font-medium uppercase tracking-wider">Your Hand</span>
-            <div className="flex items-center gap-2 text-xs text-green-400">
-              <span className="font-medium">{myHand.length} cards</span>
-              <span className="opacity-50">|</span>
-              <span>Deck: {myDeckSize}</span>
-              {game.currentPhase === "deployment" && isMyTurn && (
-                <Badge className="bg-purple-500/50 text-xs ml-2">
-                  Select {cardsToDeploy - selectedCards.length} more
+        <div className="rounded-xl border-2 p-4 transition-colors duration-300"
+          style={{
+            background: handView === "units" 
+              ? "linear-gradient(to top, rgba(20, 83, 45, 0.1), rgba(30, 41, 59, 0.3))" 
+              : "linear-gradient(to top, rgba(120, 53, 15, 0.1), rgba(30, 41, 59, 0.3))",
+            borderColor: handView === "units" ? "rgba(34, 197, 94, 0.2)" : "rgba(245, 158, 11, 0.2)",
+          }}
+        >
+          <div className="flex items-center justify-between mb-3 gap-2">
+            <div className="flex items-center gap-1 bg-slate-800/80 rounded-lg p-0.5 border border-slate-700/50" data-testid="hand-view-toggle">
+              <button
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
+                  handView === "units" 
+                    ? "bg-green-600/80 text-green-100 shadow-sm" 
+                    : "text-slate-400 hover:text-slate-200"
+                }`}
+                onClick={() => setHandView("units")}
+                data-testid="button-hand-view-units"
+              >
+                <Swords className="w-3.5 h-3.5" />
+                Unit Cards
+                <Badge className="bg-green-800/60 text-green-200 text-[9px] px-1 py-0 ml-0.5">
+                  {myHand.length}
                 </Badge>
+              </button>
+              <button
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
+                  handView === "abilities" 
+                    ? "bg-amber-600/80 text-amber-100 shadow-sm" 
+                    : "text-slate-400 hover:text-slate-200"
+                }`}
+                onClick={() => setHandView("abilities")}
+                data-testid="button-hand-view-abilities"
+              >
+                <Scroll className="w-3.5 h-3.5" />
+                {myCommander ? myCommander.name : "Abilities"}
+                {myCommander && (
+                  <Badge className="bg-amber-800/60 text-amber-200 text-[9px] px-1 py-0 ml-0.5">
+                    {myCommander.abilities.length}
+                  </Badge>
+                )}
+              </button>
+            </div>
+            
+            <div className="flex items-center gap-3 text-xs flex-wrap">
+              {handView === "units" ? (
+                <>
+                  <span className="text-green-400 font-medium">{myHand.length} cards</span>
+                  <span className="text-slate-500">|</span>
+                  <span className="text-green-400/70">Deck: {myDeckSize}</span>
+                  {game.currentPhase === "deployment" && isMyTurn && (
+                    <Badge className="bg-purple-500/50 text-xs">
+                      Select {cardsToDeploy - selectedCards.length} more
+                    </Badge>
+                  )}
+                </>
+              ) : (
+                <div className="flex items-center gap-2 text-xs">
+                  <div className="flex items-center gap-1">
+                    <Trophy className="w-3 h-3 text-green-400" />
+                    <span className="text-green-400 font-bold" data-testid="text-my-victory-points">{myVP}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Flag className="w-3 h-3 text-blue-400" />
+                    <span className="text-blue-400 font-bold" data-testid="text-my-withdrawal-points">{myWP}</span>
+                  </div>
+                  {myCommander && (
+                    <Badge variant="outline" className="text-amber-300 border-amber-500/30 text-[10px]">
+                      {myCommander.element}
+                    </Badge>
+                  )}
+                </div>
               )}
             </div>
           </div>
-          <div className="flex gap-2 flex-wrap justify-center min-h-[100px] items-center">
-            {myHand.map((cardId) => {
-              const card = getCardById(cardId);
-              if (!card) return null;
-              const isPlayable = game.currentPhase === "deployment" && isMyTurn;
-              return (
-                <MiniCard 
-                  key={cardId} 
-                  card={card} 
-                  selected={selectedCards.includes(cardId)}
-                  playable={isPlayable && !selectedCards.includes(cardId) && selectedCards.length < cardsToDeploy}
-                  isNewlyPlayed={newlyDrawnCards.has(cardId)}
-                  onClick={() => handleCardSelect(cardId)}
-                  onPreview={() => setPreviewCard(card)}
-                />
-              );
-            })}
-            {myHand.length === 0 && (
-              <div className="text-green-400/50 text-sm italic">No cards in hand</div>
-            )}
-          </div>
-        </div>
-        {myCommander && (
-          <div className="bg-gradient-to-t from-amber-900/10 to-slate-800/30 rounded-xl border-2 border-amber-500/20 p-3">
-            <div className="flex items-center justify-between gap-2 mb-2">
-              <div className="flex items-center gap-2 flex-wrap">
-                <Scroll className="w-4 h-4 text-amber-400" />
-                <span className="text-amber-300 text-xs font-medium uppercase tracking-wider">
-                  {myCommander.name}'s Abilities
-                </span>
-                <Badge variant="outline" className="text-amber-300 border-amber-500/30 text-[10px]">
-                  {myCommander.element}
-                </Badge>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1 text-xs text-slate-400">
-                  <Trophy className="w-3 h-3 text-green-400" />
-                  <span className="text-green-400 font-bold" data-testid="text-my-victory-points">{myVP}</span>
-                  <Flag className="w-3 h-3 text-blue-400 ml-1" />
-                  <span className="text-blue-400 font-bold" data-testid="text-my-withdrawal-points">{myWP}</span>
-                </div>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={() => setAbilityHandOpen(!abilityHandOpen)}
-                  data-testid="button-toggle-ability-hand"
-                >
-                  {abilityHandOpen ? <X className="w-4 h-4" /> : <Scroll className="w-4 h-4" />}
-                </Button>
-              </div>
+
+          {handView === "units" ? (
+            <div className="flex gap-2 flex-wrap justify-center min-h-[100px] items-center" data-testid="unit-hand-cards">
+              {myHand.map((cardId) => {
+                const card = getCardById(cardId);
+                if (!card) return null;
+                const isPlayable = game.currentPhase === "deployment" && isMyTurn;
+                return (
+                  <MiniCard 
+                    key={cardId} 
+                    card={card} 
+                    selected={selectedCards.includes(cardId)}
+                    playable={isPlayable && !selectedCards.includes(cardId) && selectedCards.length < cardsToDeploy}
+                    isNewlyPlayed={newlyDrawnCards.has(cardId)}
+                    onClick={() => handleCardSelect(cardId)}
+                    onPreview={() => setPreviewCard(card)}
+                  />
+                );
+              })}
+              {myHand.length === 0 && (
+                <div className="text-green-400/50 text-sm italic">No cards in hand</div>
+              )}
             </div>
-            {abilityHandOpen && (
-              <div className="flex gap-2 flex-wrap justify-center min-h-[80px] items-center" data-testid="ability-hand-cards">
-                {myCommander.abilities.map((ability) => {
+          ) : (
+            <div className="flex gap-2 flex-wrap justify-center min-h-[100px] items-center" data-testid="ability-hand-cards">
+              {myCommander ? (
+                myCommander.abilities.map((ability) => {
                   const canAfford = myVP >= ability.victoryCost && myWP >= ability.withdrawalCost;
                   const isCorrectPhase = ability.phase === game.currentPhase;
                   return (
@@ -3073,14 +3332,17 @@ export default function GameBoardPage() {
                       canAfford={canAfford}
                       isCorrectPhase={isCorrectPhase}
                       isMyTurn={isMyTurn}
+                      usedThisTurn={usedAbilitiesThisTurn.has(ability.id)}
                       onActivate={() => handleActivateAbility(ability)}
                     />
                   );
-                })}
-              </div>
-            )}
-          </div>
-        )}
+                })
+              ) : (
+                <div className="text-amber-400/50 text-sm italic">No commander equipped</div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
       <CardPreviewDialog 
         card={previewCard} 
