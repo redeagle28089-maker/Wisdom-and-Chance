@@ -15,6 +15,7 @@ import { NavHeader } from "@/components/nav-header";
  * TO REVERT: Remove this import and the <LandscapeOverlay /> component below
  */
 import { LandscapeOverlay } from "@/components/landscape-overlay";
+import { PWAInstallPrompt } from "@/components/pwa-install-prompt";
 import HomePage from "@/pages/home";
 import RulesPage from "@/pages/rules";
 import CardDatabasePage from "@/pages/card-database";
@@ -81,6 +82,7 @@ function App() {
           <Toaster />
           {/* MOBILE LANDSCAPE OVERLAY - TO REVERT: Remove this component */}
           <LandscapeOverlay />
+          <PWAInstallPrompt />
           <AppContent />
         </TooltipProvider>
       </ThemeProvider>

@@ -1,295 +1,45 @@
 # Wisdom & Chance TCG
 
 ## Overview
-A tactical trading card game simulator built with React, Express, and TypeScript. Master elemental powers, build strategic decks, and battle against AI opponents or other players online.
+Wisdom & Chance TCG is a tactical trading card game simulator designed to provide a rich and engaging experience for players. It features deck building, practice battles against AI, and real-time multiplayer functionality. The project's vision is to create a fully immersive card game universe where players can master elemental powers, craft strategic decks, and compete in a dynamic online environment. Key capabilities include Google authentication, a robust multiplayer system with friends and rooms, and a comprehensive card database.
 
-**Purpose:** Card game simulator with deck building, practice battles, and real-time multiplayer.
+## User Preferences
+I prefer clear and concise communication. For coding, I favor functional programming paradigms where applicable and maintainable. When developing, I appreciate an iterative approach with frequent, small commits. Please ask before making any major architectural changes or decisions that might significantly alter the project's direction.
 
-**Current State:** Fully functional TCG with Google authentication, multiplayer rooms, friend system, and real-time gameplay.
+## System Architecture
 
-## Recent Changes
-- **January 2026:** Card Display Size Improvements
-  - Added 'xl' size option to GameCard (144×216px) and CommanderCard (192×288px)
-  - Card Database and Deck Builder now use 'xl' size for 50% larger card displays
-  - Card/commander popup preview images increased 50% in height (h-56 → h-84)
-  - Game mode cards unchanged at original 96×144px size
+### UI/UX Decisions
+The game features a dark fantasy themed UI, utilizing element-specific color schemes. Shadcn UI components provide a consistent and modern aesthetic. The design includes various card sizes (standard, 'xl' for databases/deck builders, and larger for commanders) to optimize visual information. The application is designed as a Progressive Web App (PWA) for installability and mobile accessibility, including responsive app icons.
 
-- **January 2026:** Production Authentication Fix
-  - Replaced openid-client library with manual OIDC implementation using fetch
-  - Fixed ESM/CJS bundling issues that caused `(0 , X.default) is not a function` errors in production
-  - Implemented full JWT signature verification using JWKS from discovery document
-  - Added proper OIDC claim validation (iss, aud, exp, iat, nonce)
-  - Moved pending auth state from global Map to user session for multi-instance resilience
-  - Added token response validation (token_type, id_token presence)
+### Technical Implementations
+The application is built with a React 18 frontend, leveraging Tailwind CSS for styling and Wouter for routing. State management and data fetching are handled by TanStack Query. The backend is an Express.js server written in TypeScript. Real-time communication for multiplayer functionality is managed via WebSockets. Authentication is handled through Replit Auth, supporting Google/GitHub/email logins via OIDC, with user data and sessions persisted in a PostgreSQL database. JWT-based authentication is implemented for mobile API readiness, including refresh token mechanisms.
 
-- **January 2026:** Multiplayer Deck Selection Fix
-  - Fixed critical bug where saved decks weren't appearing in multiplayer room deck selector
-  - Room page now fetches from /api/user-decks (database) instead of /api/decks (in-memory)
-  - Added server-side game start endpoint (POST /api/rooms/:id/start)
-  - Game initialization moved to server where both players' decks can be accessed
-  - Players can now properly select their saved decks and start multiplayer games
+Key features include:
+- **Deck Builder:** Allows users to create and manage decks with validation rules (40 cards, specific power distribution, max 3 copies of any card). Decks are saved to the user's account in PostgreSQL.
+- **AI Deck Suggestion System:** Integrates the Gemini 2.5 Flash model to provide AI-generated deck recommendations based on selected commander and playstyle (Aggressive/Defensive/Balanced).
+- **Multiplayer System:** Supports a game lobby, room creation (public/private), pre-game waiting areas with deck selection, and a ready system. Real-time game synchronization, in-game chat, and spectator mode are all powered by WebSockets. A friend system allows users to send requests, track online status, and manage connections.
+- **Practice Mode:** Users can play against an AI opponent with adjustable difficulty levels (Easy, Medium, Hard).
+- **Admin Tools:** An admin-only interface allows for AI-powered card art generation using the Gemini 2.5 Flash Image model. This includes generating art only, stats only, or complete cards, with options for reference image uploads and toggling stat generation. An image database allows for browsing, managing, and applying artwork to cards.
+- **Engagement Systems:** Includes achievements, daily challenges with XP rewards, a global leaderboard with ELO rating tiers, and in-game emotes.
+- **Game Mechanics:** Implements a turn-based battle system with five distinct phases (Draw, Deployment, Combat, Calculation, End) and specific victory conditions.
+- **Data Storage:** While game data is primarily handled in-memory using a `MemStorage` class during active gameplay, user-specific data like saved decks, friends, and user profiles are persistently stored in a PostgreSQL database.
 
-- **January 2026:** Combat System Fixes & Combat Log
-  - Fixed AI combat calculation bug (AI was calculating 0 power for all cards)
-  - Card instance IDs (format: cardId::N) now properly resolved to base card IDs
-  - AI now draws and deploys cards simultaneously with player in practice mode
-  - Combat log button prominently placed with "View Combat Log" text and amber styling
-  - Combat log persisted in game.gameState.lastCombatLog (survives re-renders)
-  - Combat log dialog shows: card name, base power, trait bonuses, buff/debuff modifiers, final power
+### System Design Choices
+- **API Structure:** A clear separation of concerns is maintained with dedicated API endpoints for authentication, game data, user-specific decks, friend management, room management, and admin functions.
+- **WebSocket Security:** WebSocket connections are secured using session-based authentication, validating cookies upon connection. Authorization checks are implemented for joining rooms and games to ensure only authorized users can participate or spectate.
+- **Error Handling:** OIDC authentication is manually implemented using `fetch` to mitigate bundling issues, ensuring robust JWT signature and claim validation.
+- **PWA Capabilities:** Manifest and service worker are configured for offline capabilities and an installable experience.
 
-- **January 2026:** New Pages & Card Database Enhancement
-  - Card tiles now display unique fantasy names above UNIT label
-  - Analytics Dashboard with stats, element performance, charts
-  - Live Matches Browser for spectating ongoing games
-  - Lore Archives with World History, Elements, and Commander backstories
-  - Sidebar updated with Analytics, Live Matches, and Lore sections
+## External Dependencies
 
-- **January 2026:** User Deck Persistence
-  - Save decks to your account (persists in PostgreSQL database)
-  - "My Decks" button shows all saved decks with load/delete options
-  - Edit existing decks with "Update Deck" functionality
-  - Create new decks from saved decks dialog
-  - Deck validation before save (40 cards, proper power distribution)
-
-- **January 2026:** AI Deck Suggestion System
-  - AI-powered deck builder using Gemini 2.5 Flash model
-  - Select commander and playstyle (Aggressive/Defensive/Balanced)
-  - AI generates complete 40-card deck recommendations
-  - One-click apply to populate deck with AI suggestions
-  - Validates deck constraints (4 cards per power rank, max 3 copies)
-
-- **January 2026:** Enhanced Admin Card Art Generator & Image Database
-  - AI-powered card art generation using Gemini 2.5 Flash Image model
-  - Admin-only access restricted to redeagle28089@gmail.com
-  - 3 Generation Modes: Art Only, Stats Only, Art + Stats (creates complete card in game DB)
-  - Reference image upload support for style-influenced AI generation
-  - Toggleable stat generation: Power, Trait (with modifier), Buff/Debuff (with color and value)
-  - Card Image Database page to browse, search, filter, and manage stored artwork
-  - Direct image upload from computer to image database
-  - Image swap functionality to apply stored images to cards/commanders
-  - Cards now support custom imageUrl with fallback to default element art
-
-- **January 2026:** Engagement & Progression Systems
-  - Achievement system with 22 unlockable achievements across 5 categories
-  - Daily challenges with rotating quests and XP rewards
-  - Global leaderboard with ELO rating tiers (Bronze/Silver/Gold/Platinum/Diamond/Master)
-  - Quick emotes in game chat (GG, Nice!, Thanks, Thinking, Hurry!, Sorry)
-  - Deck sharing with import/export codes
-
-- **January 2026:** WebSocket Security Hardening
-  - Session-based WebSocket authentication (validates cookies on connection)
-  - Authorization checks for room joining (host, guest, or spectator)
-  - Authorization checks for game joining (player1 or player2 only)
-  - Removed insecure client-side userId auth mechanism
-
-- **January 2026:** Full Multiplayer System
-  - Game lobby to browse and create rooms
-  - Real-time WebSocket communication (/ws endpoint)
-  - Room waiting area with deck selection and ready system
-  - In-game chat for player communication
-  - Spectator mode for watching matches
-  - Friend system with requests, online status tracking
-
-- **January 2026:** Google Authentication Integration
-  - Replit Auth with Google/GitHub/email login via OIDC
-  - PostgreSQL database for user accounts and sessions
-  - Protected pages: Practice, Deck Builder, Profile require login
-  - User data persists across sessions
-  - Profile shows authenticated user info and stats
-
-- **January 2026:** Complete TCG implementation
-  - 5 elements: Fire, Water, Earth, Air, Nature
-  - 200 seeded cards (40 per element, powers 1-10)
-  - 5 commanders with unique abilities
-  - Full deck building with 40-card validation
-  - Practice mode with AI opponent (Easy/Medium/Hard difficulty)
-  - Turn-based battle system with 5 phases
-  - Game history and replay viewing
-  - Tutorial page for new players
-  - Player profile with stats tracking
-
-## Game Rules
-
-### Deck Construction
-- 40 unit cards total
-- Exactly 4 cards of each power rank (1-10)
-- Maximum 3 copies of any single card
-- 1 commander card (not in deck)
-
-### Turn Phases
-1. **Draw Phase**: Draw 2 cards
-2. **Deployment**: Play 2 cards face-down
-3. **Combat Phase**: Reveal all cards
-4. **Calculation**: Compare power, deal damage
-5. **End Phase**: Check win conditions
-
-### Victory Conditions
-- Reduce opponent HP to 0
-- Opponent cannot draw cards
-
-## Project Architecture
-
-### Tech Stack
-- **Frontend:** React 18, Tailwind CSS, Shadcn UI, Wouter, TanStack Query
-- **Backend:** Express.js, TypeScript
-- **Database:** PostgreSQL (via DATABASE_URL)
-- **Authentication:** Replit Auth (OIDC with Google/GitHub/email)
-- **Storage:** In-memory (MemStorage class) for game data
-
-### Directory Structure
-```
-├── client/
-│   ├── src/
-│   │   ├── components/     # UI components
-│   │   │   ├── ui/         # Shadcn primitives
-│   │   │   ├── game-sidebar.tsx
-│   │   │   └── theme-*.tsx
-│   │   ├── hooks/
-│   │   │   ├── use-auth.ts     # Authentication hook
-│   │   │   └── use-websocket.ts # WebSocket hook for real-time
-│   │   ├── pages/
-│   │   │   ├── home.tsx
-│   │   │   ├── rules.tsx
-│   │   │   ├── tutorial.tsx
-│   │   │   ├── card-database.tsx
-│   │   │   ├── deck-builder.tsx  # Protected
-│   │   │   ├── practice.tsx      # Protected
-│   │   │   ├── profile.tsx       # Protected
-│   │   │   ├── friends.tsx       # Protected - Friend management
-│   │   │   ├── lobby.tsx         # Protected - Game room browser
-│   │   │   ├── room.tsx          # Protected - Pre-game waiting room
-│   │   │   ├── game-board.tsx    # Protected - Game play
-│   │   │   └── admin-card-art.tsx # Admin - Card art generator
-│   │   └── App.tsx
-├── server/
-│   ├── replit_integrations/
-│   │   └── auth/           # Replit Auth integration
-│   │       ├── index.ts
-│   │       ├── replitAuth.ts
-│   │       └── storage.ts
-│   ├── routes.ts           # Core API endpoints
-│   ├── multiplayerRoutes.ts # Friends, rooms, matchmaking API
-│   ├── websocket.ts        # WebSocket server for real-time
-│   ├── storage.ts          # In-memory data + seed
-│   └── index.ts            # Express server
-├── shared/
-│   ├── schema.ts           # TypeScript types + Zod schemas
-│   └── models/
-│       └── auth.ts         # Auth types
-└── design_guidelines.md    # TCG design system
-```
-
-### API Endpoints
-
-#### Authentication (Replit Auth)
-- `GET /api/login` - Start login flow (redirects to OIDC provider)
-- `GET /api/logout` - Logout and destroy session
-- `GET /api/auth/user` - Get current authenticated user
-
-#### Game Data
-- `GET /api/cards` - List all cards
-- `GET /api/cards/:id` - Get single card
-- `GET /api/commanders` - List all commanders
-- `GET /api/decks` - List all decks (in-memory)
-- `POST /api/decks` - Create deck (in-memory)
-- `POST /api/deck-suggestions` - AI deck suggestion (requires auth, uses Gemini)
-- `GET /api/games` - List all games
-- `POST /api/games` - Create game (requires auth)
-- `PATCH /api/games/:id` - Update game state
-
-#### User Decks (requires auth, persisted in database)
-- `GET /api/user-decks` - List user's saved decks
-- `GET /api/user-decks/:id` - Get specific saved deck
-- `POST /api/user-decks` - Save new deck to account
-- `PATCH /api/user-decks/:id` - Update existing saved deck
-- `DELETE /api/user-decks/:id` - Delete saved deck
-
-#### Friend System (requires auth)
-- `GET /api/friends` - List friends with online status
-- `GET /api/friend-requests` - List pending requests (incoming + outgoing)
-- `POST /api/friend-requests` - Send friend request by email
-- `POST /api/friend-requests/:id/accept` - Accept request
-- `POST /api/friend-requests/:id/decline` - Decline request
-- `DELETE /api/friends/:friendId` - Remove friend
-
-#### Room System (requires auth)
-- `GET /api/rooms` - List public waiting rooms
-- `GET /api/rooms/:id` - Get room details with players/spectators
-- `POST /api/rooms` - Create room
-- `POST /api/rooms/:id/join` - Join as player (with optional password)
-- `POST /api/rooms/:id/leave` - Leave room
-- `POST /api/rooms/:id/ready` - Set ready status with deck selection
-- `POST /api/rooms/:id/spectate` - Join as spectator
-- `DELETE /api/rooms/:id/spectate` - Stop spectating
-- `GET /api/rooms/:id/messages` - Get room chat history
-- `POST /api/rooms/:id/messages` - Send chat message
-
-#### WebSocket Events (/ws)
-- Authentication: Session-based (validates cookies on connection, no client-side auth needed)
-- `join_room/leave_room` - Join/leave room for updates (requires host, guest, or spectator membership)
-- `join_game/leave_game` - Join/leave game for real-time sync (requires player1 or player2)
-- `room_message/game_message` - Chat in room or game
-- `game_action` - Broadcast game state changes
-- `player_ready` - Notify ready status change
-- `game_start` - Notify game start
-
-#### Admin Routes (requires admin email: redeagle28089@gmail.com)
-- `GET /api/admin/check` - Check if current user is admin
-- `POST /api/admin/generate-card-art` - Generate AI artwork with Gemini
-- `PATCH /api/admin/cards/:id` - Update card image URL
-- `PATCH /api/admin/commanders/:id` - Update commander image URL
-
-### Data Models
-
-#### User (from auth)
-- id: string (UUID)
-- email: string
-- firstName: string | null
-- lastName: string | null
-- profileImageUrl: string | null
-- createdAt: Date
-- updatedAt: Date
-
-#### Game Data
-- **Card**: id, name, element, power (1-10), trait, buff/debuff modifiers
-- **Commander**: id, name, element, title, abilities
-- **Deck**: id, name, playerId, commanderId, cardIds[]
-- **Game**: id, players, HP, phase, turn, gameState, status, aiDifficulty
-
-## Running the App
-`npm run dev` starts Express backend + Vite frontend on port 5000.
-
-## Features
-
-### Implemented
-- Google/GitHub/email authentication via Replit Auth
-- User accounts with persistent progress
-- Home page with hero section and feature highlights
-- Rules page with complete game mechanics
-- Tutorial page with 5-step learning guide
-- Card Database with element filtering (public)
-- Deck Builder with validation (40 cards, power distribution, max 3 copies)
-- Commander selection for decks
-- Practice mode with AI opponent
-- AI difficulty selection (Easy, Medium, Hard)
-- Game history viewing
-- Player profile with stats (wins, losses, win rate)
-- Turn-based gameplay with 5 phases
-- Dark fantasy themed UI with element colors
-- **Multiplayer Features:**
-  - Game lobby with room browser and creation
-  - Public and private (password-protected) rooms
-  - Pre-game waiting room with deck selection
-  - Ready system for both players
-  - Real-time game synchronization via WebSocket
-  - In-game chat during matches
-  - Spectator mode for watching games
-  - Friend system with requests and online status
-  - Room chat for pre-game communication
-
-### Page Access
-- **Public:** Home, Rules, Tutorial, Card Database
-- **Protected (requires login):** Deck Builder, Practice, Profile, Game Board, Lobby, Friends, Room
-
-### Known Limitations (Development Environment)
-- Game state updates use optimistic client PATCHes; production should add server-side move validation
+- **PostgreSQL:** Primary database for persistent user data, saved decks, friend lists, and game statistics.
+- **Replit Auth:** Used for user authentication, providing seamless integration with Google, GitHub, and email login providers via OIDC.
+- **Google Gemini 2.5 Flash Model:** Utilized for AI deck suggestions and AI-powered card art generation in admin tools.
+- **React 18:** Frontend framework.
+- **Tailwind CSS:** Utility-first CSS framework for styling.
+- **Shadcn UI:** Reusable UI components.
+- **Wouter:** Lightweight React router.
+- **TanStack Query:** For data fetching and state management.
+- **Express.js:** Backend web framework.
+- **TypeScript:** Programming language for both frontend and backend.
+- **MemStorage:** In-memory storage solution used for active game state during a session.

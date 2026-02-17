@@ -7,6 +7,8 @@ import { db } from "./db";
 import { insertCardSchema, insertDeckSchema, insertPlayerSchema, insertGameSchema, ELEMENTS, userDecks, insertUserDeckSchema, GAME_CONSTANTS, cardImages, insertCardImageSchema, TRAITS, BUFF_DEBUFF_COLORS } from "@shared/schema";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import { registerMultiplayerRoutes } from "./multiplayerRoutes";
+import { registerMobileAuthRoutes } from "./mobileAuth";
+import { registerApiDocsRoutes } from "./apiDocs";
 import { generateImage, generateText } from "./replit_integrations/image/client";
 
 const ADMIN_EMAIL = "redeagle28089@gmail.com";
@@ -62,6 +64,8 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
   await setupAuth(app);
   registerAuthRoutes(app);
   registerMultiplayerRoutes(app);
+  registerMobileAuthRoutes(app);
+  registerApiDocsRoutes(app);
   app.get("/api/cards", async (req, res) => {
     const cards = await storage.getCards();
     res.json(cards);
