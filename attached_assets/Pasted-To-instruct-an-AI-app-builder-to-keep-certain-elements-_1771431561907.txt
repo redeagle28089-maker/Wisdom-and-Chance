@@ -1,0 +1,33 @@
+To instruct an AI app builder to keep certain elements static (e.g., game board, tokens) while scaling others (e.g., UI panels, screen layout) when resizing, you must move away from "Scale to Fit" settings and define constraints and anchoring for individual UI components. 
+Here is how to tell an AI builder to achieve a "board game" style responsive layout, based on common UI development patterns: 
+Unity Discussions
+Unity Discussions
+ +2
+1. Disable Global Auto-Scaling
+First, instruct the AI to stop treating the entire screen as one image that zooms in/out.
+Prompt/Setting: "Disable 'Scale to fit' and 'Lock aspect ratio' in the app settings."
+Alternative: "Set the rendering mode to 'Constant Pixel Size' instead of 'Scale with Screen Size' for the main game board container." 
+Unity Discussions
+Unity Discussions
+ +1
+2. Define "Static" vs. "Scaling" Areas
+You must clearly define which elements are fixed (like a game board) and which should move (like menu buttons). 
+Prompt: "Create a main game canvas that stays at a fixed pixel size. Keep all game pieces (child elements) at their original size, even if the screen changes size."
+Define Layout Containers: "Use a ConstraintLayout or a nested HBox/VBox structure. The central game board should have flex-grow set to 0 (non-scaling), while sidebar panels can have flex-grow set to 1 (scaling)." 
+Reddit
+Reddit
+ +4
+3. Use Anchoring for Non-Scaling Elements 
+To keep items (like a button) in the same corner regardless of screen size, instruct the AI to anchor them. 
+Prompt: "Anchor all UI elements relative to their edges (e.g., top-right for a pause button, bottom-center for player hand) rather than the center of the screen."
+Action: "Set the Anchor point of the main board container to top-left with 0 offsets." 
+Reddit
+Reddit
+ +3
+4. Use "Transform Each" (if using Visual Editors) 
+If your AI builder allows for component-level adjustments:
+Prompt: "Apply 'Transform Each' to the child elements within the game board container so they maintain their size relative to each other, rather than scaling as a single group." 
+Adobe
+Adobe
+Summary of Prompting Strategy
+"Build a responsive layout, but disable 'Scale to Fit' on the central game board container. Keep the game board at a constant pixel size, but anchor the surrounding menu panels to the screen edges so they adjust to different screen sizes without distorting the game board." 
