@@ -980,6 +980,119 @@ function CardPreviewDialog({
   );
 }
 
+function AbilityPreviewDialog({
+  ability,
+  commanderElement,
+  open,
+  onClose,
+}: {
+  ability: CommanderAbility | null;
+  commanderElement: Element | null;
+  open: boolean;
+  onClose: () => void;
+}) {
+  if (!ability || !commanderElement) return null;
+
+  const config = elementConfig[commanderElement];
+  const Icon = config.icon;
+
+  const effectTypeLabels: Record<string, string> = {
+    direct_damage: "Direct Damage",
+    element_power_damage: "Elemental Power Damage",
+    buff_element_unit: "Buff Element Units",
+    extra_deploy: "Extra Deployment",
+    cycle_element_cards: "Cycle Element Cards",
+    block_effects: "Block Enemy Effects",
+    negate_and_halve: "Negate & Halve",
+    healing_factor: "Healing Factor",
+    draw_cards: "Draw Cards",
+    protect_element: "Protect Element",
+    debuff_enemy: "Debuff Enemy Units",
+    swap_units: "Swap Units",
+    revive_unit: "Revive Unit",
+    growth_buff: "Growth Buff",
+    prevent_ward: "Ward Prevention",
+    destroy_unit: "Destroy Unit",
+    add_shield: "Add Shield",
+    reduce_power: "Reduce Power",
+    first_strike: "First Strike",
+    add_evasion: "Add Evasion",
+    set_power: "Set Power",
+    restore_from_ward: "Restore from Ward",
+    heal_and_buff: "Heal & Buff",
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="bg-slate-900 border-purple-500/30 max-w-sm" data-testid="dialog-ability-preview">
+        <DialogHeader>
+          <DialogTitle className={`flex items-center gap-2 ${config.color}`}>
+            <Icon className="w-5 h-5" />
+            {ability.name}
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-3">
+          <p className="text-slate-200 text-sm leading-relaxed">
+            {ability.description}
+          </p>
+
+          <div className="bg-slate-800/60 rounded-lg p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-slate-400 text-xs uppercase tracking-wider">Phase</span>
+              <Badge className={`${ability.phase === "combat" ? "bg-red-600/80" : ability.phase === "deployment" ? "bg-blue-600/80" : ability.phase === "draw" ? "bg-cyan-600/80" : "bg-slate-600/80"}`}>
+                {ability.phase}
+              </Badge>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span className="text-slate-400 text-xs uppercase tracking-wider">Effect Type</span>
+              <span className="text-white text-sm font-medium">
+                {effectTypeLabels[ability.effect.type] || ability.effect.type}
+              </span>
+            </div>
+
+            {ability.effect.value !== undefined && (
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400 text-xs uppercase tracking-wider">Value</span>
+                <span className="text-yellow-300 text-sm font-bold">{ability.effect.value}</span>
+              </div>
+            )}
+
+            {ability.effect.target && (
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400 text-xs uppercase tracking-wider">Target</span>
+                <span className="text-white text-sm capitalize">{ability.effect.target}</span>
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3">
+            {ability.victoryCost > 0 && (
+              <div className="flex items-center gap-1.5 bg-green-900/40 border border-green-500/30 rounded-lg px-3 py-1.5">
+                <Trophy className="w-4 h-4 text-green-400" />
+                <span className="text-green-300 text-sm font-medium">-{ability.victoryCost} Advantage</span>
+              </div>
+            )}
+            {ability.withdrawalCost > 0 && (
+              <div className="flex items-center gap-1.5 bg-blue-900/40 border border-blue-500/30 rounded-lg px-3 py-1.5">
+                <Flag className="w-4 h-4 text-blue-400" />
+                <span className="text-blue-300 text-sm font-medium">-{ability.withdrawalCost} Withdrawal</span>
+              </div>
+            )}
+            {ability.victoryCost === 0 && ability.withdrawalCost === 0 && (
+              <div className="flex items-center gap-1.5 bg-slate-700/40 border border-slate-500/30 rounded-lg px-3 py-1.5">
+                <Sparkles className="w-4 h-4 text-yellow-400" />
+                <span className="text-slate-300 text-sm font-medium">Free to use</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 interface CombatResultProps {
   player1Breakdown: CardPowerBreakdown[];
   player2Breakdown: CardPowerBreakdown[];
@@ -1434,6 +1547,7 @@ function AbilityCard({
   isMyTurn,
   usedThisTurn,
   onActivate,
+  onPreview,
 }: {
   ability: CommanderAbility;
   commanderElement: Element;
@@ -1442,6 +1556,7 @@ function AbilityCard({
   isMyTurn: boolean;
   usedThisTurn: boolean;
   onActivate: () => void;
+  onPreview: () => void;
 }) {
   const config = elementConfig[commanderElement];
   const isPlayable = canAfford && isCorrectPhase && isMyTurn;
@@ -1466,8 +1581,21 @@ function AbilityCard({
           </div>
         </div>
       )}
+
+      <Button
+        size="icon"
+        variant="ghost"
+        className="absolute top-1 right-1 z-20 w-5 h-5 min-h-0 rounded-full bg-slate-700/80 border border-slate-500/40"
+        onClick={(e) => {
+          e.stopPropagation();
+          onPreview();
+        }}
+        data-testid={`button-preview-ability-${ability.id}`}
+      >
+        <Eye className="w-3 h-3 text-slate-300" />
+      </Button>
       
-      <div className={`text-xs font-bold ${config.color} mb-1 truncate`}>
+      <div className={`text-xs font-bold ${config.color} mb-1 truncate pr-5`}>
         {ability.name}
       </div>
       
@@ -1518,6 +1646,7 @@ export default function GameBoardPage() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [spectatorCount, setSpectatorCount] = useState(0);
   const [previewCard, setPreviewCard] = useState<CardType | null>(null);
+  const [previewAbility, setPreviewAbility] = useState<CommanderAbility | null>(null);
   const [previousMyHP, setPreviousMyHP] = useState<number | undefined>(undefined);
   const [previousOpponentHP, setPreviousOpponentHP] = useState<number | undefined>(undefined);
   const [newlyDrawnCards, setNewlyDrawnCards] = useState<Set<string>>(new Set());
@@ -3334,6 +3463,7 @@ export default function GameBoardPage() {
                       isMyTurn={isMyTurn}
                       usedThisTurn={usedAbilitiesThisTurn.has(ability.id)}
                       onActivate={() => handleActivateAbility(ability)}
+                      onPreview={() => setPreviewAbility(ability)}
                     />
                   );
                 })
@@ -3348,6 +3478,12 @@ export default function GameBoardPage() {
         card={previewCard} 
         open={!!previewCard} 
         onClose={() => setPreviewCard(null)} 
+      />
+      <AbilityPreviewDialog
+        ability={previewAbility}
+        commanderElement={myCommander?.element || null}
+        open={!!previewAbility}
+        onClose={() => setPreviewAbility(null)}
       />
       {chatOpen && isMultiplayer && (
         <div className="fixed bottom-4 right-4 w-80 h-96 bg-slate-800 border border-purple-500/30 rounded-lg shadow-xl flex flex-col z-50">
