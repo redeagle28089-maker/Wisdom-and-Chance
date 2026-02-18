@@ -536,16 +536,16 @@ function VictoryWithdrawalCounter({
   isPlayer: boolean;
 }) {
   return (
-    <div className={`flex gap-2 p-2 rounded-lg ${isPlayer ? 'bg-green-900/20 border border-green-500/30' : 'bg-red-900/20 border border-red-500/30'}`} data-testid={`${isPlayer ? 'player' : 'opponent'}-counters`}>
-      <div className="flex items-center gap-1" title="Advances (Victories)">
-        <Trophy className="w-4 h-4 text-green-400" />
-        <span className="text-green-300 font-bold text-sm" data-testid={`${isPlayer ? 'player' : 'opponent'}-victories`}>
+    <div className={`flex gap-1.5 px-1.5 py-1 rounded-md ${isPlayer ? 'bg-green-900/20 border border-green-500/30' : 'bg-red-900/20 border border-red-500/30'}`} data-testid={`${isPlayer ? 'player' : 'opponent'}-counters`}>
+      <div className="flex items-center gap-0.5" title="Advances (Victories)">
+        <Trophy className="w-3.5 h-3.5 text-green-400" />
+        <span className="text-green-300 font-bold text-xs" data-testid={`${isPlayer ? 'player' : 'opponent'}-victories`}>
           {victories}
         </span>
       </div>
-      <div className="flex items-center gap-1" title="Withdrawals (Defeats)">
-        <Flag className="w-4 h-4 text-blue-400" />
-        <span className="text-blue-300 font-bold text-sm" data-testid={`${isPlayer ? 'player' : 'opponent'}-withdrawals`}>
+      <div className="flex items-center gap-0.5" title="Withdrawals (Defeats)">
+        <Flag className="w-3.5 h-3.5 text-blue-400" />
+        <span className="text-blue-300 font-bold text-xs" data-testid={`${isPlayer ? 'player' : 'opponent'}-withdrawals`}>
           {withdrawals}
         </span>
       </div>
@@ -581,7 +581,7 @@ function AnimatedHPBar({
   }, [current, tookDamage]);
   
   return (
-    <div className={`relative rounded-xl overflow-hidden ${isPlayer ? 'bg-slate-800/80' : 'bg-slate-800/60'} border ${isPlayer ? 'border-green-500/30' : 'border-red-500/30'} p-3 min-w-[180px] ${shaking ? 'animate-damage-shake' : ''}`}>
+    <div className={`relative rounded-lg overflow-hidden ${isPlayer ? 'bg-slate-800/80' : 'bg-slate-800/60'} border ${isPlayer ? 'border-green-500/30' : 'border-red-500/30'} px-2 py-1.5 min-w-[140px] ${shaking ? 'animate-damage-shake' : ''}`}>
       <div className="absolute inset-0 opacity-20">
         <div 
           className={`h-full transition-all duration-500 ease-out ${
@@ -592,16 +592,16 @@ function AnimatedHPBar({
           style={{ width: `${percentage}%` }}
         />
       </div>
-      <div className="relative flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Heart className={`w-5 h-5 ${isPlayer ? 'text-green-400' : 'text-red-400'} ${isCritical ? 'animate-pulse' : ''}`} />
-          <span className="text-white/70 text-sm font-medium">{label}</span>
-        </div>
+      <div className="relative flex items-center justify-between gap-2">
         <div className="flex items-center gap-1">
-          <span className={`text-2xl font-bold transition-all ${isCritical ? 'text-red-400 animate-pulse' : shaking ? 'text-red-300 scale-110' : 'text-white'}`}>
+          <Heart className={`w-4 h-4 ${isPlayer ? 'text-green-400' : 'text-red-400'} ${isCritical ? 'animate-pulse' : ''}`} />
+          <span className="text-white/70 text-xs font-medium">{label}</span>
+        </div>
+        <div className="flex items-center gap-0.5">
+          <span className={`text-lg font-bold transition-all ${isCritical ? 'text-red-400 animate-pulse' : shaking ? 'text-red-300 scale-110' : 'text-white'}`}>
             {current}
           </span>
-          <span className="text-white/40 text-sm">/{max}</span>
+          <span className="text-white/40 text-xs">/{max}</span>
         </div>
       </div>
     </div>
@@ -638,8 +638,8 @@ function PhaseIndicator({
   };
   
   return (
-    <div className="flex flex-col items-center gap-2">
-      <div className="flex items-center gap-2 text-xs">
+    <div className="flex flex-col items-center gap-1">
+      <div className="flex items-center gap-1.5 text-xs">
         {combatHistoryCount && combatHistoryCount > 0 && onViewCombatHistory && (
           <Button 
             size="sm"
@@ -689,7 +689,7 @@ function PhaseIndicator({
           );
         })}
       </div>
-      <span className={`text-sm font-medium bg-gradient-to-r ${phaseColors[currentPhase]} bg-clip-text text-transparent`}>
+      <span className={`text-xs font-medium bg-gradient-to-r ${phaseColors[currentPhase]} bg-clip-text text-transparent`}>
         {phaseNames[currentPhase]}
       </span>
     </div>
@@ -765,11 +765,11 @@ function MiniCard({
   if (faceDown) {
     return (
       <div 
-        className={`w-24 h-36 rounded-lg bg-gradient-to-br from-purple-800 to-purple-900 border-2 border-purple-500/50 flex items-center justify-center shadow-lg transition-all duration-300 ${isOnBattlefield ? 'animate-pulse' : ''}`}
+        className={`w-[4.5rem] h-[6.5rem] rounded-lg bg-gradient-to-br from-purple-800 to-purple-900 border-2 border-purple-500/50 flex items-center justify-center shadow-lg transition-all duration-300 ${isOnBattlefield ? 'animate-pulse' : ''}`}
         onClick={handleClick}
       >
-        <div className="w-14 h-14 rounded-full bg-purple-600/30 flex items-center justify-center border border-purple-400/30">
-          <span className="text-purple-300 text-2xl font-bold">?</span>
+        <div className="w-10 h-10 rounded-full bg-purple-600/30 flex items-center justify-center border border-purple-400/30">
+          <span className="text-purple-300 text-xl font-bold">?</span>
         </div>
       </div>
     );
@@ -777,7 +777,7 @@ function MiniCard({
 
   return (
     <div 
-      className={`relative w-24 h-36 rounded-lg ${config.bgColor} border-2 transition-all duration-200 cursor-pointer group
+      className={`relative w-[4.5rem] h-[6.5rem] rounded-lg ${config.bgColor} border-2 transition-all duration-200 cursor-pointer group
         ${selected 
           ? 'border-yellow-400 ring-2 ring-yellow-400/50 shadow-lg shadow-yellow-500/30 -translate-y-2 scale-105' 
           : playable 
@@ -809,19 +809,19 @@ function MiniCard({
       )}
       
       {/* Power/Rank badge - top left (always visible) */}
-      <div className="absolute top-1.5 left-1.5 w-7 h-7 bg-slate-900/90 rounded flex items-center justify-center border border-white/30 z-10">
-        <span className="text-white font-bold text-sm">{card.power}</span>
+      <div className="absolute top-1 left-1 w-6 h-6 bg-slate-900/90 rounded flex items-center justify-center border border-white/30 z-10">
+        <span className="text-white font-bold text-xs">{card.power}</span>
       </div>
       
       {/* Trait value badge - top right (always visible with icon) */}
       {(() => {
         const TraitIcon = card.trait ? traitIconsMap[card.trait] || Zap : null;
         return (
-          <div className={`absolute top-1.5 right-1.5 h-7 px-1 rounded flex items-center justify-center gap-0.5 z-10 ${
+          <div className={`absolute top-1 right-1 h-6 px-0.5 rounded flex items-center justify-center gap-0.5 z-10 ${
             card.trait ? 'bg-purple-600/90 border border-purple-400/50' : 'bg-slate-700/80 border border-slate-500/30'
           }`}>
-            <span className={`font-bold text-xs ${card.trait ? 'text-white' : 'text-slate-400'}`}>{card.trait ? (card.traitValue ?? 1) : 0}</span>
-            {TraitIcon && <TraitIcon className="w-4 h-4 text-white" />}
+            <span className={`font-bold text-[10px] ${card.trait ? 'text-white' : 'text-slate-400'}`}>{card.trait ? (card.traitValue ?? 1) : 0}</span>
+            {TraitIcon && <TraitIcon className="w-3 h-3 text-white" />}
           </div>
         );
       })()}
@@ -830,12 +830,12 @@ function MiniCard({
       {(() => {
         const buffStyle = card.buffColor && buffDebuffColorMap[card.buffColor];
         return (
-          <div className={`absolute bottom-7 left-1.5 w-7 h-6 rounded flex items-center justify-center z-10 ${
+          <div className={`absolute bottom-6 left-1 w-6 h-5 rounded flex items-center justify-center z-10 ${
             card.buffModifier > 0 
               ? buffStyle ? `${buffStyle.bg} ${buffStyle.border}` : 'bg-cyan-500/90 border border-cyan-300/50'
               : 'bg-slate-700/80 border border-slate-500/30'
           }`}>
-            <span className={`font-bold text-[10px] ${card.buffModifier > 0 ? 'text-white' : 'text-slate-400'}`}>+{card.buffModifier}</span>
+            <span className={`font-bold text-[9px] ${card.buffModifier > 0 ? 'text-white' : 'text-slate-400'}`}>+{card.buffModifier}</span>
           </div>
         );
       })()}
@@ -844,12 +844,12 @@ function MiniCard({
       {(() => {
         const debuffStyle = card.debuffColor && buffDebuffColorMap[card.debuffColor];
         return (
-          <div className={`absolute bottom-7 right-1.5 w-7 h-6 rounded flex items-center justify-center z-10 ${
+          <div className={`absolute bottom-6 right-1 w-6 h-5 rounded flex items-center justify-center z-10 ${
             card.debuffModifier > 0 
               ? debuffStyle ? `${debuffStyle.bg} ${debuffStyle.border}` : 'bg-orange-500/90 border border-orange-300/50'
               : 'bg-slate-700/80 border border-slate-500/30'
           }`}>
-            <span className={`font-bold text-[10px] ${card.debuffModifier > 0 ? 'text-white' : 'text-slate-400'}`}>-{card.debuffModifier}</span>
+            <span className={`font-bold text-[9px] ${card.debuffModifier > 0 ? 'text-white' : 'text-slate-400'}`}>-{card.debuffModifier}</span>
           </div>
         );
       })()}
@@ -1178,7 +1178,7 @@ function CombatResultPanel({
                           yourCardsDraw > 0 || enemyCardsDraw > 0;
   
   return (
-    <div className="bg-slate-900/95 border border-purple-500/30 rounded-xl p-4 space-y-4 max-h-[80vh] overflow-y-auto">
+    <div className="bg-slate-900/95 border border-purple-500/30 rounded-lg p-3 space-y-3 max-h-[40vh] overflow-y-auto flex-shrink-0">
       <div className="flex items-center justify-between">
         <h3 className="text-white font-bold text-lg flex items-center gap-2">
           <Swords className="w-5 h-5 text-yellow-400" />
@@ -1498,14 +1498,14 @@ function BattlefieldZone({
   };
   
   return (
-    <div className={`relative rounded-xl border-2 ${isOpponent ? 'border-red-500/20 bg-gradient-to-b from-red-900/10 to-slate-800/30' : 'border-green-500/20 bg-gradient-to-t from-green-900/10 to-slate-800/30'} p-4`}>
-      <div className="absolute inset-0 overflow-hidden rounded-xl">
+    <div className={`relative rounded-lg border-2 ${isOpponent ? 'border-red-500/20 bg-gradient-to-b from-red-900/10 to-slate-800/30' : 'border-green-500/20 bg-gradient-to-t from-green-900/10 to-slate-800/30'} p-2 flex-1 min-h-0 flex flex-col`}>
+      <div className="absolute inset-0 overflow-hidden rounded-lg">
         <div className={`absolute inset-0 bg-[radial-gradient(circle_at_50%_${isOpponent ? '0%' : '100%'},_var(--tw-gradient-from)_0%,_transparent_70%)] ${isOpponent ? 'from-red-500/5' : 'from-green-500/5'}`} />
       </div>
-      <p className={`${isOpponent ? 'text-red-300' : 'text-green-300'} text-xs font-medium mb-3 text-center uppercase tracking-wider`}>
+      <p className={`${isOpponent ? 'text-red-300' : 'text-green-300'} text-[10px] font-medium mb-1 text-center uppercase tracking-wider flex-shrink-0`}>
         {isOpponent ? "Opponent's Field" : "Your Field"}
       </p>
-      <div className="flex gap-3 justify-center min-h-[100px] items-center">
+      <div className="flex gap-2 justify-center flex-1 min-h-0 items-center">
         {cards.length > 0 ? (
           cards.map((bf, i) => {
             const card = getCardById(bf.cardId);
@@ -1563,7 +1563,7 @@ function AbilityCard({
   
   return (
     <div 
-      className={`relative w-36 rounded-lg border-2 p-2.5 transition-all duration-200 cursor-pointer
+      className={`relative w-32 rounded-lg border-2 p-2 transition-all duration-200 cursor-pointer
         ${usedThisTurn 
           ? 'border-amber-500/40 opacity-70 bg-gradient-to-br from-amber-900/30 to-slate-900' 
           : isPlayable 
@@ -3148,11 +3148,11 @@ export default function GameBoardPage() {
   }
 
   return (
-    <div className="min-h-full bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900 p-4 relative overflow-hidden">
+    <div className="h-dvh bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900 p-2 relative overflow-hidden">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-purple-900/20 via-transparent to-transparent pointer-events-none" />
-      <div className="max-w-6xl mx-auto space-y-3 relative z-10">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+      <div className="max-w-6xl mx-auto flex flex-col h-full gap-1.5 relative z-10">
+        <div className="flex items-center justify-between flex-shrink-0 gap-2">
+          <div className="flex items-center gap-2">
             <AnimatedHPBar current={opponentHP} max={GAME_CONSTANTS.STARTING_HP} isPlayer={false} label="Opponent" previousHP={previousOpponentHP} />
             <VictoryWithdrawalCounter 
               victories={isPlayer1 ? game.player2VictoryPoints : game.player1VictoryPoints} 
@@ -3181,14 +3181,14 @@ export default function GameBoardPage() {
             combatHistoryCount={game.gameState.combatHistory?.length || 0}
             onViewCombatHistory={() => setShowCombatHistoryDialog(true)}
           />
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <VictoryWithdrawalCounter 
               victories={isPlayer1 ? game.player1VictoryPoints : game.player2VictoryPoints} 
               withdrawals={isPlayer1 ? game.player1WithdrawalPoints : game.player2WithdrawalPoints} 
               isPlayer={true} 
             />
             <AnimatedHPBar current={myHP} max={GAME_CONSTANTS.STARTING_HP} isPlayer={true} label="You" previousHP={previousMyHP} />
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               {isMultiplayer && (
                 <Button 
                   variant="outline" 
@@ -3206,25 +3206,25 @@ export default function GameBoardPage() {
           </div>
         </div>
 
-        <div className="bg-slate-800/30 rounded-xl border border-purple-500/10 p-3">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-purple-300 text-xs font-medium uppercase tracking-wider">Opponent's Hand</span>
-            <div className="flex items-center gap-2 text-xs text-purple-400">
+        <div className="bg-slate-800/30 rounded-lg border border-purple-500/10 px-3 py-1.5 flex-shrink-0">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-purple-300 text-[10px] font-medium uppercase tracking-wider">Opponent's Hand</span>
+            <div className="flex items-center gap-2 text-[10px] text-purple-400">
               <span>{opponentHandSize} cards</span>
               <span className="opacity-50">|</span>
               <span>Deck: {opponentDeckSize}</span>
             </div>
           </div>
-          <div className="flex gap-1.5 justify-center min-h-[80px] items-center">
+          <div className="flex gap-1 justify-center items-center">
             {Array(Math.min(opponentHandSize, 10)).fill(0).map((_, i) => (
               <div 
                 key={i} 
-                className="w-10 h-16 rounded-lg bg-gradient-to-br from-purple-800 to-purple-950 border border-purple-500/30 shadow-lg transform transition-all hover:-translate-y-1"
+                className="w-8 h-12 rounded bg-gradient-to-br from-purple-800 to-purple-950 border border-purple-500/30 shadow-lg"
                 style={{ transform: `rotate(${(i - Math.floor(opponentHandSize / 2)) * 2}deg)` }}
               />
             ))}
             {opponentHandSize > 10 && (
-              <Badge variant="secondary" className="text-xs">+{opponentHandSize - 10}</Badge>
+              <Badge variant="secondary" className="text-[10px]">+{opponentHandSize - 10}</Badge>
             )}
           </div>
         </div>
@@ -3236,9 +3236,9 @@ export default function GameBoardPage() {
           onPreview={setPreviewCard}
         />
 
-        <div className="flex justify-center items-center gap-4">
-          <Card className="bg-purple-900/50 border-purple-500/30 p-4">
-            <div className="flex items-center gap-4">
+        <div className="flex justify-center items-center gap-2 flex-shrink-0">
+          <Card className="bg-purple-900/50 border-purple-500/30 px-3 py-2">
+            <div className="flex items-center gap-3">
               {/* Multiplayer waiting message when it's not your turn */}
               {game.gameType === "multiplayer" && !isMyTurn && (
                 <div className="flex items-center gap-2 text-amber-300" data-testid="text-waiting-opponent">
@@ -3349,7 +3349,7 @@ export default function GameBoardPage() {
           />
         )}
 
-        <div className="rounded-xl border-2 p-4 transition-colors duration-300"
+        <div className="rounded-lg border-2 px-3 py-2 transition-colors duration-300 flex-shrink-0 min-h-0"
           style={{
             background: handView === "units" 
               ? "linear-gradient(to top, rgba(20, 83, 45, 0.1), rgba(30, 41, 59, 0.3))" 
@@ -3357,7 +3357,7 @@ export default function GameBoardPage() {
             borderColor: handView === "units" ? "rgba(34, 197, 94, 0.2)" : "rgba(245, 158, 11, 0.2)",
           }}
         >
-          <div className="flex items-center justify-between mb-3 gap-2">
+          <div className="flex items-center justify-between mb-1.5 gap-2">
             <div className="flex items-center gap-1 bg-slate-800/80 rounded-lg p-0.5 border border-slate-700/50" data-testid="hand-view-toggle">
               <button
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
@@ -3426,7 +3426,7 @@ export default function GameBoardPage() {
           </div>
 
           {handView === "units" ? (
-            <div className="flex gap-2 flex-wrap justify-center min-h-[100px] items-center" data-testid="unit-hand-cards">
+            <div className="flex gap-1.5 flex-wrap justify-center items-center" data-testid="unit-hand-cards">
               {myHand.map((cardId) => {
                 const card = getCardById(cardId);
                 if (!card) return null;
@@ -3448,7 +3448,7 @@ export default function GameBoardPage() {
               )}
             </div>
           ) : (
-            <div className="flex gap-2 flex-wrap justify-center min-h-[100px] items-center" data-testid="ability-hand-cards">
+            <div className="flex gap-1.5 flex-wrap justify-center items-center" data-testid="ability-hand-cards">
               {myCommander ? (
                 myCommander.abilities.map((ability) => {
                   const canAfford = myVP >= ability.victoryCost && myWP >= ability.withdrawalCost;
