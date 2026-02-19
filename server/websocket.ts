@@ -8,6 +8,7 @@ import { storage } from "./storage";
 import { getSessionStore, getSessionSecret } from "./replit_integrations/auth/replitAuth";
 import cookie from "cookie";
 import cookieSignature from "cookie-signature";
+import { filterObscenity } from "./obscenity-filter";
 
 interface ConnectedUser {
   id: string;
@@ -240,7 +241,7 @@ class GameWebSocketServer {
                     roomId: message.payload.roomId,
                     senderId: userId,
                     senderName: connectedUser?.displayName || displayName,
-                    message: message.payload.message,
+                    message: filterObscenity(message.payload.message || ""),
                     timestamp: new Date().toISOString(),
                   },
                 });
@@ -256,7 +257,7 @@ class GameWebSocketServer {
                     gameId: message.payload.gameId,
                     senderId: userId,
                     senderName: connectedUser?.displayName || displayName,
-                    message: message.payload.message,
+                    message: filterObscenity(message.payload.message || ""),
                     timestamp: new Date().toISOString(),
                   },
                 });

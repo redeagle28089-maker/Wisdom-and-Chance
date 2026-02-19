@@ -306,3 +306,22 @@ export const deckCodes = pgTable(
 
 export type DeckCode = typeof deckCodes.$inferSelect;
 export type InsertDeckCode = typeof deckCodes.$inferInsert;
+
+export const friendMessages = pgTable(
+  "friend_messages",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    senderId: varchar("sender_id").notNull().references(() => users.id),
+    receiverId: varchar("receiver_id").notNull().references(() => users.id),
+    message: text("message").notNull(),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => [
+    index("idx_friend_messages_sender").on(table.senderId),
+    index("idx_friend_messages_receiver").on(table.receiverId),
+    index("idx_friend_messages_created").on(table.createdAt),
+  ]
+);
+
+export type FriendMessage = typeof friendMessages.$inferSelect;
+export type InsertFriendMessage = typeof friendMessages.$inferInsert;

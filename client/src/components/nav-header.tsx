@@ -153,6 +153,7 @@ export function NavHeader() {
                 items={[
                   { title: "Card Art Generator", url: "/admin/card-art", icon: Palette },
                   { title: "Image Database", url: "/admin/image-database", icon: ImageIcon },
+                  { title: "User Database", url: "/admin/user-database", icon: Users },
                 ]} 
                 labelColor="text-amber-400"
               />

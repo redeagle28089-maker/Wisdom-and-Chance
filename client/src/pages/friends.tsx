@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,9 +20,11 @@ import {
   Circle,
   Clock,
   UserX,
-  Search
+  Search,
+  MessageCircle,
+  Send,
+  ArrowLeft,
 } from "lucide-react";
-import { useEffect } from "react";
 
 interface Friend {
   id: string;
@@ -68,10 +70,134 @@ function getDisplayName(user: { firstName: string | null; lastName: string | nul
   return user.email?.split('@')[0] || "Unknown";
 }
 
+interface FriendMessage {
+  id: number;
+  senderId: string;
+  receiverId: string;
+  message: string;
+  createdAt: string;
+}
+
 function getInitials(user: { firstName: string | null; lastName: string | null; email: string } | null | undefined): string {
   if (!user) return "?";
   const name = getDisplayName(user);
   return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+}
+
+function FriendChatPanel({
+  friend,
+  onClose,
+  currentUserId,
+}: {
+  friend: Friend;
+  onClose: () => void;
+  currentUserId: string;
+}) {
+  const [messageText, setMessageText] = useState("");
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { subscribe } = useWebSocket();
+
+  const { data: messages = [], refetch } = useQuery<FriendMessage[]>({
+    queryKey: ["/api/friend-messages", friend.friendId],
+    refetchInterval: 30000,
+  });
+
+  const sendMutation = useMutation({
+    mutationFn: async (message: string) => {
+      const res = await apiRequest("POST", `/api/friend-messages/${friend.friendId}`, { message });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/friend-messages", friend.friendId] });
+      setMessageText("");
+    },
+  });
+
+  useEffect(() => {
+    const unsub = subscribe("friend_message", (payload: any) => {
+      if (payload.senderId === friend.friendId || payload.receiverId === friend.friendId) {
+        queryClient.invalidateQueries({ queryKey: ["/api/friend-messages", friend.friendId] });
+      }
+    });
+    return unsub;
+  }, [subscribe, friend.friendId]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const handleSend = () => {
+    if (messageText.trim()) {
+      sendMutation.mutate(messageText.trim());
+    }
+  };
+
+  return (
+    <Card className="bg-slate-800/50 border-purple-500/20 flex flex-col h-[500px]">
+      <CardHeader className="flex flex-row items-center gap-3 pb-3 border-b border-purple-500/10">
+        <Button size="icon" variant="ghost" onClick={onClose} data-testid="button-close-chat">
+          <ArrowLeft className="w-4 h-4" />
+        </Button>
+        <div className="relative">
+          <Avatar>
+            {friend.friend?.profileImageUrl && <AvatarImage src={friend.friend.profileImageUrl} />}
+            <AvatarFallback className="bg-purple-600 text-white">{getInitials(friend.friend)}</AvatarFallback>
+          </Avatar>
+          {friend.isOnline && <Circle className="absolute bottom-0 right-0 w-3 h-3 text-green-500 fill-green-500" />}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-white font-medium truncate">{getDisplayName(friend.friend)}</p>
+          <Badge variant={friend.isOnline ? "default" : "secondary"} className="text-xs">
+            {friend.isOnline ? "Online" : "Offline"}
+          </Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="flex-1 overflow-y-auto p-3 space-y-2" data-testid="chat-messages">
+        {messages.length === 0 ? (
+          <p className="text-purple-300/50 text-center py-8 text-sm">No messages yet. Say hello!</p>
+        ) : (
+          messages.map((msg) => {
+            const isMe = msg.senderId === currentUserId;
+            return (
+              <div key={msg.id} className={`flex ${isMe ? "justify-end" : "justify-start"}`} data-testid={`message-${msg.id}`}>
+                <div
+                  className={`max-w-[75%] rounded-lg px-3 py-2 text-sm ${
+                    isMe
+                      ? "bg-purple-600 text-white"
+                      : "bg-slate-700 text-purple-100"
+                  }`}
+                >
+                  <p className="break-words">{msg.message}</p>
+                  <p className={`text-xs mt-1 ${isMe ? "text-purple-200/60" : "text-purple-400/60"}`}>
+                    {new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  </p>
+                </div>
+              </div>
+            );
+          })
+        )}
+        <div ref={messagesEndRef} />
+      </CardContent>
+      <div className="p-3 border-t border-purple-500/10 flex gap-2">
+        <Input
+          placeholder="Type a message..."
+          value={messageText}
+          onChange={(e) => setMessageText(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+          className="bg-slate-900/50 border-purple-500/30 text-white"
+          data-testid="input-chat-message"
+        />
+        <Button
+          size="icon"
+          onClick={handleSend}
+          disabled={!messageText.trim() || sendMutation.isPending}
+          data-testid="button-send-message"
+        >
+          <Send className="w-4 h-4" />
+        </Button>
+      </div>
+    </Card>
+  );
 }
 
 export default function FriendsPage() {
@@ -80,6 +206,7 @@ export default function FriendsPage() {
   const { subscribe } = useWebSocket();
   const [addFriendEmail, setAddFriendEmail] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [chattingWith, setChattingWith] = useState<Friend | null>(null);
 
   const { data: friends = [], refetch: refetchFriends } = useQuery<Friend[]>({
     queryKey: ["/api/friends"],
@@ -383,15 +510,25 @@ export default function FriendsPage() {
                           <Badge variant="secondary" className="text-xs">Online</Badge>
                         </div>
                       </div>
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        className="border-red-500/50 text-red-400 hover:bg-red-500/20"
-                        onClick={() => removeFriendMutation.mutate(friend.friendId)}
-                        data-testid={`button-remove-${friend.friendId}`}
-                      >
-                        <UserX className="w-4 h-4" />
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setChattingWith(friend)}
+                          data-testid={`button-message-${friend.friendId}`}
+                        >
+                          <MessageCircle className="w-4 h-4" />
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          className="border-red-500/50 text-red-400"
+                          onClick={() => removeFriendMutation.mutate(friend.friendId)}
+                          data-testid={`button-remove-${friend.friendId}`}
+                        >
+                          <UserX className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -431,15 +568,25 @@ export default function FriendsPage() {
                           <Badge variant="secondary" className="text-xs opacity-70">Offline</Badge>
                         </div>
                       </div>
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        className="border-red-500/50 text-red-400 hover:bg-red-500/20"
-                        onClick={() => removeFriendMutation.mutate(friend.friendId)}
-                        data-testid={`button-remove-${friend.friendId}`}
-                      >
-                        <UserX className="w-4 h-4" />
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setChattingWith(friend)}
+                          data-testid={`button-message-offline-${friend.friendId}`}
+                        >
+                          <MessageCircle className="w-4 h-4" />
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          className="border-red-500/50 text-red-400"
+                          onClick={() => removeFriendMutation.mutate(friend.friendId)}
+                          data-testid={`button-remove-${friend.friendId}`}
+                        >
+                          <UserX className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -447,6 +594,16 @@ export default function FriendsPage() {
             </CardContent>
           </Card>
         </div>
+
+        {chattingWith && user && (
+          <div className="mt-6">
+            <FriendChatPanel
+              friend={chattingWith}
+              onClose={() => setChattingWith(null)}
+              currentUserId={user.claims.sub}
+            />
+          </div>
+        )}
 
         {friends.length === 0 && incomingRequests.length === 0 && outgoingRequests.length === 0 && (
           <Card className="bg-slate-800/50 border-purple-500/20 mt-6">

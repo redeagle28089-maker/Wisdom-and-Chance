@@ -1,15 +1,17 @@
 import type { Express } from "express";
 import type { Server } from "http";
 import { z } from "zod";
-import { eq } from "drizzle-orm";
+import { eq, or, and, lt, desc } from "drizzle-orm";
 import { storage } from "./storage";
 import { db } from "./db";
-import { insertCardSchema, insertDeckSchema, insertPlayerSchema, insertGameSchema, ELEMENTS, userDecks, insertUserDeckSchema, GAME_CONSTANTS, cardImages, insertCardImageSchema, TRAITS, BUFF_DEBUFF_COLORS } from "@shared/schema";
+import { insertCardSchema, insertDeckSchema, insertPlayerSchema, insertGameSchema, ELEMENTS, userDecks, insertUserDeckSchema, GAME_CONSTANTS, cardImages, insertCardImageSchema, TRAITS, BUFF_DEBUFF_COLORS, users, friendships, friendMessages } from "@shared/schema";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import { registerMultiplayerRoutes } from "./multiplayerRoutes";
 import { registerMobileAuthRoutes } from "./mobileAuth";
 import { registerApiDocsRoutes } from "./apiDocs";
 import { generateImage, generateText } from "./replit_integrations/image/client";
+import { getWebSocketServer } from "./websocket";
+import { filterObscenity } from "./obscenity-filter";
 
 const ADMIN_EMAIL = "redeagle28089@gmail.com";
 
@@ -893,4 +895,162 @@ IMPORTANT:
       res.status(500).json({ error: "Failed to upload card image" });
     }
   });
+
+  app.get("/api/admin/users", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const allUsers = await db.select({
+        id: users.id,
+        email: users.email,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        profileImageUrl: users.profileImageUrl,
+        createdAt: users.createdAt,
+      }).from(users);
+
+      const wsServer = getWebSocketServer();
+      const usersWithStatus = allUsers.map((u) => ({
+        ...u,
+        isOnline: wsServer?.isUserOnline(u.id) || false,
+      }));
+
+      res.json(usersWithStatus);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ error: "Failed to fetch users" });
+    }
+  });
+
+  app.post("/api/admin/force-add-friend", isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const adminId = req.user.claims.sub;
+      const { targetUserId } = req.body;
+
+      if (!targetUserId) {
+        return res.status(400).json({ message: "Target user ID is required" });
+      }
+
+      if (targetUserId === adminId) {
+        return res.status(400).json({ message: "Cannot add yourself as a friend" });
+      }
+
+      const existingFriendship = await db
+        .select()
+        .from(friendships)
+        .where(
+          or(
+            and(eq(friendships.userId, adminId), eq(friendships.friendId, targetUserId)),
+            and(eq(friendships.userId, targetUserId), eq(friendships.friendId, adminId))
+          )
+        )
+        .limit(1);
+
+      if (existingFriendship.length > 0) {
+        return res.status(400).json({ message: "Already friends with this user" });
+      }
+
+      await db.insert(friendships).values([
+        { userId: adminId, friendId: targetUserId },
+        { userId: targetUserId, friendId: adminId },
+      ]);
+
+      const wsServer = getWebSocketServer();
+      wsServer?.sendToUser(targetUserId, {
+        type: "friend_request_accepted",
+        payload: { friendId: adminId },
+      });
+
+      res.status(201).json({ message: "Friend added successfully" });
+    } catch (error) {
+      console.error("Error force-adding friend:", error);
+      res.status(500).json({ error: "Failed to add friend" });
+    }
+  });
+
+  app.get("/api/friend-messages/:friendId", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { friendId } = req.params;
+
+      const isFriend = await db
+        .select()
+        .from(friendships)
+        .where(and(eq(friendships.userId, userId), eq(friendships.friendId, friendId)))
+        .limit(1);
+
+      if (isFriend.length === 0) {
+        return res.status(403).json({ message: "You can only view messages with friends" });
+      }
+
+      await db.delete(friendMessages).where(
+        lt(friendMessages.createdAt, new Date(Date.now() - 24 * 60 * 60 * 1000))
+      );
+
+      const msgs = await db
+        .select()
+        .from(friendMessages)
+        .where(
+          or(
+            and(eq(friendMessages.senderId, userId), eq(friendMessages.receiverId, friendId)),
+            and(eq(friendMessages.senderId, friendId), eq(friendMessages.receiverId, userId))
+          )
+        )
+        .orderBy(friendMessages.createdAt)
+        .limit(100);
+
+      res.json(msgs);
+    } catch (error) {
+      console.error("Error fetching friend messages:", error);
+      res.status(500).json({ error: "Failed to fetch messages" });
+    }
+  });
+
+  app.post("/api/friend-messages/:friendId", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { friendId } = req.params;
+      const { message } = req.body;
+
+      if (!message || !message.trim()) {
+        return res.status(400).json({ message: "Message is required" });
+      }
+
+      const isFriend = await db
+        .select()
+        .from(friendships)
+        .where(and(eq(friendships.userId, userId), eq(friendships.friendId, friendId)))
+        .limit(1);
+
+      if (isFriend.length === 0) {
+        return res.status(403).json({ message: "You can only message friends" });
+      }
+
+      const filteredMessage = filterObscenity(message.trim());
+
+      const [msg] = await db
+        .insert(friendMessages)
+        .values({ senderId: userId, receiverId: friendId, message: filteredMessage })
+        .returning();
+
+      const wsServer = getWebSocketServer();
+      wsServer?.sendToUser(friendId, {
+        type: "friend_message",
+        payload: { id: msg.id, senderId: userId, receiverId: friendId, message: filteredMessage, createdAt: msg.createdAt },
+      });
+
+      res.status(201).json(msg);
+    } catch (error) {
+      console.error("Error sending friend message:", error);
+      res.status(500).json({ error: "Failed to send message" });
+    }
+  });
+
+  setInterval(async () => {
+    try {
+      await db.delete(friendMessages).where(
+        lt(friendMessages.createdAt, new Date(Date.now() - 24 * 60 * 60 * 1000))
+      );
+    } catch (e) {
+      console.error("Error cleaning up old messages:", e);
+    }
+  }, 60 * 60 * 1000);
 }

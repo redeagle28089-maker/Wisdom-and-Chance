@@ -21,6 +21,7 @@ import {
 import { eq, and, or, desc, sql, gte, lt } from "drizzle-orm";
 import { getWebSocketServer } from "./websocket";
 import { storage } from "./storage";
+import { filterObscenity } from "./obscenity-filter";
 
 export function registerMultiplayerRoutes(app: Express) {
   app.get("/api/friends", async (req, res) => {
@@ -661,15 +662,17 @@ export function registerMultiplayerRoutes(app: Express) {
       return res.status(400).json({ message: "Message is required" });
     }
 
+    const filteredMsg = filterObscenity(message);
+
     const [chatMessage] = await db
       .insert(chatMessages)
-      .values({ roomId: id, senderId: userId, message })
+      .values({ roomId: id, senderId: userId, message: filteredMsg })
       .returning();
 
     const wsServer = getWebSocketServer();
     wsServer?.sendToRoom(id, {
       type: "chat_message",
-      payload: { roomId: id, senderId: userId, message, createdAt: chatMessage.createdAt },
+      payload: { roomId: id, senderId: userId, message: filteredMsg, createdAt: chatMessage.createdAt },
     });
 
     res.status(201).json(chatMessage);
