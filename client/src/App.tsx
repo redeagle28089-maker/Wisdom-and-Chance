@@ -35,6 +35,7 @@ import LiveMatchesPage from "@/pages/live-matches";
 import LoreArchivesPage from "@/pages/lore-archives";
 import AdminCardArtPage from "@/pages/admin-card-art";
 import AdminImageDatabasePage from "@/pages/admin-image-database";
+import AboutCreatorPage from "@/pages/about-creator";
 import NotFound from "@/pages/not-found";
 
 /**
@@ -64,6 +65,7 @@ function AppContent() {
           <Route path="/analytics" component={AnalyticsPage} />
           <Route path="/live-matches" component={LiveMatchesPage} />
           <Route path="/lore" component={LoreArchivesPage} />
+          <Route path="/about" component={AboutCreatorPage} />
           <Route path="/admin/card-art" component={AdminCardArtPage} />
           <Route path="/admin/image-database" component={AdminImageDatabasePage} />
           <Route path="/admin-card-art" component={AdminCardArtPage} />

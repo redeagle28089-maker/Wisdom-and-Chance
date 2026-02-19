@@ -15,7 +15,7 @@ import { useQuery } from "@tanstack/react-query";
 import { 
   Home, BookOpen, Database, Layers, Swords, Trophy, User, GraduationCap, 
   LogIn, LogOut, Users, Gamepad2, Medal, Calendar, BarChart3, Eye, 
-  BookMarked, Palette, ImageIcon, ChevronDown, X
+  BookMarked, Palette, ImageIcon, ChevronDown, X, UserCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -47,6 +47,7 @@ const progressItems = [
 
 const loreItems = [
   { title: "Lore Archives", url: "/lore", icon: BookMarked },
+  { title: "About the Creator", url: "/about", icon: UserCircle },
 ];
 
 export function NavHeader() {
