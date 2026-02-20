@@ -107,5 +107,11 @@ export default {
       },
     },
   },
-  plugins: [require("tailwindcss-animate"), require("@tailwindcss/typography")],
+  plugins: [
+    require("tailwindcss-animate"),
+    require("@tailwindcss/typography"),
+    function({ addVariant }: { addVariant: Function }) {
+      addVariant('landscape-mobile', '@media screen and (max-height: 500px) and (orientation: landscape)');
+    },
+  ],
 } satisfies Config;

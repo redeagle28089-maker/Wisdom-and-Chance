@@ -81,32 +81,32 @@ export default function HomePage() {
       )}
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-transparent to-slate-900/50" />
-        <div className="relative px-6 py-16 md:py-24 text-center">
-          <div className="inline-flex items-center justify-center w-20 h-20 md:w-24 md:h-24 bg-gradient-to-br from-purple-500 to-pink-500 rounded-3xl mb-6 md:mb-8 shadow-2xl shadow-purple-500/50">
-            <Swords className="w-10 h-10 md:w-12 md:h-12 text-white" />
+        <div className="relative px-6 py-16 md:py-24 landscape-mobile:py-4 text-center">
+          <div className="inline-flex items-center justify-center w-20 h-20 md:w-24 md:h-24 landscape-mobile:w-12 landscape-mobile:h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-3xl landscape-mobile:rounded-xl mb-6 md:mb-8 landscape-mobile:mb-2 shadow-2xl shadow-purple-500/50">
+            <Swords className="w-10 h-10 md:w-12 md:h-12 landscape-mobile:w-6 landscape-mobile:h-6 text-white" />
           </div>
-          <h1 className="text-4xl md:text-6xl font-bold text-white mb-4 md:mb-6" data-testid="text-title">
+          <h1 className="text-4xl md:text-6xl landscape-mobile:text-2xl font-bold text-white mb-4 md:mb-6 landscape-mobile:mb-2" data-testid="text-title">
             Wisdom & Chance
           </h1>
-          <p className="text-lg md:text-2xl text-purple-200 mb-6 md:mb-8 max-w-2xl mx-auto">
+          <p className="text-lg md:text-2xl landscape-mobile:text-sm text-purple-200 mb-6 md:mb-8 landscape-mobile:mb-3 max-w-2xl mx-auto">
             Master strategy, harness elemental powers, and command legendary armies in tactical card battles
           </p>
-          <div className="flex gap-4 justify-center flex-wrap">
+          <div className="flex gap-4 landscape-mobile:gap-2 justify-center flex-wrap">
             <Link href="/rules">
               <Button
-                className="bg-gradient-to-r from-cyan-600 to-blue-600 text-base md:text-lg px-6 md:px-8 py-5 md:py-6 shadow-xl shadow-cyan-500/30"
+                className="bg-gradient-to-r from-cyan-600 to-blue-600 text-base md:text-lg landscape-mobile:text-sm px-6 md:px-8 landscape-mobile:px-4 py-5 md:py-6 landscape-mobile:py-3 shadow-xl shadow-cyan-500/30"
                 data-testid="button-learn-rules"
               >
-                <BookOpen className="w-5 h-5 mr-2" />
+                <BookOpen className="w-5 h-5 landscape-mobile:w-4 landscape-mobile:h-4 mr-2" />
                 Learn the Rules
               </Button>
             </Link>
             <Link href="/deck-builder">
               <Button
-                className="bg-gradient-to-r from-purple-600 to-pink-600 text-base md:text-lg px-6 md:px-8 py-5 md:py-6 shadow-xl shadow-purple-500/30"
+                className="bg-gradient-to-r from-purple-600 to-pink-600 text-base md:text-lg landscape-mobile:text-sm px-6 md:px-8 landscape-mobile:px-4 py-5 md:py-6 landscape-mobile:py-3 shadow-xl shadow-purple-500/30"
                 data-testid="button-build-deck"
               >
-                <Layers className="w-5 h-5 mr-2" />
+                <Layers className="w-5 h-5 landscape-mobile:w-4 landscape-mobile:h-4 mr-2" />
                 Build Your Deck
               </Button>
             </Link>
@@ -114,22 +114,22 @@ export default function HomePage() {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-6 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+      <div className="max-w-6xl mx-auto px-6 landscape-mobile:px-3 py-12 landscape-mobile:py-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 landscape-mobile:grid-cols-2 gap-6 landscape-mobile:gap-3 mb-12 landscape-mobile:mb-4">
           {features.map((feature) => (
             <Link key={feature.title} href={feature.href}>
               <Card
                 className="bg-slate-800/50 border-purple-500/20 cursor-pointer transition-all duration-300 overflow-hidden group h-full hover-elevate"
                 data-testid={`card-${feature.title.toLowerCase().replace(/\s+/g, '-')}`}
               >
-                <CardContent className="p-6 md:p-8">
-                  <div className={`inline-flex items-center justify-center w-14 h-14 md:w-16 md:h-16 bg-gradient-to-br ${feature.gradient} rounded-xl mb-4 md:mb-6 shadow-xl`}>
-                    <feature.icon className="w-7 h-7 md:w-8 md:h-8 text-white" />
+                <CardContent className="p-6 md:p-8 landscape-mobile:p-3">
+                  <div className={`inline-flex items-center justify-center w-14 h-14 md:w-16 md:h-16 landscape-mobile:w-10 landscape-mobile:h-10 bg-gradient-to-br ${feature.gradient} rounded-xl landscape-mobile:rounded-lg mb-4 md:mb-6 landscape-mobile:mb-2 shadow-xl`}>
+                    <feature.icon className="w-7 h-7 md:w-8 md:h-8 landscape-mobile:w-5 landscape-mobile:h-5 text-white" />
                   </div>
-                  <h3 className="text-xl md:text-2xl font-bold text-white mb-2 md:mb-3">{feature.title}</h3>
-                  <p className="text-purple-200">{feature.description}</p>
-                  <div className="mt-4 md:mt-6">
-                    <span className="text-purple-400 group-hover:text-purple-300 transition-colors">
+                  <h3 className="text-xl md:text-2xl landscape-mobile:text-base font-bold text-white mb-2 md:mb-3 landscape-mobile:mb-1">{feature.title}</h3>
+                  <p className="text-purple-200 landscape-mobile:text-xs">{feature.description}</p>
+                  <div className="mt-4 md:mt-6 landscape-mobile:mt-2">
+                    <span className="text-purple-400 group-hover:text-purple-300 transition-colors landscape-mobile:text-xs">
                       Get Started →
                     </span>
                   </div>
@@ -140,14 +140,14 @@ export default function HomePage() {
         </div>
 
         <div className="text-center">
-          <h2 className="text-2xl md:text-3xl font-bold text-white mb-6 md:mb-8">Master the Elements</h2>
-          <div className="grid grid-cols-3 md:grid-cols-5 gap-4 md:gap-6">
+          <h2 className="text-2xl md:text-3xl landscape-mobile:text-lg font-bold text-white mb-6 md:mb-8 landscape-mobile:mb-3">Master the Elements</h2>
+          <div className="grid grid-cols-3 md:grid-cols-5 landscape-mobile:grid-cols-5 gap-4 md:gap-6 landscape-mobile:gap-3">
             {elements.map((element) => (
               <div key={element.name} className="flex flex-col items-center" data-testid={`element-${element.name.toLowerCase()}`}>
-                <div className={`w-14 h-14 md:w-20 md:h-20 bg-gradient-to-br ${element.color} rounded-2xl flex items-center justify-center mb-2 md:mb-3 shadow-xl`}>
-                  <element.icon className="w-7 h-7 md:w-10 md:h-10 text-white" />
+                <div className={`w-14 h-14 md:w-20 md:h-20 landscape-mobile:w-10 landscape-mobile:h-10 bg-gradient-to-br ${element.color} rounded-2xl landscape-mobile:rounded-lg flex items-center justify-center mb-2 md:mb-3 landscape-mobile:mb-1 shadow-xl`}>
+                  <element.icon className="w-7 h-7 md:w-10 md:h-10 landscape-mobile:w-5 landscape-mobile:h-5 text-white" />
                 </div>
-                <span className={`text-sm md:text-base font-medium ${element.textColor}`}>{element.name}</span>
+                <span className={`text-sm md:text-base landscape-mobile:text-xs font-medium ${element.textColor}`}>{element.name}</span>
               </div>
             ))}
           </div>

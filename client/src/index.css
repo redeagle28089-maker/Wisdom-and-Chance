@@ -424,3 +424,38 @@
 }
 
 /* END: Landscape Layout Optimizations */
+
+/* =========================================================================
+ * LANDSCAPE MOBILE GLOBAL OPTIMIZATIONS
+ * 
+ * Targets phones in landscape orientation (max-height ~500px).
+ * Reduces padding, font sizes, and spacing for better use of limited
+ * vertical space on small landscape screens.
+ * 
+ * TO REVERT: Delete from START to END markers below
+ * ========================================================================= */
+
+/* START: Landscape Mobile Global Optimizations */
+
+@media screen and (max-height: 500px) and (orientation: landscape) {
+  body {
+    font-size: 14px;
+  }
+
+  .landscape-compact-padding {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(139, 92, 246, 0.3);
+    border-radius: 4px;
+  }
+}
+
+/* END: Landscape Mobile Global Optimizations */

@@ -88,21 +88,21 @@ export function NavHeader() {
     items: { title: string; url: string; icon: React.ElementType }[];
     labelColor?: string;
   }) => (
-    <div className="mb-3">
-      <p className={`text-xs font-semibold uppercase tracking-wider mb-2 ${labelColor}`}>{label}</p>
-      <div className="space-y-1">
+    <div className="mb-3 landscape-mobile:mb-2">
+      <p className={`text-xs font-semibold uppercase tracking-wider mb-2 landscape-mobile:mb-1 ${labelColor}`}>{label}</p>
+      <div className="space-y-1 landscape-mobile:space-y-0 landscape-mobile:grid landscape-mobile:grid-cols-2 landscape-mobile:gap-1">
         {items.map((item) => (
           <Link key={item.title} href={item.url}>
             <div
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer hover-elevate active-elevate-2
+              className={`flex items-center gap-3 landscape-mobile:gap-2 px-3 py-2 landscape-mobile:py-1.5 rounded-lg cursor-pointer hover-elevate active-elevate-2
                 ${location === item.url 
                   ? 'bg-purple-600/30 text-white' 
                   : 'text-purple-200'
                 }`}
               data-testid={`nav-${item.title.toLowerCase().replace(/\s+/g, '-')}`}
             >
-              <item.icon className="w-4 h-4" />
-              <span className="text-sm">{item.title}</span>
+              <item.icon className="w-4 h-4 landscape-mobile:w-3.5 landscape-mobile:h-3.5" />
+              <span className="text-sm landscape-mobile:text-xs">{item.title}</span>
             </div>
           </Link>
         ))}
@@ -111,28 +111,28 @@ export function NavHeader() {
   );
 
   return (
-    <header className="sticky top-0 z-[9999] flex items-center justify-between gap-4 border-b border-purple-500/20 px-4 py-2 bg-slate-900/95 backdrop-blur">
+    <header className="sticky top-0 z-[9999] flex items-center justify-between gap-4 border-b border-purple-500/20 px-4 py-2 landscape-mobile:py-1 landscape-mobile:px-2 bg-slate-900/95 backdrop-blur">
       {/* Left side: Logo + Title */}
-      <div className="relative flex items-center gap-3" ref={menuRef}>
+      <div className="relative flex items-center gap-3 landscape-mobile:gap-2" ref={menuRef}>
         {/* Clickable Logo */}
         <button
           onClick={() => setIsMenuOpen(!isMenuOpen)}
-          className="flex items-center gap-3 hover-elevate rounded-lg p-1 pr-3 transition-all"
+          className="flex items-center gap-3 landscape-mobile:gap-2 hover-elevate rounded-lg p-1 pr-3 landscape-mobile:pr-2 transition-all"
           data-testid="button-nav-menu"
         >
-          <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center shadow-lg shadow-purple-500/30">
-            <Swords className="w-6 h-6 text-white" />
+          <div className="w-10 h-10 landscape-mobile:w-7 landscape-mobile:h-7 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center shadow-lg shadow-purple-500/30">
+            <Swords className="w-6 h-6 landscape-mobile:w-4 landscape-mobile:h-4 text-white" />
           </div>
           <div className="hidden sm:block">
-            <h1 className="font-bold text-white text-lg leading-tight">Wisdom & Chance</h1>
-            <p className="text-xs text-purple-300">TCG</p>
+            <h1 className="font-bold text-white text-lg landscape-mobile:text-sm leading-tight">Wisdom & Chance</h1>
+            <p className="text-xs text-purple-300 landscape-mobile:hidden">TCG</p>
           </div>
-          <ChevronDown className={`w-4 h-4 text-purple-400 transition-transform ${isMenuOpen ? 'rotate-180' : ''}`} />
+          <ChevronDown className={`w-4 h-4 landscape-mobile:w-3 landscape-mobile:h-3 text-purple-400 transition-transform ${isMenuOpen ? 'rotate-180' : ''}`} />
         </button>
 
         {/* Dropdown Menu */}
         {isMenuOpen && (
-          <div className="absolute top-full left-0 mt-2 w-72 max-h-[80vh] overflow-y-auto bg-slate-900 border border-purple-500/30 rounded-xl shadow-2xl shadow-purple-900/50 p-4 z-[9999]">
+          <div className="absolute top-full left-0 mt-2 w-72 landscape-mobile:w-[90vw] landscape-mobile:max-w-lg max-h-[80vh] landscape-mobile:max-h-[70vh] overflow-y-auto bg-slate-900 border border-purple-500/30 rounded-xl shadow-2xl shadow-purple-900/50 p-4 landscape-mobile:p-3 z-[9999]">
             {/* Close button for mobile */}
             <button
               onClick={() => setIsMenuOpen(false)}
