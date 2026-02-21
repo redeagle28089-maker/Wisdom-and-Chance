@@ -1016,7 +1016,7 @@ function AbilityPreviewDialog({
     add_shield: "Add Shield",
     reduce_power: "Reduce Power",
     first_strike: "First Strike",
-    add_evasion: "Add Evasion",
+    add_evasion: "Add Shield",
     set_power: "Set Power",
     restore_from_ward: "Restore from Ward",
     heal_and_buff: "Heal & Buff",
@@ -2098,8 +2098,8 @@ export default function GameBoardPage() {
                 const ev = aiEffect.value || 4;
                 const et = (aiEffect.target || aiCommander.element).toLowerCase();
                 const eb = updatedGameState.player2AbilityBuffs || [];
-                updatedGameState.player2AbilityBuffs = [...eb, { targetElement: et, amount: ev, type: "evasion" }];
-                aiEffectDesc = `AI added +${ev} evasion to ${et} units!`;
+                updatedGameState.player2AbilityBuffs = [...eb, { targetElement: et, amount: ev, type: "shield" }];
+                aiEffectDesc = `AI added +${ev} shield to ${et} units!`;
                 break;
               }
               case "set_power": {
@@ -2579,11 +2579,11 @@ export default function GameBoardPage() {
         break;
       }
       case "add_evasion": {
-        const evasionValue = effect.value || 4;
-        const evasionEl = (effect.target || myCommander.element).toLowerCase();
-        const currentEvasionBuffs = (newGameState as any)[myBuffsKey] || [];
-        (newGameState as any)[myBuffsKey] = [...currentEvasionBuffs, { targetElement: evasionEl, amount: evasionValue, type: "evasion" }];
-        effectDescription = `Added +${evasionValue} evasion to ${evasionEl} units!`;
+        const shieldValue = effect.value || 4;
+        const shieldEl = (effect.target || myCommander.element).toLowerCase();
+        const currentShieldBuffs = (newGameState as any)[myBuffsKey] || [];
+        (newGameState as any)[myBuffsKey] = [...currentShieldBuffs, { targetElement: shieldEl, amount: shieldValue, type: "shield" }];
+        effectDescription = `Added +${shieldValue} shield to ${shieldEl} units!`;
         break;
       }
       case "set_power": {

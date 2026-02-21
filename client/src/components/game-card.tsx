@@ -388,6 +388,30 @@ export function CardWithPopup({ enablePopup = true, ...props }: CardWithPopupPro
   );
 }
 
+function getTargetLabel(target: string, effectType: string): string {
+  if (!target) return "";
+
+  if (target === "opponent") return "All Enemies";
+  if (target === "deck") return "Your Deck";
+
+  if (target.startsWith("enemy_non_")) {
+    const elPart = target.replace("enemy_non_", "");
+    const elName = elPart === "element" ? "Element" : elPart.charAt(0).toUpperCase() + elPart.slice(1);
+    return `Single Non-${elName} Enemy`;
+  }
+
+  const elements = ["fire", "water", "earth", "air", "nature"];
+  if (elements.includes(target.toLowerCase())) {
+    const elName = target.charAt(0).toUpperCase() + target.slice(1);
+    const allTargetEffects = ["first_strike", "cycle_element_cards", "prevent_ward"];
+    if (allTargetEffects.includes(effectType)) return `All Friendly ${elName}`;
+    if (effectType === "extra_deploy") return `Friendly ${elName} (Hand)`;
+    return `Friendly ${elName} Unit`;
+  }
+
+  return target.charAt(0).toUpperCase() + target.slice(1);
+}
+
 interface CommanderWithPopupProps extends CommanderCardProps {
   enablePopup?: boolean;
 }
@@ -452,22 +476,45 @@ export function CommanderWithPopup({ enablePopup = true, ...props }: CommanderWi
           {/* Abilities */}
           <div className="px-6 py-4 bg-slate-900/50 space-y-3" data-testid="commander-popup-abilities">
             <h4 className="text-purple-300 text-sm uppercase tracking-wider font-semibold">Commander Abilities</h4>
-            {commander.abilities.map((ability, index) => (
-              <div key={index} className="p-4 bg-slate-800/50 rounded-xl border border-slate-600" data-testid={`commander-popup-ability-${index}`}>
-                <div className="flex items-center gap-2 mb-2 flex-wrap">
-                  <span className="text-yellow-400 font-bold text-base" data-testid={`commander-popup-ability-name-${index}`}>{ability.name}</span>
-                  <Badge className="bg-purple-600 text-white text-xs px-2 py-0.5" data-testid={`commander-popup-ability-cost-${index}`}>
-                    Cost: {ability.victoryCost || ability.withdrawalCost || 1}
-                  </Badge>
-                  {ability.phase === "deployment" && (
-                    <Badge className="bg-green-600 text-white text-xs px-2 py-0.5">
-                      Deployment Phase
+            {commander.abilities.map((ability, index) => {
+              const costParts: string[] = [];
+              if (ability.victoryCost > 0) costParts.push(`${ability.victoryCost} Advance`);
+              if (ability.withdrawalCost > 0) costParts.push(`${ability.withdrawalCost} Withdraw`);
+              const costLabel = costParts.length > 0 ? costParts.join(" + ") : "Free";
+
+              const targetLabel = getTargetLabel(ability.effect.target || "", ability.effect.type || "");
+
+              return (
+                <div key={index} className="p-4 bg-slate-800/50 rounded-xl border border-slate-600" data-testid={`commander-popup-ability-${index}`}>
+                  <div className="flex items-center gap-2 mb-2 flex-wrap">
+                    <span className="text-yellow-400 font-bold text-base" data-testid={`commander-popup-ability-name-${index}`}>{ability.name}</span>
+                    <Badge className="bg-purple-600 text-white text-xs px-2 py-0.5" data-testid={`commander-popup-ability-cost-${index}`}>
+                      {costLabel}
                     </Badge>
-                  )}
+                    {ability.phase && (
+                      <Badge className={`text-white text-xs px-2 py-0.5 ${
+                        ability.phase === "deployment" ? "bg-green-600" :
+                        ability.phase === "combat" ? "bg-red-600" :
+                        ability.phase === "draw" ? "bg-blue-600" :
+                        ability.phase === "end" ? "bg-amber-600" : "bg-slate-600"
+                      }`}>
+                        {ability.phase.charAt(0).toUpperCase() + ability.phase.slice(1)} Phase
+                      </Badge>
+                    )}
+                    {targetLabel && (
+                      <Badge className={`text-xs px-2 py-0.5 ${
+                        targetLabel.includes("Enemy") ? "bg-red-700 text-white" :
+                        targetLabel.includes("Friendly") ? "bg-emerald-700 text-white" :
+                        "bg-cyan-700 text-white"
+                      }`} data-testid={`commander-popup-ability-target-${index}`}>
+                        {targetLabel}
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-slate-300 text-sm leading-relaxed" data-testid={`commander-popup-ability-desc-${index}`}>{ability.description}</p>
                 </div>
-                <p className="text-slate-300 text-sm leading-relaxed" data-testid={`commander-popup-ability-desc-${index}`}>{ability.description}</p>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </DialogContent>
     </Dialog>
