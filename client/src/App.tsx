@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
@@ -44,9 +44,12 @@ import NotFound from "@/pages/not-found";
  * TO REVERT TO SIDEBAR: See game-sidebar.tsx for original SidebarProvider setup
  */
 function AppContent() {
+  const [location] = useLocation();
+  const isGameBoard = location.startsWith("/game/");
+
   return (
     <div className="flex flex-col h-screen w-full bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900">
-      <NavHeader />
+      {!isGameBoard && <NavHeader />}
       <main className="flex-1 overflow-auto">
         <Switch>
           <Route path="/" component={HomePage} />

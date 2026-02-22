@@ -581,7 +581,7 @@ function AnimatedHPBar({
   }, [current, tookDamage]);
   
   return (
-    <div className={`relative rounded-lg overflow-hidden ${isPlayer ? 'bg-slate-800/80' : 'bg-slate-800/60'} border ${isPlayer ? 'border-green-500/30' : 'border-red-500/30'} px-2 py-1.5 min-w-[140px] ${shaking ? 'animate-damage-shake' : ''}`}>
+    <div className={`relative rounded-lg overflow-hidden ${isPlayer ? 'bg-slate-800/80' : 'bg-slate-800/60'} border ${isPlayer ? 'border-green-500/30' : 'border-red-500/30'} px-2 py-1.5 min-w-[140px] hp-bar ${shaking ? 'animate-damage-shake' : ''}`}>
       <div className="absolute inset-0 opacity-20">
         <div 
           className={`h-full transition-all duration-500 ease-out ${
@@ -598,7 +598,7 @@ function AnimatedHPBar({
           <span className="text-white/70 text-xs font-medium">{label}</span>
         </div>
         <div className="flex items-center gap-0.5">
-          <span className={`text-lg font-bold transition-all ${isCritical ? 'text-red-400 animate-pulse' : shaking ? 'text-red-300 scale-110' : 'text-white'}`}>
+          <span className={`text-lg font-bold transition-all hp-value ${isCritical ? 'text-red-400 animate-pulse' : shaking ? 'text-red-300 scale-110' : 'text-white'}`}>
             {current}
           </span>
           <span className="text-white/40 text-xs">/{max}</span>
@@ -638,7 +638,7 @@ function PhaseIndicator({
   };
   
   return (
-    <div className="flex flex-col items-center gap-1">
+    <div className="flex flex-col items-center gap-1 phase-indicator-zone">
       <div className="flex items-center gap-1.5 text-xs">
         {combatHistoryCount && combatHistoryCount > 0 && onViewCombatHistory && (
           <Button 
@@ -671,7 +671,7 @@ function PhaseIndicator({
           return (
             <div key={phase} className="flex items-center">
               <div 
-                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
+                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 phase-dot ${
                   isActive 
                     ? `bg-gradient-to-r ${phaseColors[phase]} shadow-lg shadow-${phase === 'combat' ? 'red' : 'purple'}-500/30` 
                     : isPast 
@@ -689,7 +689,7 @@ function PhaseIndicator({
           );
         })}
       </div>
-      <span className={`text-xs font-medium bg-gradient-to-r ${phaseColors[currentPhase]} bg-clip-text text-transparent`}>
+      <span className={`text-xs font-medium bg-gradient-to-r ${phaseColors[currentPhase]} bg-clip-text text-transparent phase-name`}>
         {phaseNames[currentPhase]}
       </span>
     </div>
@@ -765,7 +765,7 @@ function MiniCard({
   if (faceDown) {
     return (
       <div 
-        className={`w-[4.5rem] h-[6.5rem] rounded-lg bg-gradient-to-br from-purple-800 to-purple-900 border-2 border-purple-500/50 flex items-center justify-center shadow-lg transition-all duration-300 ${isOnBattlefield ? 'animate-pulse' : ''}`}
+        className={`w-[4.5rem] h-[6.5rem] rounded-lg bg-gradient-to-br from-purple-800 to-purple-900 border-2 border-purple-500/50 flex items-center justify-center shadow-lg transition-all duration-300 minicard ${isOnBattlefield ? 'animate-pulse' : ''}`}
         onClick={handleClick}
       >
         <div className="w-10 h-10 rounded-full bg-purple-600/30 flex items-center justify-center border border-purple-400/30">
@@ -777,7 +777,7 @@ function MiniCard({
 
   return (
     <div 
-      className={`relative w-[4.5rem] h-[6.5rem] rounded-lg ${config.bgColor} border-2 transition-all duration-200 cursor-pointer group
+      className={`relative w-[4.5rem] h-[6.5rem] rounded-lg ${config.bgColor} border-2 transition-all duration-200 cursor-pointer group minicard
         ${selected 
           ? 'border-yellow-400 ring-2 ring-yellow-400/50 shadow-lg shadow-yellow-500/30 -translate-y-2 scale-105' 
           : playable 
@@ -809,7 +809,7 @@ function MiniCard({
       )}
       
       {/* Power/Rank badge - top left (always visible) */}
-      <div className="absolute top-1 left-1 w-6 h-6 bg-slate-900/90 rounded flex items-center justify-center border border-white/30 z-10">
+      <div className="absolute top-1 left-1 w-6 h-6 bg-slate-900/90 rounded flex items-center justify-center border border-white/30 z-10 card-power-badge">
         <span className="text-white font-bold text-xs">{card.power}</span>
       </div>
       
@@ -1498,7 +1498,7 @@ function BattlefieldZone({
   };
   
   return (
-    <div className={`relative rounded-lg border-2 ${isOpponent ? 'border-red-500/20 bg-gradient-to-b from-red-900/10 to-slate-800/30' : 'border-green-500/20 bg-gradient-to-t from-green-900/10 to-slate-800/30'} p-2 flex-1 min-h-0 flex flex-col`}>
+    <div className={`relative rounded-lg border-2 ${isOpponent ? 'border-red-500/20 bg-gradient-to-b from-red-900/10 to-slate-800/30' : 'border-green-500/20 bg-gradient-to-t from-green-900/10 to-slate-800/30'} p-2 flex-1 min-h-0 flex flex-col battlefield-zone`}>
       <div className="absolute inset-0 overflow-hidden rounded-lg">
         <div className={`absolute inset-0 bg-[radial-gradient(circle_at_50%_${isOpponent ? '0%' : '100%'},_var(--tw-gradient-from)_0%,_transparent_70%)] ${isOpponent ? 'from-red-500/5' : 'from-green-500/5'}`} />
       </div>
@@ -3148,10 +3148,10 @@ export default function GameBoardPage() {
   }
 
   return (
-    <div className="h-dvh bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900 p-2 relative overflow-hidden">
+    <div className="h-dvh bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900 p-2 relative overflow-hidden game-board-compact">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-purple-900/20 via-transparent to-transparent pointer-events-none" />
-      <div className="max-w-6xl mx-auto flex flex-col h-full gap-1.5 relative z-10">
-        <div className="flex items-center justify-between flex-shrink-0 gap-2">
+      <div className="max-w-6xl mx-auto flex flex-col h-full gap-1.5 relative z-10 main-game-column">
+        <div className="flex items-center justify-between flex-shrink-0 gap-2 top-status-bar">
           <div className="flex items-center gap-2">
             <AnimatedHPBar current={opponentHP} max={GAME_CONSTANTS.STARTING_HP} isPlayer={false} label="Opponent" previousHP={previousOpponentHP} />
             <VictoryWithdrawalCounter 
@@ -3206,7 +3206,7 @@ export default function GameBoardPage() {
           </div>
         </div>
 
-        <div className="bg-slate-800/30 rounded-lg border border-purple-500/10 px-3 py-1.5 flex-shrink-0">
+        <div className="bg-slate-800/30 rounded-lg border border-purple-500/10 px-3 py-1.5 flex-shrink-0 opponent-hand-zone">
           <div className="flex items-center justify-between mb-1">
             <span className="text-purple-300 text-[10px] font-medium uppercase tracking-wider">Opponent's Hand</span>
             <div className="flex items-center gap-2 text-[10px] text-purple-400">
@@ -3219,7 +3219,7 @@ export default function GameBoardPage() {
             {Array(Math.min(opponentHandSize, 10)).fill(0).map((_, i) => (
               <div 
                 key={i} 
-                className="w-8 h-12 rounded bg-gradient-to-br from-purple-800 to-purple-950 border border-purple-500/30 shadow-lg"
+                className="w-8 h-12 rounded bg-gradient-to-br from-purple-800 to-purple-950 border border-purple-500/30 shadow-lg opponent-facedown-card"
                 style={{ transform: `rotate(${(i - Math.floor(opponentHandSize / 2)) * 2}deg)` }}
               />
             ))}
@@ -3236,8 +3236,8 @@ export default function GameBoardPage() {
           onPreview={setPreviewCard}
         />
 
-        <div className="flex justify-center items-center gap-2 flex-shrink-0">
-          <Card className="bg-purple-900/50 border-purple-500/30 px-3 py-2">
+        <div className="flex justify-center items-center gap-2 flex-shrink-0 action-buttons-row">
+          <Card className="bg-purple-900/50 border-purple-500/30 px-3 py-2 action-card">
             <div className="flex items-center gap-3">
               {/* Multiplayer waiting message when it's not your turn */}
               {game.gameType === "multiplayer" && !isMyTurn && (
@@ -3349,7 +3349,7 @@ export default function GameBoardPage() {
           />
         )}
 
-        <div className="rounded-lg border-2 px-3 py-2 transition-colors duration-300 flex-shrink-0 min-h-0"
+        <div className="rounded-lg border-2 px-3 py-2 transition-colors duration-300 flex-shrink-0 min-h-0 player-hand-zone"
           style={{
             background: handView === "units" 
               ? "linear-gradient(to top, rgba(20, 83, 45, 0.1), rgba(30, 41, 59, 0.3))" 
@@ -3357,7 +3357,7 @@ export default function GameBoardPage() {
             borderColor: handView === "units" ? "rgba(34, 197, 94, 0.2)" : "rgba(245, 158, 11, 0.2)",
           }}
         >
-          <div className="flex items-center justify-between mb-1.5 gap-2">
+          <div className="flex items-center justify-between mb-1.5 gap-2 hand-toggle-bar">
             <div className="flex items-center gap-1 bg-slate-800/80 rounded-lg p-0.5 border border-slate-700/50" data-testid="hand-view-toggle">
               <button
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${

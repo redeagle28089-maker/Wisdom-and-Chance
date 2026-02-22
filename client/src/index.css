@@ -458,4 +458,126 @@
   }
 }
 
+/* Game Board: Small-height screen optimizations */
+@media screen and (max-height: 500px) {
+  .game-board-compact {
+    padding: 2px 4px !important;
+  }
+
+  .game-board-compact .main-game-column {
+    gap: 2px !important;
+  }
+
+  .game-board-compact .top-status-bar {
+    gap: 4px !important;
+  }
+
+  .game-board-compact .top-status-bar .hp-bar {
+    min-width: 100px !important;
+    padding: 2px 6px !important;
+  }
+
+  .game-board-compact .top-status-bar .hp-bar .hp-value {
+    font-size: 14px !important;
+  }
+
+  .game-board-compact .phase-indicator-zone {
+    gap: 2px !important;
+  }
+
+  .game-board-compact .phase-indicator-zone .phase-dot {
+    width: 1.25rem !important;
+    height: 1.25rem !important;
+  }
+
+  .game-board-compact .phase-indicator-zone .phase-dot svg {
+    width: 10px !important;
+    height: 10px !important;
+  }
+
+  .game-board-compact .phase-indicator-zone .phase-name {
+    display: none !important;
+  }
+
+  .game-board-compact .opponent-hand-zone {
+    padding: 1px 8px !important;
+  }
+
+  .game-board-compact .opponent-hand-zone > div:first-child {
+    margin-bottom: 0 !important;
+    font-size: 8px !important;
+    line-height: 1 !important;
+  }
+
+  .game-board-compact .opponent-hand-zone .opponent-facedown-card {
+    width: 1.25rem !important;
+    height: 1.75rem !important;
+  }
+
+  .game-board-compact .battlefield-zone {
+    padding: 1px 8px !important;
+    max-height: 70px !important;
+  }
+
+  .game-board-compact .battlefield-zone > p {
+    font-size: 7px !important;
+    margin-bottom: 0 !important;
+    line-height: 1 !important;
+  }
+
+  .game-board-compact .battlefield-zone .minicard {
+    width: 2.5rem !important;
+    height: 3.5rem !important;
+  }
+
+  .game-board-compact .battlefield-zone .minicard .card-power-badge {
+    width: 1rem !important;
+    height: 1rem !important;
+  }
+
+  .game-board-compact .battlefield-zone .minicard .card-power-badge span {
+    font-size: 8px !important;
+  }
+
+  .game-board-compact .action-buttons-row {
+    padding: 2px 4px !important;
+  }
+
+  .game-board-compact .action-buttons-row .action-card {
+    padding: 2px 6px !important;
+  }
+
+  .game-board-compact .action-buttons-row button {
+    padding: 2px 8px !important;
+    font-size: 11px !important;
+    height: 1.5rem !important;
+    min-height: 0 !important;
+  }
+
+  .game-board-compact .action-buttons-row button svg {
+    width: 12px !important;
+    height: 12px !important;
+  }
+
+  .game-board-compact .player-hand-zone {
+    padding: 2px 8px !important;
+    max-height: 90px !important;
+    overflow-y: auto !important;
+  }
+
+  .game-board-compact .player-hand-zone .hand-toggle-bar {
+    margin-bottom: 2px !important;
+  }
+
+  .game-board-compact .player-hand-zone .hand-toggle-bar button {
+    padding: 2px 6px !important;
+    font-size: 10px !important;
+  }
+
+  .game-board-compact .player-hand-zone .minicard {
+    width: 2.8rem !important;
+    height: 4rem !important;
+  }
+}
+
 /* END: Landscape Mobile Global Optimizations */
