@@ -9,6 +9,8 @@ import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integra
 import { registerMultiplayerRoutes } from "./multiplayerRoutes";
 import { registerMobileAuthRoutes } from "./mobileAuth";
 import { registerApiDocsRoutes } from "./apiDocs";
+import { isUnifiedAuth } from "./unifiedAuth";
+import jwt from "jsonwebtoken";
 import { generateImage, generateText } from "./replit_integrations/image/client";
 import { getWebSocketServer } from "./websocket";
 import { filterObscenity } from "./obscenity-filter";
@@ -65,6 +67,39 @@ const updateImageSchema = z.object({
 export async function registerRoutes(server: Server, app: Express): Promise<void> {
   await setupAuth(app);
   registerAuthRoutes(app);
+
+  app.use("/api", async (req: any, res, next) => {
+    if (req.user && req.isAuthenticated && req.isAuthenticated()) return next();
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      const token = authHeader.split(" ")[1];
+      const secret = process.env.SESSION_SECRET;
+      if (secret && token) {
+        try {
+          const payload = jwt.verify(token, secret) as any;
+          if (payload?.userId) {
+            const [user] = await db.select().from(users).where(eq(users.id, payload.userId)).limit(1);
+            if (user) {
+              req.user = {
+                claims: {
+                  sub: user.id,
+                  email: user.email,
+                  first_name: user.firstName,
+                  last_name: user.lastName,
+                },
+                expires_at: Math.floor(Date.now() / 1000) + 3600,
+              };
+              req.isAuthenticated = () => true;
+              return next();
+            }
+          }
+        } catch {}
+      }
+      return res.status(401).json({ message: "Invalid or expired token" });
+    }
+    next();
+  });
+
   registerMultiplayerRoutes(app);
   registerMobileAuthRoutes(app);
   registerApiDocsRoutes(app);

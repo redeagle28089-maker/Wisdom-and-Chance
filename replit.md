@@ -26,9 +26,17 @@ Key features include:
 
 ### System Design Choices
 - **API Structure:** A clear separation of concerns is maintained with dedicated API endpoints for authentication, game data, user-specific decks, friend management, room management, and admin functions.
-- **WebSocket Security:** WebSocket connections are secured using session-based authentication, validating cookies upon connection. Authorization checks are implemented for joining rooms and games to ensure only authorized users can participate or spectate.
+- **Unified Authentication:** All /api endpoints support both session cookies (web) and JWT Bearer tokens (mobile). A middleware in routes.ts intercepts Bearer tokens, verifies them via jsonwebtoken, and populates req.user with the same claims structure as session auth. This makes every endpoint work seamlessly for both web and mobile clients.
+- **CORS:** The server uses the `cors` middleware to allow cross-origin requests from any origin with credentials, enabling mobile app connectivity.
+- **WebSocket Security:** WebSocket connections are secured using both session-based authentication (cookies) and JWT token authentication (via ?token= query parameter). Authorization checks are implemented for joining rooms and games.
 - **Error Handling:** OIDC authentication is manually implemented using `fetch` to mitigate bundling issues, ensuring robust JWT signature and claim validation.
-- **PWA Capabilities:** Manifest and service worker are configured for offline capabilities and an installable experience.
+- **PWA Capabilities:** Full PWA support with manifest.json, service worker (sw.js), app icons (192x192 and 512x512), offline caching, and an in-app install prompt component (PWAInstallPrompt) with iOS Safari "Add to Home Screen" guide.
+
+### Mobile API Readiness
+- **API Docs:** Available at GET /api/docs - comprehensive JSON documentation of all endpoints, WebSocket events, and game rules.
+- **Mobile Auth Flow:** POST /api/mobile/auth/login with email to get JWT token (7-day expiry). Token refresh via POST /api/mobile/auth/refresh.
+- **WebSocket Mobile:** Connect with `wss://wisdom-and-chance.replit.app/ws?token=<jwt>` for real-time multiplayer.
+- **Key Files:** server/unifiedAuth.ts (JWT middleware), server/mobileAuth.ts (mobile auth endpoints), server/apiDocs.ts (API documentation).
 
 ## External Dependencies
 

@@ -22,7 +22,6 @@ import { eq, and, or, desc, sql, gte, lt } from "drizzle-orm";
 import { getWebSocketServer } from "./websocket";
 import { storage } from "./storage";
 import { filterObscenity } from "./obscenity-filter";
-
 export function registerMultiplayerRoutes(app: Express) {
   app.get("/api/friends", async (req, res) => {
     if (!req.user) {

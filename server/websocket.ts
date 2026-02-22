@@ -9,6 +9,7 @@ import { getSessionStore, getSessionSecret } from "./replit_integrations/auth/re
 import cookie from "cookie";
 import cookieSignature from "cookie-signature";
 import { filterObscenity } from "./obscenity-filter";
+import jwt from "jsonwebtoken";
 
 interface ConnectedUser {
   id: string;
@@ -154,13 +155,40 @@ class GameWebSocketServer {
     }
   }
 
+  private async parseJWTFromRequest(req: IncomingMessage): Promise<AuthenticatedSession | null> {
+    try {
+      const url = new URL(req.url || "", `http://${req.headers.host}`);
+      const token = url.searchParams.get("token");
+      if (!token) return null;
+
+      const secret = process.env.SESSION_SECRET;
+      if (!secret) return null;
+
+      const payload = jwt.verify(token, secret) as any;
+      if (!payload?.userId) return null;
+
+      const [user] = await db.select().from(users).where(eq(users.id, payload.userId)).limit(1);
+      if (!user) return null;
+
+      const displayName = user.firstName || user.email?.split("@")[0] || "Player";
+      log(`JWT authenticated for user ${user.id}`, "websocket");
+      return { userId: user.id, email: user.email || undefined, displayName };
+    } catch (error: any) {
+      log(`JWT parse error: ${error.message}`, "websocket");
+      return null;
+    }
+  }
+
   private setupHandlers() {
     this.wss.on("connection", async (ws: WebSocket, req: IncomingMessage) => {
-      // Authenticate using session cookie
-      const session = await this.parseSessionFromRequest(req);
+      let session = await this.parseSessionFromRequest(req);
       
       if (!session) {
-        log("WebSocket connection rejected: no valid session", "websocket");
+        session = await this.parseJWTFromRequest(req);
+      }
+
+      if (!session) {
+        log("WebSocket connection rejected: no valid session or token", "websocket");
         ws.send(JSON.stringify({ type: "auth_error", payload: { message: "Authentication required" } }));
         ws.close(4001, "Authentication required");
         return;
@@ -169,12 +197,10 @@ class GameWebSocketServer {
       const userId = session.userId;
       const displayName = session.displayName || "Player";
       
-      // Register the authenticated user
       this.users.set(userId, { id: userId, ws, displayName });
       this.broadcastPresence(userId, "online");
-      log(`User ${userId} (${displayName}) authenticated via session`, "websocket");
+      log(`User ${userId} (${displayName}) authenticated`, "websocket");
       
-      // Send auth success confirmation
       ws.send(JSON.stringify({ type: "auth_success", payload: { userId, displayName } }));
 
       ws.on("message", async (data: Buffer) => {
