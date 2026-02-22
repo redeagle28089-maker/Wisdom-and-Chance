@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import type { Server } from "http";
 import { z } from "zod";
-import { eq, or, and, lt, desc } from "drizzle-orm";
+import { eq, or, and, lt, desc, sql } from "drizzle-orm";
 import { storage } from "./storage";
 import { db } from "./db";
 import { insertCardSchema, insertDeckSchema, insertPlayerSchema, insertGameSchema, ELEMENTS, userDecks, insertUserDeckSchema, GAME_CONSTANTS, cardImages, insertCardImageSchema, TRAITS, BUFF_DEBUFF_COLORS, users, friendships, friendMessages } from "@shared/schema";
@@ -103,6 +103,79 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
   registerMultiplayerRoutes(app);
   registerMobileAuthRoutes(app);
   registerApiDocsRoutes(app);
+
+  app.get("/api/health", async (_req, res) => {
+    try {
+      const [dbCheck] = await db.select({ now: sql`NOW()` }).from(sql`(SELECT 1) AS t`);
+      res.json({
+        status: "ok",
+        timestamp: new Date().toISOString(),
+        version: "2.1.0",
+        database: dbCheck ? "connected" : "error",
+        services: {
+          auth: "available",
+          websocket: "available",
+          multiplayer: "available",
+        },
+      });
+    } catch (error) {
+      res.status(503).json({
+        status: "error",
+        timestamp: new Date().toISOString(),
+        version: "2.1.0",
+        database: "error",
+      });
+    }
+  });
+
+  app.patch("/api/user/profile", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
+      const profileSchema = z.object({
+        firstName: z.string().min(1).max(100).optional(),
+        lastName: z.string().min(1).max(100).optional(),
+        profileImageUrl: z.string().url().optional().nullable(),
+      });
+
+      const parseResult = profileSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ error: parseResult.error.flatten().fieldErrors });
+      }
+
+      const updates = parseResult.data;
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ error: "No fields to update" });
+      }
+
+      const [updated] = await db
+        .update(users)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(eq(users.id, userId))
+        .returning({
+          id: users.id,
+          email: users.email,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          profileImageUrl: users.profileImageUrl,
+          createdAt: users.createdAt,
+          updatedAt: users.updatedAt,
+        });
+
+      if (!updated) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      res.status(500).json({ error: "Failed to update profile" });
+    }
+  });
+
   app.get("/api/cards", async (req, res) => {
     const cards = await storage.getCards();
     res.json(cards);

@@ -1,0 +1,199 @@
+# Wisdom & Chance TCG - Mobile App Setup Guide
+
+## What You Need To Do
+
+Create a new Replit project and paste the prompt below into the AI agent to get started. The mobile app will connect to your existing website's backend for all data.
+
+---
+
+## Step 1: Create a New Replit Project
+
+1. Go to replit.com and click "Create Repl"
+2. Choose "React Native / Expo" as the template (or blank Node.js and let the AI set it up)
+3. Name it something like "wisdom-chance-mobile"
+
+---
+
+## Step 2: Initial Setup Prompt
+
+Copy and paste this into the AI agent in your new project:
+
+---
+
+### PROMPT TO PASTE:
+
+```
+I want to build a React Native + Expo mobile app for my existing card game called "Wisdom & Chance TCG". The backend already exists at this URL:
+
+BACKEND URL: https://wisdom-and-chance.replit.app
+
+The backend has a full REST API and WebSocket server already built. The mobile app should connect to it for ALL data - no local database needed.
+
+AUTHENTICATION:
+- POST https://wisdom-and-chance.replit.app/api/mobile/auth/login
+  Body: { "email": "user@example.com", "firstName": "John", "lastName": "Doe", "provider": "google" }
+  Returns: { "token": "JWT_TOKEN", "user": { id, email, firstName, lastName, profileImageUrl } }
+- The JWT token is valid for 7 days
+- Include "Authorization: Bearer <token>" header on all protected API calls
+- Refresh token: POST /api/mobile/auth/refresh (with Bearer token)
+- Get current user: GET /api/mobile/auth/me
+
+HEALTH CHECK:
+- GET https://wisdom-and-chance.replit.app/api/health
+  Returns server status, database connectivity, and service availability
+
+FULL API DOCUMENTATION:
+- GET https://wisdom-and-chance.replit.app/api/docs
+  Returns complete JSON documentation of ALL endpoints, request/response schemas, WebSocket events, and game rules. FETCH THIS FIRST and use it as your reference.
+
+KEY API ENDPOINTS (all prefixed with https://wisdom-and-chance.replit.app):
+
+Public (no auth needed):
+- GET /api/cards - All game cards
+- GET /api/cards/:id - Single card
+- GET /api/cards/element/:element - Cards by element (fire, water, earth, air, nature)
+- GET /api/commanders - All commander cards
+- GET /api/commanders/:id - Single commander
+- GET /api/achievements - All achievements
+- GET /api/leaderboard - Top 100 players by ELO rating
+- GET /api/daily-challenges - Today's challenges
+- GET /api/rooms - Public game rooms
+
+Protected (need Bearer token):
+- GET /api/user-decks - User's saved decks
+- POST /api/user-decks - Create deck (40 cards, validated)
+- PATCH /api/user-decks/:id - Update deck
+- DELETE /api/user-decks/:id - Delete deck
+- POST /api/deck-suggestions - AI deck suggestions
+- PATCH /api/user/profile - Update user profile
+- GET /api/friends - Friends list with online status
+- GET /api/friend-requests - Pending friend requests
+- POST /api/friend-requests - Send friend request by email
+- POST /api/friend-requests/:id/accept - Accept request
+- POST /api/friend-requests/:id/decline - Decline request
+- DELETE /api/friends/:friendId - Remove friend
+- GET /api/friend-messages/:friendId - Messages with friend
+- POST /api/friend-messages/:friendId - Send message
+- POST /api/rooms - Create game room
+- POST /api/rooms/:id/join - Join room
+- POST /api/rooms/:id/leave - Leave room
+- POST /api/rooms/:id/ready - Set ready with deck
+- POST /api/rooms/:id/start - Start game (host only)
+- GET /api/player-stats - User's game statistics
+- GET /api/player-rating - User's ELO rating
+- GET /api/player-achievements - Unlocked achievements
+- GET /api/player-challenges - Challenge progress
+- POST /api/player-challenges/:id/claim - Claim challenge reward
+- GET /api/users/search?q=query - Search users
+
+WEBSOCKET (for real-time multiplayer):
+- Connect: wss://wisdom-and-chance.replit.app/ws?token=JWT_TOKEN
+- Message format: JSON { type: string, payload: object }
+- Client events: join_room, leave_room, join_game, leave_game, room_message, game_message, game_action
+- Server events: auth_success, auth_error, room_update, player_joined, player_left, player_ready_update, game_start, game_action, chat_message, friend_message, friend_request, presence_update
+
+GAME RULES:
+- 5 elements: fire, water, earth, air, nature
+- Decks: exactly 40 cards, 4 cards per power rank (1-10), max 3 copies of any card, 1 commander
+- Turn phases: draw (2 cards), deployment (play up to 2), combat, calculation, end
+- Starting HP: 20, Starting hand: 5 cards
+- Victory: reduce opponent HP to 0 or opponent runs out of cards
+
+DESIGN THEME:
+- Dark fantasy theme with element-specific colors
+- Fire: red/orange, Water: blue/cyan, Earth: brown/green, Air: white/silver, Nature: green/gold
+- Card sizes: standard for lists, larger for detail views
+- Clean, modern UI similar to games like Hearthstone or Magic Arena mobile
+
+PHASE 1 - START WITH:
+1. Set up Expo project with navigation (React Navigation)
+2. Implement Google Sign-In authentication flow
+3. Create a login screen that calls the backend auth endpoint
+4. Store JWT token securely (expo-secure-store)
+5. Create an API service that adds Bearer token to all requests
+6. Build home screen showing user profile, stats, and navigation
+7. Build card database browser (list all cards, filter by element, view card details)
+8. Build deck builder (create/edit/delete decks with validation)
+
+We'll do multiplayer, battles, friends, and other features in later phases.
+```
+
+---
+
+## Step 3: After Initial Setup
+
+Once the AI has set up the project structure and basic screens, you can guide it through the remaining phases:
+
+### Phase 2 Prompt:
+```
+Now let's add the deck builder and AI suggestions:
+- Full deck builder with drag-and-drop card selection
+- Deck validation (40 cards, 4 per power rank, max 3 copies)
+- Commander selection
+- AI deck suggestion feature (POST /api/deck-suggestions)
+- Save/load/delete decks from the backend
+- Fetch the full API docs from GET /api/docs for reference
+```
+
+### Phase 3 Prompt:
+```
+Now let's build the game battle system:
+- Practice mode against AI (create game with POST /api/games with gameType: "practice")
+- Game board with card zones (hand, battlefield, yard/graveyard)
+- Turn phase system (draw, deployment, combat, calculation, end)
+- Card animations for playing, attacking, and destroying cards
+- HP tracking and victory/defeat screens
+- The game state is managed on the server via the API
+```
+
+### Phase 4 Prompt:
+```
+Now let's add multiplayer:
+- Connect to WebSocket at wss://wisdom-and-chance.replit.app/ws?token=JWT_TOKEN
+- Game lobby showing public rooms (GET /api/rooms)
+- Create room (POST /api/rooms)
+- Join room with pre-game waiting area
+- Deck selection and ready system
+- Real-time game via WebSocket events (game_action, game_start, etc.)
+- In-game chat via WebSocket
+- Spectator mode
+```
+
+### Phase 5 Prompt:
+```
+Now let's add social features:
+- Friends list with online status indicators (GET /api/friends)
+- Send/accept/decline friend requests
+- Direct messaging with friends (real-time via WebSocket friend_message events)
+- User search (GET /api/users/search?q=query)
+- User profiles
+```
+
+### Phase 6 Prompt:
+```
+Now let's add progression systems:
+- Achievements display (GET /api/achievements + GET /api/player-achievements)
+- Daily challenges with claim rewards (GET /api/daily-challenges + GET /api/player-challenges)
+- Global leaderboard with ELO tiers: Bronze (<800), Silver (<1000), Gold (<1200), Platinum (<1400), Diamond (<1600), Master (1600+)
+- Player stats dashboard (GET /api/player-stats)
+- XP and level display
+```
+
+---
+
+## Important Notes
+
+- **Backend URL**: https://wisdom-and-chance.replit.app
+- **API Docs**: Always fetch GET /api/docs first - it has complete documentation
+- **Health Check**: Use GET /api/health to verify the backend is online
+- **Token Storage**: Use expo-secure-store for JWT tokens
+- **All data comes from the backend** - the mobile app should NOT have its own database
+- **WebSocket reconnection**: Implement auto-reconnect logic for dropped connections
+- **Image handling**: Card images come as data URLs from the API - you may want to cache them locally for performance
+- **Offline support**: Cache card data and deck lists for offline viewing
+
+## Testing
+
+- Use Expo Go app on your phone to test during development
+- The backend is live and will respond to API calls from the mobile app
+- Test authentication flow first, then build features one at a time
