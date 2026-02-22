@@ -1,0 +1,40 @@
+Great question! Here's a realistic breakdown for building a native mobile app version on Replit using React Native + Expo:
+
+What the mobile app would include:
+
+All screens rebuilt as native mobile components (home, deck builder, card database, game board, lobby, friends, chat, profile, achievements, leaderboard, etc.)
+Login via your existing authentication system
+All data synced from your existing website backend via the JWT API
+Real-time multiplayer and chat via WebSocket
+Push notifications for friend messages, game invites, challenges
+Offline caching for card database/deck lists
+Estimated Time (with Replit Agent):
+
+Phase	Estimated Time
+Project setup (React Native + Expo, API connection, auth)	1-2 sessions
+Core screens (home, cards, deck builder, profile)	3-5 sessions
+Game board + battle system (most complex part)	4-6 sessions
+Multiplayer, lobby, rooms, WebSocket integration	3-4 sessions
+Friends, messaging, social features	2-3 sessions
+Achievements, leaderboard, daily challenges	2-3 sessions
+Admin tools (if needed on mobile)	1-2 sessions
+Testing all features + bug fixing	3-5 sessions
+Total	~20-30 sessions
+A "session" here means a focused working period with the AI agent (roughly 1-2 hours of interaction each).
+
+Estimated Replit Cost:
+
+This would depend on your Replit plan. On Core ($25/month), you get generous AI agent usage. The project could likely be completed over 2-4 weeks of active development within a single billing cycle, so roughly $25-50 in Replit costs.
+Important considerations:
+
+Publishing to the Google Play Store costs a one-time $25 developer fee
+Publishing to the Apple App Store costs $99/year for an Apple Developer account
+The mobile app would be a separate Replit project that connects to your existing website's API
+Your current backend already supports JWT authentication, so it's ready for mobile clients
+My recommendation: If you want to go this route, the most efficient approach would be to start a new Replit project for the React Native app and build it feature by feature, testing each piece against your live website API as you go.
+
+Would you like to start building the mobile app, or do you have more questions first?
+
+
+Detailed estimate from replit on making separate mobile version of the website that would sync with website logins excetra and data bases.
+$25-$50. grand total
