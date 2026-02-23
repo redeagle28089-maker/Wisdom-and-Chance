@@ -15,6 +15,11 @@ import {
   Search,
   Shield,
   LogIn,
+  Filter,
+  Bot,
+  FlaskConical,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
 interface AdminUser {
@@ -39,10 +44,28 @@ function getInitials(user: { firstName: string | null; lastName: string | null; 
   return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
 }
 
+const TEST_EMAIL_PATTERNS = ["@test", "@example", "@fake", "@dummy", "@temp", "@sample", "test@", "testing@", "demo@"];
+
+function isTestUser(user: AdminUser): boolean {
+  const email = user.email.toLowerCase();
+  return TEST_EMAIL_PATTERNS.some((pattern) => email.includes(pattern));
+}
+
+function isAiGeneratedUser(user: AdminUser): boolean {
+  if (!user.firstName && !user.lastName && !user.profileImageUrl) return true;
+  const name = `${user.firstName || ""} ${user.lastName || ""}`.toLowerCase().trim();
+  if (!name) return true;
+  const genericNames = ["test", "user", "player", "guest", "anonymous", "unknown", "testuser", "test user"];
+  if (genericNames.includes(name)) return true;
+  return false;
+}
+
 export default function AdminUserDatabasePage() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
+  const [hideTestUsers, setHideTestUsers] = useState(false);
+  const [hideAiUsers, setHideAiUsers] = useState(false);
 
   const { data: adminCheck } = useQuery<{ isAdmin: boolean }>({
     queryKey: ["/api/admin/check"],
@@ -116,7 +139,12 @@ export default function AdminUserDatabasePage() {
     );
   }
 
+  const testUserCount = allUsers.filter(isTestUser).length;
+  const aiUserCount = allUsers.filter(isAiGeneratedUser).length;
+
   const filteredUsers = allUsers.filter((u) => {
+    if (hideTestUsers && isTestUser(u)) return false;
+    if (hideAiUsers && isAiGeneratedUser(u)) return false;
     const term = searchTerm.toLowerCase();
     if (!term) return true;
     return (
@@ -144,7 +172,7 @@ export default function AdminUserDatabasePage() {
           </div>
         </div>
 
-        <div className="relative mb-6">
+        <div className="relative mb-4">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-purple-400" />
           <Input
             placeholder="Search by name or email..."
@@ -153,6 +181,47 @@ export default function AdminUserDatabasePage() {
             className="pl-10 bg-slate-800/50 border-purple-500/30 text-white"
             data-testid="input-search-users"
           />
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 mb-6">
+          <div className="flex items-center gap-1 text-purple-300 text-sm mr-1">
+            <Filter className="w-4 h-4" />
+            Filters:
+          </div>
+          <Button
+            size="sm"
+            variant={hideTestUsers ? "destructive" : "outline"}
+            onClick={() => setHideTestUsers(!hideTestUsers)}
+            data-testid="button-filter-test-users"
+          >
+            {hideTestUsers ? <EyeOff className="w-3.5 h-3.5 mr-1.5" /> : <FlaskConical className="w-3.5 h-3.5 mr-1.5" />}
+            {hideTestUsers ? "Test Users Hidden" : `Hide Test Users (${testUserCount})`}
+          </Button>
+          <Button
+            size="sm"
+            variant={hideAiUsers ? "secondary" : "outline"}
+            onClick={() => setHideAiUsers(!hideAiUsers)}
+            data-testid="button-filter-ai-users"
+          >
+            {hideAiUsers ? <EyeOff className="w-3.5 h-3.5 mr-1.5" /> : <Bot className="w-3.5 h-3.5 mr-1.5" />}
+            {hideAiUsers ? "AI/Generic Hidden" : `Hide AI/Generic (${aiUserCount})`}
+          </Button>
+          {(hideTestUsers || hideAiUsers) && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => { setHideTestUsers(false); setHideAiUsers(false); }}
+              data-testid="button-clear-filters"
+            >
+              <Eye className="w-3.5 h-3.5 mr-1.5" />
+              Show All
+            </Button>
+          )}
+          {(hideTestUsers || hideAiUsers) && (
+            <span className="text-purple-400 text-xs ml-auto">
+              Showing {filteredUsers.length} of {allUsers.length} users
+            </span>
+          )}
         </div>
 
         {usersLoading ? (
@@ -213,6 +282,8 @@ export default function AdminUserDatabasePage() {
 }
 
 function UserRow({ user, onForceAdd, isPending }: { user: AdminUser; onForceAdd: () => void; isPending: boolean }) {
+  const testUser = isTestUser(user);
+  const aiUser = isAiGeneratedUser(user);
   return (
     <div
       className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-lg bg-slate-900/50 border border-purple-500/10"
@@ -231,7 +302,21 @@ function UserRow({ user, onForceAdd, isPending }: { user: AdminUser; onForceAdd:
           )}
         </div>
         <div>
-          <p className="text-white font-medium">{getDisplayName(user)}</p>
+          <div className="flex items-center gap-2">
+            <p className="text-white font-medium">{getDisplayName(user)}</p>
+            {testUser && (
+              <Badge variant="destructive" className="text-xs" data-testid={`badge-test-${user.id}`}>
+                <FlaskConical className="w-2.5 h-2.5 mr-0.5" />
+                Test
+              </Badge>
+            )}
+            {aiUser && !testUser && (
+              <Badge variant="secondary" className="text-xs" data-testid={`badge-ai-${user.id}`}>
+                <Bot className="w-2.5 h-2.5 mr-0.5" />
+                AI/Generic
+              </Badge>
+            )}
+          </div>
           <p className="text-purple-400 text-sm">{user.email}</p>
         </div>
       </div>
