@@ -4,7 +4,7 @@ import { z } from "zod";
 import { eq, or, and, lt, desc, sql } from "drizzle-orm";
 import { storage } from "./storage";
 import { db } from "./db";
-import { insertCardSchema, insertDeckSchema, insertPlayerSchema, insertGameSchema, ELEMENTS, userDecks, insertUserDeckSchema, GAME_CONSTANTS, cardImages, insertCardImageSchema, TRAITS, BUFF_DEBUFF_COLORS, users, friendships, friendMessages } from "@shared/schema";
+import { insertCardSchema, insertDeckSchema, insertPlayerSchema, insertGameSchema, ELEMENTS, userDecks, insertUserDeckSchema, GAME_CONSTANTS, cardImages, insertCardImageSchema, TRAITS, BUFF_DEBUFF_COLORS, users, friendships, friendMessages, cardImageMappings, commanderImageMappings, GAME_PHASES, GAME_MODE_CONFIG, AI_DIFFICULTY, GAME_STATUS } from "@shared/schema";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import { registerMultiplayerRoutes } from "./multiplayerRoutes";
 import { registerMobileAuthRoutes } from "./mobileAuth";
@@ -722,6 +722,7 @@ IMPORTANT:
     if (!card) {
       return res.status(404).json({ message: "Card not found" });
     }
+    await db.insert(cardImageMappings).values({ cardId: req.params.id, imageUrl }).onConflictDoUpdate({ target: cardImageMappings.cardId, set: { imageUrl, updatedAt: new Date() } });
     res.json(card);
   });
 
@@ -744,6 +745,7 @@ IMPORTANT:
     if (!commander) {
       return res.status(404).json({ message: "Commander not found" });
     }
+    await db.insert(commanderImageMappings).values({ commanderId: req.params.id, imageUrl }).onConflictDoUpdate({ target: commanderImageMappings.commanderId, set: { imageUrl, updatedAt: new Date() } });
     res.json(commander);
   });
 
@@ -936,11 +938,11 @@ IMPORTANT:
         return res.status(404).json({ error: "Image not found in image database" });
       }
 
-      // Update the card with the new image
       const card = await storage.updateCard(cardId, { imageUrl: image.imageUrl });
       if (!card) {
         return res.status(404).json({ error: "Card not found" });
       }
+      await db.insert(cardImageMappings).values({ cardId, imageUrl: image.imageUrl, imageId }).onConflictDoUpdate({ target: cardImageMappings.cardId, set: { imageUrl: image.imageUrl, imageId, updatedAt: new Date() } });
 
       res.json({ success: true, card, swappedImage: image });
     } catch (error) {
@@ -964,11 +966,11 @@ IMPORTANT:
         return res.status(404).json({ error: "Image not found in image database" });
       }
 
-      // Update the commander with the new image
       const commander = await storage.updateCommander(commanderId, { imageUrl: image.imageUrl });
       if (!commander) {
         return res.status(404).json({ error: "Commander not found" });
       }
+      await db.insert(commanderImageMappings).values({ commanderId, imageUrl: image.imageUrl, imageId }).onConflictDoUpdate({ target: commanderImageMappings.commanderId, set: { imageUrl: image.imageUrl, imageId, updatedAt: new Date() } });
 
       res.json({ success: true, commander, swappedImage: image });
     } catch (error) {
@@ -1071,6 +1073,132 @@ IMPORTANT:
     } catch (error) {
       console.error("Error force-adding friend:", error);
       res.status(500).json({ error: "Failed to add friend" });
+    }
+  });
+
+  const SYNC_ACCESS_CODE = "4838";
+
+  app.get("/api/admin/sync", async (req, res) => {
+    const code = req.query.code as string;
+    if (code !== SYNC_ACCESS_CODE) {
+      return res.status(403).json({ error: "Invalid access code" });
+    }
+
+    try {
+      const allCards = await storage.getCards();
+      const allCommanders = await storage.getCommanders();
+
+      res.json({
+        version: "2.1.0",
+        syncedAt: new Date().toISOString(),
+        cards: allCards,
+        commanders: allCommanders,
+        gameConstants: {
+          ...GAME_CONSTANTS,
+          ELEMENTS,
+          TRAITS,
+          BUFF_DEBUFF_COLORS,
+          GAME_PHASES,
+          AI_DIFFICULTY,
+          GAME_STATUS,
+          GAME_MODE_CONFIG,
+        },
+        deckRules: {
+          deckSize: GAME_CONSTANTS.DECK_SIZE,
+          maxCopiesPerCard: GAME_CONSTANTS.MAX_COPIES_PER_CARD,
+          cardsPerPowerRank: GAME_CONSTANTS.CARDS_PER_POWER_RANK,
+          powerDistribution: "40 cards total: 4 cards at each power level 1-10. Max 3 copies of any single card.",
+          requiresCommander: true,
+        },
+        databaseSchemas: {
+          users: { table: "users", columns: { id: "varchar PK (uuid)", email: "varchar unique", firstName: "varchar", lastName: "varchar", profileImageUrl: "varchar", createdAt: "timestamp", updatedAt: "timestamp" } },
+          userDecks: { table: "user_decks", columns: { id: "varchar PK (uuid)", userId: "varchar FK->users.id", name: "varchar", commanderId: "varchar", cardIds: "text[]", createdAt: "timestamp", updatedAt: "timestamp" } },
+          friendRequests: { table: "friend_requests", columns: { id: "varchar PK (uuid)", senderId: "varchar FK->users.id", receiverId: "varchar FK->users.id", status: "varchar (pending|accepted|declined)", createdAt: "timestamp", updatedAt: "timestamp" } },
+          friendships: { table: "friendships", columns: { id: "varchar PK (uuid)", userId: "varchar FK->users.id", friendId: "varchar FK->users.id", createdAt: "timestamp" } },
+          friendMessages: { table: "friend_messages", columns: { id: "varchar PK (uuid)", senderId: "varchar FK->users.id", receiverId: "varchar FK->users.id", message: "text", createdAt: "timestamp" } },
+          gameRooms: { table: "game_rooms", columns: { id: "varchar PK (uuid)", name: "varchar(100)", hostId: "varchar FK->users.id", guestId: "varchar FK->users.id nullable", isPrivate: "boolean", password: "varchar(100) nullable", status: "varchar (waiting|ready|in_game|completed)", hostDeckId: "varchar", guestDeckId: "varchar", hostReady: "boolean", guestReady: "boolean", gameId: "varchar", maxSpectators: "integer default 10", settings: "jsonb", createdAt: "timestamp", updatedAt: "timestamp" } },
+          roomSpectators: { table: "room_spectators", columns: { id: "varchar PK (uuid)", roomId: "varchar FK->game_rooms.id", userId: "varchar FK->users.id", joinedAt: "timestamp" } },
+          chatMessages: { table: "chat_messages", columns: { id: "varchar PK (uuid)", roomId: "varchar FK->game_rooms.id nullable", gameId: "varchar nullable", senderId: "varchar FK->users.id", message: "text", createdAt: "timestamp" } },
+          playerRatings: { table: "player_ratings", columns: { id: "varchar PK (uuid)", userId: "varchar FK->users.id unique", rating: "integer default 1000", wins: "integer default 0", losses: "integer default 0", streak: "integer default 0", highestRating: "integer default 1000", updatedAt: "timestamp" } },
+          playerStats: { table: "player_stats", columns: { id: "varchar PK (uuid)", userId: "varchar FK->users.id unique", totalXp: "integer default 0", level: "integer default 1", gamesPlayed: "integer default 0", gamesWon: "integer default 0", gamesLost: "integer default 0", totalDamageDealt: "integer default 0", totalCardsPlayed: "integer default 0", favoriteElement: "varchar(20)", favoriteCommander: "varchar", longestWinStreak: "integer default 0", currentWinStreak: "integer default 0", updatedAt: "timestamp" } },
+          achievements: { table: "achievements", columns: { id: "varchar PK (uuid)", name: "varchar(100)", description: "text", category: "varchar (wins|games|collection|social|special)", icon: "varchar(50)", requirement: "integer", xpReward: "integer default 100", isSecret: "boolean", createdAt: "timestamp" } },
+          playerAchievements: { table: "player_achievements", columns: { id: "varchar PK (uuid)", userId: "varchar FK->users.id", achievementId: "varchar FK->achievements.id", progress: "integer default 0", unlockedAt: "timestamp nullable", createdAt: "timestamp" } },
+          dailyChallenges: { table: "daily_challenges", columns: { id: "varchar PK (uuid)", name: "varchar(100)", description: "text", challengeType: "varchar (win_games|play_element|deal_damage|use_commander|play_cards)", requirement: "integer", elementFilter: "varchar(20) nullable", xpReward: "integer default 50", activeDate: "timestamp", createdAt: "timestamp" } },
+          playerChallenges: { table: "player_challenges", columns: { id: "varchar PK (uuid)", userId: "varchar FK->users.id", challengeId: "varchar FK->daily_challenges.id", progress: "integer default 0", completedAt: "timestamp nullable", claimedAt: "timestamp nullable", createdAt: "timestamp" } },
+          deckCodes: { table: "deck_codes", columns: { id: "varchar PK (uuid)", code: "varchar(20) unique", deckName: "varchar(100)", commanderId: "varchar", cardIds: "jsonb", creatorId: "varchar FK->users.id nullable", isPublic: "boolean", uses: "integer default 0", createdAt: "timestamp" } },
+          cardImages: { table: "card_images", columns: { id: "varchar PK (uuid)", name: "varchar", imageUrl: "text (base64 data URL)", element: "varchar nullable", cardType: "varchar (unit|commander)", tags: "text[]", createdAt: "timestamp", createdBy: "varchar FK->users.id" } },
+          cardImageMappings: { table: "card_image_mappings", columns: { cardId: "varchar PK", imageUrl: "text", imageId: "varchar FK->card_images.id nullable", updatedAt: "timestamp" } },
+          commanderImageMappings: { table: "commander_image_mappings", columns: { commanderId: "varchar PK", imageUrl: "text", imageId: "varchar FK->card_images.id nullable", updatedAt: "timestamp" } },
+          userPresence: { table: "user_presence", columns: { id: "varchar PK (uuid)", userId: "varchar FK->users.id unique", status: "varchar (online|offline|in_game)", currentRoomId: "varchar nullable", currentGameId: "varchar nullable", lastSeen: "timestamp" } },
+          matchmakingQueue: { table: "matchmaking_queue", columns: { id: "varchar PK (uuid)", userId: "varchar FK->users.id unique", deckId: "varchar", rating: "integer default 1000", queueType: "varchar (ranked)", joinedAt: "timestamp" } },
+        },
+        apiEndpoints: {
+          auth: {
+            login: { method: "POST", path: "/api/mobile/auth/login", body: { email: "string (required)", firstName: "string", lastName: "string", profileImageUrl: "string", provider: "google|apple", providerToken: "string" }, response: "{ token, user }" },
+            refresh: { method: "POST", path: "/api/mobile/auth/refresh", auth: "Bearer token", response: "{ token }" },
+            me: { method: "GET", path: "/api/mobile/auth/me", auth: "Bearer token", response: "{ id, email, firstName, lastName, profileImageUrl }" },
+            webLogin: { method: "GET", path: "/api/login", response: "Redirect to Replit OIDC" },
+            webUser: { method: "GET", path: "/api/auth/user", response: "{ id, email, firstName, lastName, profileImageUrl }" },
+            updateProfile: { method: "PATCH", path: "/api/user/profile", auth: "Bearer/session", body: { firstName: "string", lastName: "string" }, response: "{ user }" },
+          },
+          cards: {
+            list: { method: "GET", path: "/api/cards", response: "Card[]" },
+            get: { method: "GET", path: "/api/cards/:id", response: "Card" },
+            byElement: { method: "GET", path: "/api/cards/element/:element", response: "Card[]" },
+          },
+          commanders: {
+            list: { method: "GET", path: "/api/commanders", response: "Commander[]" },
+            get: { method: "GET", path: "/api/commanders/:id", response: "Commander" },
+          },
+          decks: {
+            list: { method: "GET", path: "/api/decks?playerId=X", response: "Deck[]" },
+            userDecks: { method: "GET", path: "/api/user-decks", auth: "Bearer/session", response: "UserDeck[]" },
+            save: { method: "POST", path: "/api/user-decks", auth: "Bearer/session", body: { name: "string", commanderId: "string", cardIds: "string[]" }, response: "UserDeck" },
+            update: { method: "PUT", path: "/api/user-decks/:id", auth: "Bearer/session", body: { name: "string", commanderId: "string", cardIds: "string[]" }, response: "UserDeck" },
+            delete: { method: "DELETE", path: "/api/user-decks/:id", auth: "Bearer/session" },
+            aiSuggest: { method: "POST", path: "/api/deck-suggestion", body: { commanderId: "string", playstyle: "aggressive|defensive|balanced" }, response: "{ suggestion: string }" },
+          },
+          multiplayer: {
+            rooms: { method: "GET", path: "/api/rooms", auth: "Bearer/session", response: "GameRoom[]" },
+            createRoom: { method: "POST", path: "/api/rooms", auth: "Bearer/session", body: { name: "string", isPrivate: "boolean", password: "string optional" } },
+            friends: { method: "GET", path: "/api/friends", auth: "Bearer/session", response: "{ friends, pendingRequests }" },
+            sendFriendRequest: { method: "POST", path: "/api/friends/request", auth: "Bearer/session", body: { targetUserId: "string" } },
+            acceptFriendRequest: { method: "POST", path: "/api/friends/accept", auth: "Bearer/session", body: { requestId: "string" } },
+          },
+          progression: {
+            leaderboard: { method: "GET", path: "/api/leaderboard", response: "PlayerRating[]" },
+            stats: { method: "GET", path: "/api/stats", auth: "Bearer/session", response: "PlayerStats" },
+            achievements: { method: "GET", path: "/api/achievements", auth: "Bearer/session", response: "{ achievements, playerAchievements }" },
+            challenges: { method: "GET", path: "/api/daily-challenges", auth: "Bearer/session", response: "{ challenges, playerProgress }" },
+          },
+          health: { method: "GET", path: "/api/health", response: "{ status: 'ok', version, uptime }" },
+          docs: { method: "GET", path: "/api/docs", response: "Full API documentation JSON" },
+        },
+        websocketEvents: {
+          connection: "wss://<host>/ws?token=<jwt> or via session cookie",
+          clientEvents: [
+            "join_room", "leave_room", "select_deck", "toggle_ready",
+            "game_action", "chat_message", "send_emote",
+            "join_matchmaking", "cancel_matchmaking",
+          ],
+          serverEvents: [
+            "room_update", "game_start", "game_state", "game_over",
+            "chat_message", "emote", "player_joined", "player_left",
+            "spectator_joined", "spectator_left",
+            "friend_request", "friend_request_accepted", "friend_online", "friend_offline",
+            "matchmaking_found",
+          ],
+        },
+        gameMechanics: {
+          turnPhases: ["Draw Phase: Draw cards from deck", "Deployment Phase: Play units to battlefield", "Combat Phase: Use commander abilities, resolve buffs/debuffs", "Calculation Phase: Compare battlefield power totals", "End Phase: Resolve damage, check victory conditions"],
+          victoryConditions: "Reduce opponent HP from 40 to 0",
+          elements: { Fire: "Offensive power, direct damage abilities", Water: "Control and healing abilities", Earth: "Defensive and resilient abilities", Air: "Speed and evasion abilities", Nature: "Growth and resource abilities" },
+          counterSystem: "Commanders earn advance counters from won battles and defeat counters from lost battles. Abilities cost advance or defeat counters to activate.",
+        },
+      });
+    } catch (error) {
+      console.error("Error generating sync data:", error);
+      res.status(500).json({ error: "Failed to generate sync data" });
     }
   });
 

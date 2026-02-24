@@ -22,7 +22,7 @@ Key features include:
 - **Admin Tools:** An admin-only interface allows for AI-powered card art generation using the Gemini 2.5 Flash Image model. This includes generating art only, stats only, or complete cards, with options for reference image uploads and toggling stat generation. An image database allows for browsing, managing, and applying artwork to cards.
 - **Engagement Systems:** Includes achievements, daily challenges with XP rewards, a global leaderboard with ELO rating tiers, and in-game emotes.
 - **Game Mechanics:** Implements a turn-based battle system with five distinct phases (Draw, Deployment, Combat, Calculation, End) and specific victory conditions.
-- **Data Storage:** While game data is primarily handled in-memory using a `MemStorage` class during active gameplay, user-specific data like saved decks, friends, and user profiles are persistently stored in a PostgreSQL database.
+- **Data Storage:** While game data is primarily handled in-memory using a `MemStorage` class during active gameplay, user-specific data like saved decks, friends, and user profiles are persistently stored in a PostgreSQL database. Card/commander image mappings are persisted in `card_image_mappings` and `commander_image_mappings` PostgreSQL tables, and automatically loaded into memory on server startup via `storage.initialize()`.
 
 ### System Design Choices
 - **API Structure:** A clear separation of concerns is maintained with dedicated API endpoints for authentication, game data, user-specific decks, friend management, room management, and admin functions.
@@ -34,6 +34,7 @@ Key features include:
 
 ### Mobile API Readiness
 - **API Docs:** Available at GET /api/docs - comprehensive JSON documentation of all endpoints, WebSocket events, and game rules.
+- **Admin Sync Endpoint:** GET /api/admin/sync?code=4838 — Returns complete app data dump (all cards, commanders, game constants, database schemas, API endpoints, WebSocket events, game mechanics) for mobile app development. Protected by access code, no auth required.
 - **Mobile Auth Flow:** POST /api/mobile/auth/login with email to get JWT token (7-day expiry). Token refresh via POST /api/mobile/auth/refresh.
 - **WebSocket Mobile:** Connect with `wss://wisdom-and-chance.replit.app/ws?token=<jwt>` for real-time multiplayer.
 - **Key Files:** server/unifiedAuth.ts (JWT middleware), server/mobileAuth.ts (mobile auth endpoints), server/apiDocs.ts (API documentation).

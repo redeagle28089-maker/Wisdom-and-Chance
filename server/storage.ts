@@ -12,8 +12,11 @@ import {
   ELEMENTS,
   TRAITS,
   BUFF_DEBUFF_COLORS,
+  cardImageMappings,
+  commanderImageMappings,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
+import { db } from "./db";
 
 export interface IStorage {
   getCards(): Promise<Card[]>;
@@ -63,6 +66,30 @@ export class MemStorage implements IStorage {
     this.players = new Map();
     this.games = new Map();
     this.seedData();
+  }
+
+  async initialize(): Promise<void> {
+    try {
+      const cardMappings = await db.select().from(cardImageMappings);
+      for (const mapping of cardMappings) {
+        const card = this.cards.get(mapping.cardId);
+        if (card) {
+          card.imageUrl = mapping.imageUrl;
+        }
+      }
+      console.log(`[storage] Loaded ${cardMappings.length} card image mappings from database`);
+
+      const commanderMappings = await db.select().from(commanderImageMappings);
+      for (const mapping of commanderMappings) {
+        const commander = this.commanders.get(mapping.commanderId);
+        if (commander) {
+          commander.imageUrl = mapping.imageUrl;
+        }
+      }
+      console.log(`[storage] Loaded ${commanderMappings.length} commander image mappings from database`);
+    } catch (error) {
+      console.error("[storage] Failed to load image mappings:", error);
+    }
   }
 
   private seedData() {

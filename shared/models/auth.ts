@@ -69,3 +69,21 @@ export const insertCardImageSchema = createInsertSchema(cardImages).omit({
 export const selectCardImageSchema = createSelectSchema(cardImages);
 export type InsertCardImage = z.infer<typeof insertCardImageSchema>;
 export type CardImage = typeof cardImages.$inferSelect;
+
+export const cardImageMappings = pgTable("card_image_mappings", {
+  cardId: varchar("card_id").primaryKey(),
+  imageUrl: text("image_url").notNull(),
+  imageId: varchar("image_id").references(() => cardImages.id),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type CardImageMapping = typeof cardImageMappings.$inferSelect;
+
+export const commanderImageMappings = pgTable("commander_image_mappings", {
+  commanderId: varchar("commander_id").primaryKey(),
+  imageUrl: text("image_url").notNull(),
+  imageId: varchar("image_id").references(() => cardImages.id),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type CommanderImageMapping = typeof commanderImageMappings.$inferSelect;
