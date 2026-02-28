@@ -22,6 +22,7 @@ import { eq, and, or, desc, sql, gte, lt } from "drizzle-orm";
 import { getWebSocketServer } from "./websocket";
 import { storage } from "./storage";
 import { filterObscenity } from "./obscenity-filter";
+import { gameEngine } from "./gameEngine";
 export function registerMultiplayerRoutes(app: Express) {
   app.get("/api/friends", async (req, res) => {
     if (!req.user) {
@@ -551,12 +552,12 @@ export function registerMultiplayerRoutes(app: Express) {
 
     const game = await storage.createGame(gameData as any);
 
-    // Update room with game ID
+    await gameEngine.registerGame(game);
+
     await db.update(gameRooms)
       .set({ gameId: game.id, status: "in_progress", updatedAt: new Date() })
       .where(eq(gameRooms.id, id));
 
-    // Notify all room members via WebSocket
     const wsServer = getWebSocketServer();
     wsServer?.sendToRoom(id, {
       type: "game_start",

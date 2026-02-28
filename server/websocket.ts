@@ -10,6 +10,7 @@ import cookie from "cookie";
 import cookieSignature from "cookie-signature";
 import { filterObscenity } from "./obscenity-filter";
 import jwt from "jsonwebtoken";
+import { gameEngine } from "./gameEngine";
 
 interface ConnectedUser {
   id: string;
@@ -292,16 +293,7 @@ class GameWebSocketServer {
 
             case "game_action":
               if (message.payload?.gameId) {
-                this.broadcastToGame(message.payload.gameId, {
-                  type: "game_update",
-                  payload: {
-                    gameId: message.payload.gameId,
-                    playerId: userId,
-                    action: message.payload.action,
-                    data: message.payload.data,
-                    timestamp: new Date().toISOString(),
-                  },
-                }, userId);
+                await this.handleGameAction(userId, message.payload);
               }
               break;
 
@@ -353,7 +345,23 @@ class GameWebSocketServer {
           this.leaveRoom(userId, user.roomId);
         }
         if (user?.gameId) {
-          this.leaveGame(userId, user.gameId);
+          const gameId = user.gameId;
+          const activeGame = gameEngine.getActiveGame(gameId);
+          if (activeGame && activeGame.game.status === "in_progress" && activeGame.game.gameType === "multiplayer") {
+            gameEngine.handleDisconnect(gameId, userId, (winnerId: string) => {
+              this.broadcastToGame(gameId, {
+                type: "game_over",
+                payload: { gameId, winnerId, reason: "opponent_forfeit" },
+              });
+              this.sendGameStateToPlayers(gameId);
+            });
+            this.broadcastToGame(gameId, {
+              type: "opponent_disconnected",
+              payload: { gameId, disconnectedPlayerId: userId, reconnectTimeout: 60 },
+            }, userId);
+          } else {
+            this.leaveGame(userId, gameId);
+          }
         }
         this.users.delete(userId);
         this.broadcastPresence(userId, "offline");
@@ -406,7 +414,7 @@ class GameWebSocketServer {
     log(`User ${userId} left room ${roomId}`, "websocket");
   }
 
-  private joinGame(userId: string, gameId: string) {
+  private async joinGame(userId: string, gameId: string) {
     const user = this.users.get(userId);
     if (!user) return;
 
@@ -415,6 +423,38 @@ class GameWebSocketServer {
     }
     this.games.get(gameId)!.add(userId);
     user.gameId = gameId;
+
+    const activeGame = gameEngine.getActiveGame(gameId);
+    if (activeGame && activeGame.game.gameType === "multiplayer") {
+      const wasDisconnected = gameEngine.isPlayerDisconnected(gameId, userId);
+      if (wasDisconnected) {
+        gameEngine.handleReconnect(gameId, userId);
+        this.broadcastToGame(gameId, {
+          type: "opponent_reconnected",
+          payload: { gameId, reconnectedPlayerId: userId },
+        }, userId);
+        log(`User ${userId} reconnected to game ${gameId}`, "websocket");
+      }
+      const sanitized = gameEngine.getGameStateForPlayer(gameId, userId);
+      if (sanitized) {
+        this.sendToUser(userId, {
+          type: "game_state",
+          payload: sanitized,
+        });
+      }
+    } else if (!activeGame) {
+      const game = await storage.getGame(gameId);
+      if (game && game.gameType === "multiplayer" && game.status === "in_progress") {
+        await gameEngine.registerGame(game);
+        const sanitized = gameEngine.getGameStateForPlayer(gameId, userId);
+        if (sanitized) {
+          this.sendToUser(userId, {
+            type: "game_state",
+            payload: sanitized,
+          });
+        }
+      }
+    }
 
     log(`User ${userId} joined game ${gameId}`, "websocket");
   }
@@ -439,6 +479,119 @@ class GameWebSocketServer {
     });
 
     log(`User ${userId} left game ${gameId}`, "websocket");
+  }
+
+  private async handleGameAction(userId: string, payload: any) {
+    const { gameId, action, data } = payload;
+
+    const activeGame = gameEngine.getActiveGame(gameId);
+    if (!activeGame) {
+      const game = await storage.getGame(gameId);
+      if (game && game.gameType === "multiplayer" && game.status === "in_progress") {
+        await gameEngine.registerGame(game);
+      } else {
+        this.broadcastToGame(gameId, {
+          type: "game_update",
+          payload: {
+            gameId,
+            playerId: userId,
+            action,
+            data,
+            timestamp: new Date().toISOString(),
+          },
+        }, userId);
+        return;
+      }
+    }
+
+    const currentGame = gameEngine.getActiveGame(gameId);
+    if (!currentGame || currentGame.game.gameType !== "multiplayer") {
+      this.broadcastToGame(gameId, {
+        type: "game_update",
+        payload: { gameId, playerId: userId, action, data, timestamp: new Date().toISOString() },
+      }, userId);
+      return;
+    }
+
+    let result;
+    switch (action) {
+      case "draw":
+        result = await gameEngine.processDrawPhase(gameId, userId);
+        break;
+      case "deploy":
+        result = await gameEngine.processDeployment(gameId, userId, data?.cardIds || []);
+        break;
+      case "end_turn":
+        result = await gameEngine.processEndTurn(gameId, userId);
+        break;
+      case "use_ability":
+        result = await gameEngine.processAbility(gameId, userId, data?.abilityId);
+        break;
+      case "forfeit":
+        result = await gameEngine.forfeitGame(gameId, userId, "player_forfeit");
+        break;
+      default:
+        this.sendToUser(userId, {
+          type: "game_error",
+          payload: { gameId, error: `Unknown action: ${action}` },
+        });
+        return;
+    }
+
+    if (!result.success) {
+      this.sendToUser(userId, {
+        type: "game_error",
+        payload: { gameId, error: result.error },
+      });
+      return;
+    }
+
+    if (result.type === "combat_result") {
+      this.broadcastToGame(gameId, {
+        type: "combat_result",
+        payload: { gameId, ...result.combatResult },
+      });
+      if (result.combatResult.gameOver) {
+        this.broadcastToGame(gameId, {
+          type: "game_over",
+          payload: { gameId, winnerId: result.combatResult.winnerId, reason: "hp_zero" },
+        });
+      }
+    }
+
+    if (result.type === "game_over") {
+      this.broadcastToGame(gameId, {
+        type: "game_over",
+        payload: { gameId, winnerId: result.winnerId, reason: result.reason },
+      });
+    }
+
+    if (result.type === "state_update" && result.broadcast) {
+      const opponentId = currentGame.game.player1Id === userId ? currentGame.game.player2Id : currentGame.game.player1Id;
+      if (opponentId) {
+        this.sendToUser(opponentId, {
+          type: result.broadcast,
+          payload: { gameId, playerId: userId },
+        });
+      }
+    }
+
+    this.sendGameStateToPlayers(gameId);
+  }
+
+  private sendGameStateToPlayers(gameId: string) {
+    const gamePlayers = this.games.get(gameId);
+    if (!gamePlayers) return;
+
+    gamePlayers.forEach((playerId) => {
+      const sanitized = gameEngine.getGameStateForPlayer(gameId, playerId);
+      if (sanitized) {
+        this.sendToUser(playerId, {
+          type: "game_state",
+          payload: sanitized,
+        });
+      }
+    });
   }
 
   private broadcastToRoom(roomId: string, message: WSMessage, excludeUserId?: string) {

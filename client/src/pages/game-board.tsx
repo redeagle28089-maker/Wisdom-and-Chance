@@ -1673,6 +1673,11 @@ export default function GameBoardPage() {
   const previousBattlefieldRef = useRef<string[] | null>(null);
   const lastGameIdRef = useRef<string | null>(null);
   const aiExecutingRef = useRef<string | null>(null);
+  const [serverState, setServerState] = useState<any>(null);
+  const [opponentDisconnected, setOpponentDisconnected] = useState(false);
+  const [disconnectCountdown, setDisconnectCountdown] = useState(60);
+  const [waitingForOpponent, setWaitingForOpponent] = useState(false);
+  const disconnectTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const { joinGame, leaveGame, subscribe, sendGameMessage, sendGameAction } = useWebSocket();
@@ -1710,6 +1715,133 @@ export default function GameBoardPage() {
     });
     return unsubscribe;
   }, [subscribe, gameId, refetchGame]);
+
+  useEffect(() => {
+    const unsubs: (() => void)[] = [];
+
+    unsubs.push(subscribe("game_state", (msg) => {
+      if (msg.payload?.gameId === gameId) {
+        setServerState(msg.payload);
+        setWaitingForOpponent(false);
+      }
+    }));
+
+    unsubs.push(subscribe("combat_result", (msg) => {
+      if (msg.payload?.gameId === gameId) {
+        const cr = msg.payload;
+        const isP1 = cr.player1Id ? cr.player1Id === user?.id : serverState?.isPlayer1;
+        const p1B = (cr.player1Breakdown || []).map((b: any) => ({
+          card: allCards.find(c => c.id === b.cardId) || { id: b.cardId, name: b.cardName, power: b.basePower, element: "", trait: b.traitName, traitValue: b.traitValue, buffModifier: 0, debuffModifier: 0, buffColor: null, debuffColor: null, rarity: "common", imageUrl: null },
+          basePower: b.basePower,
+          buffBonuses: b.buffBonus > 0 ? [{ fromCard: { name: "buffs" } as any, amount: b.buffBonus }] : [],
+          debuffPenalties: b.debuffPenalty > 0 ? [{ fromCard: { name: "debuffs" } as any, amount: b.debuffPenalty }] : [],
+          traitInfo: b.traitName ? { trait: b.traitName, value: b.traitValue } : null,
+          finalPower: b.finalPower,
+        }));
+        const p2B = (cr.player2Breakdown || []).map((b: any) => ({
+          card: allCards.find(c => c.id === b.cardId) || { id: b.cardId, name: b.cardName, power: b.basePower, element: "", trait: b.traitName, traitValue: b.traitValue, buffModifier: 0, debuffModifier: 0, buffColor: null, debuffColor: null, rarity: "common", imageUrl: null },
+          basePower: b.basePower,
+          buffBonuses: b.buffBonus > 0 ? [{ fromCard: { name: "buffs" } as any, amount: b.buffBonus }] : [],
+          debuffPenalties: b.debuffPenalty > 0 ? [{ fromCard: { name: "debuffs" } as any, amount: b.debuffPenalty }] : [],
+          traitInfo: b.traitName ? { trait: b.traitName, value: b.traitValue } : null,
+          finalPower: b.finalPower,
+        }));
+        setCombatBreakdown({ player1: p1B, player2: p2B });
+        if (cr.combatSummary) setCombatSummary(cr.combatSummary);
+        setShowCombatResults(true);
+        setCombatTimer(30);
+        if (combatTimerRef.current) clearInterval(combatTimerRef.current);
+        combatTimerRef.current = setInterval(() => {
+          setCombatTimer(prev => {
+            if (prev <= 1) {
+              if (combatTimerRef.current) { clearInterval(combatTimerRef.current); combatTimerRef.current = null; }
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      }
+    }));
+
+    unsubs.push(subscribe("game_over", (msg) => {
+      if (msg.payload?.gameId === gameId) {
+        refetchGame();
+        const winnerId = msg.payload.winnerId;
+        const reason = msg.payload.reason;
+        if (reason === "opponent_forfeit") {
+          toast({ title: winnerId === user?.id ? "Opponent forfeited! You win!" : "You forfeited." });
+        } else {
+          toast({ title: winnerId === user?.id ? "You win!" : "You lost!" });
+        }
+        setOpponentDisconnected(false);
+        if (disconnectTimerRef.current) { clearInterval(disconnectTimerRef.current); disconnectTimerRef.current = null; }
+      }
+    }));
+
+    unsubs.push(subscribe("opponent_disconnected", (msg) => {
+      if (msg.payload?.gameId === gameId) {
+        setOpponentDisconnected(true);
+        setDisconnectCountdown(60);
+        if (disconnectTimerRef.current) clearInterval(disconnectTimerRef.current);
+        disconnectTimerRef.current = setInterval(() => {
+          setDisconnectCountdown(prev => {
+            if (prev <= 1) {
+              if (disconnectTimerRef.current) { clearInterval(disconnectTimerRef.current); disconnectTimerRef.current = null; }
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+        toast({ title: "Opponent disconnected. Waiting for reconnection...", variant: "destructive" });
+      }
+    }));
+
+    unsubs.push(subscribe("opponent_reconnected", (msg) => {
+      if (msg.payload?.gameId === gameId) {
+        setOpponentDisconnected(false);
+        if (disconnectTimerRef.current) { clearInterval(disconnectTimerRef.current); disconnectTimerRef.current = null; }
+        toast({ title: "Opponent reconnected!" });
+      }
+    }));
+
+    unsubs.push(subscribe("game_error", (msg) => {
+      if (msg.payload?.gameId === gameId) {
+        toast({ title: msg.payload.error || "Game error", variant: "destructive" });
+      }
+    }));
+
+    unsubs.push(subscribe("turn_ended", (msg) => {
+      if (msg.payload?.gameId === gameId) {
+        toast({ title: "Opponent ended their turn" });
+      }
+    }));
+
+    unsubs.push(subscribe("opponent_drew", (msg) => {
+      if (msg.payload?.gameId === gameId) {
+        toast({ title: "Opponent drew their cards" });
+      }
+    }));
+
+    unsubs.push(subscribe("opponent_deployed", (msg) => {
+      if (msg.payload?.gameId === gameId) {
+        toast({ title: "Opponent deployed their cards" });
+      }
+    }));
+
+    unsubs.push(subscribe("phase_changed", (msg) => {
+      if (msg.payload?.gameId === gameId) {
+        refetchGame();
+      }
+    }));
+
+    unsubs.push(subscribe("ability_used", (msg) => {
+      if (msg.payload?.gameId === gameId) {
+        toast({ title: "Opponent used an ability" });
+      }
+    }));
+
+    return () => unsubs.forEach(u => u());
+  }, [subscribe, gameId, user?.id, allCards, refetchGame, serverState?.isPlayer1]);
 
   useEffect(() => {
     const unsubscribe = subscribe("game_message", (msg) => {
@@ -1771,29 +1903,29 @@ export default function GameBoardPage() {
   });
 
   const isMultiplayer = game?.gameType === "multiplayer";
+  const useServerState = isMultiplayer && serverState;
 
   const getCardById = (instanceId: string) => {
     const cardId = getCardIdFromInstance(instanceId);
     return allCards.find((c) => c.id === cardId);
   };
 
-  const isPlayer1 = game ? game.player1Id === user?.id : false;
-  const myHP = game ? (isPlayer1 ? game.player1HP : game.player2HP) : GAME_CONSTANTS.STARTING_HP;
-  const opponentHP = game ? (isPlayer1 ? game.player2HP : game.player1HP) : GAME_CONSTANTS.STARTING_HP;
-  const myHand = game ? (isPlayer1 ? game.gameState.player1Hand : game.gameState.player2Hand) : [];
-  const opponentHandSize = game ? (isPlayer1 ? game.gameState.player2Hand.length : game.gameState.player1Hand.length) : 0;
-  const myBattlefield = game ? (isPlayer1 ? game.gameState.player1Battlefield : game.gameState.player2Battlefield) : [];
-  const rawOpponentBattlefield = game ? (isPlayer1 ? game.gameState.player2Battlefield : game.gameState.player1Battlefield) : [];
-  // In practice mode, always show opponent's cards face-up so player can review during combat phase
+  const isPlayer1 = useServerState ? serverState.isPlayer1 : (game ? game.player1Id === user?.id : false);
+  const myHP = useServerState ? serverState.myHP : (game ? (isPlayer1 ? game.player1HP : game.player2HP) : GAME_CONSTANTS.STARTING_HP);
+  const opponentHP = useServerState ? serverState.opponentHP : (game ? (isPlayer1 ? game.player2HP : game.player1HP) : GAME_CONSTANTS.STARTING_HP);
+  const myHand = useServerState ? serverState.myHand : (game ? (isPlayer1 ? game.gameState.player1Hand : game.gameState.player2Hand) : []);
+  const opponentHandSize = useServerState ? serverState.opponentHandCount : (game ? (isPlayer1 ? game.gameState.player2Hand.length : game.gameState.player1Hand.length) : 0);
+  const myBattlefield = useServerState ? serverState.myBattlefield : (game ? (isPlayer1 ? game.gameState.player1Battlefield : game.gameState.player2Battlefield) : []);
+  const rawOpponentBattlefield = useServerState ? serverState.opponentBattlefield : (game ? (isPlayer1 ? game.gameState.player2Battlefield : game.gameState.player1Battlefield) : []);
   const opponentBattlefield = game?.gameType === "practice" 
-    ? rawOpponentBattlefield.map(bf => ({ ...bf, faceDown: false }))
+    ? rawOpponentBattlefield.map((bf: any) => ({ ...bf, faceDown: false }))
     : rawOpponentBattlefield;
-  const myDeckSize = game ? (isPlayer1 ? game.gameState.player1Deck.length : game.gameState.player2Deck.length) : 0;
-  const opponentDeckSize = game ? (isPlayer1 ? game.gameState.player2Deck.length : game.gameState.player1Deck.length) : 0;
-  const isMyTurn = game ? game.activePlayer === user?.id : false;
-  const myVP = game ? (isPlayer1 ? game.player1VictoryPoints : game.player2VictoryPoints) : 0;
-  const myWP = game ? (isPlayer1 ? game.player1WithdrawalPoints : game.player2WithdrawalPoints) : 0;
-  const myCommanderId = game ? (isPlayer1 ? game.gameState.player1CommanderId : game.gameState.player2CommanderId) : undefined;
+  const myDeckSize = useServerState ? serverState.myDeckCount : (game ? (isPlayer1 ? game.gameState.player1Deck.length : game.gameState.player2Deck.length) : 0);
+  const opponentDeckSize = useServerState ? serverState.opponentDeckCount : (game ? (isPlayer1 ? game.gameState.player2Deck.length : game.gameState.player1Deck.length) : 0);
+  const isMyTurn = useServerState ? true : (game ? game.activePlayer === user?.id : false);
+  const myVP = useServerState ? serverState.myVP : (game ? (isPlayer1 ? game.player1VictoryPoints : game.player2VictoryPoints) : 0);
+  const myWP = useServerState ? serverState.myWP : (game ? (isPlayer1 ? game.player1WithdrawalPoints : game.player2WithdrawalPoints) : 0);
+  const myCommanderId = useServerState ? serverState.myCommanderId : (game ? (isPlayer1 ? game.gameState.player1CommanderId : game.gameState.player2CommanderId) : undefined);
   const myCommander = myCommanderId ? allCommanders.find(c => c.id === myCommanderId) : undefined;
   
   // Get game mode config (draw/deploy counts)
@@ -1801,8 +1933,14 @@ export default function GameBoardPage() {
   const modeConfig = GAME_MODE_CONFIG[gameMode];
   const cardsToDraw = modeConfig.cardsToDraw;
   const baseCardsToDeploy = modeConfig.cardsToDeploy;
-  const myExtraDeploy = game ? (isPlayer1 ? (game.gameState.player1ExtraDeploy || 0) : (game.gameState.player2ExtraDeploy || 0)) : 0;
+  const myExtraDeploy = useServerState ? (serverState.extraDeploy || 0) : (game ? (isPlayer1 ? (game.gameState.player1ExtraDeploy || 0) : (game.gameState.player2ExtraDeploy || 0)) : 0);
   const cardsToDeploy = baseCardsToDeploy + myExtraDeploy;
+  const effectivePhase = useServerState ? serverState.currentPhase : (game?.currentPhase || "draw");
+  const effectiveTurn = useServerState ? serverState.currentTurn : (game?.currentTurn || 1);
+  const effectiveStatus = useServerState ? serverState.status : (game?.status || "waiting");
+  const effectiveWinnerId = useServerState ? serverState.winnerId : game?.winnerId;
+  const opponentVP = useServerState ? serverState.opponentVP : (game ? (isPlayer1 ? game.player2VictoryPoints : game.player1VictoryPoints) : 0);
+  const opponentWP = useServerState ? serverState.opponentWP : (game ? (isPlayer1 ? game.player2WithdrawalPoints : game.player1WithdrawalPoints) : 0);
 
   useEffect(() => {
     if (!game) return;
@@ -2360,14 +2498,31 @@ export default function GameBoardPage() {
   }
 
   const handleActivateAbility = (ability: CommanderAbility) => {
-    if (!game || !myCommander || !isMyTurn) return;
-    if (ability.phase !== game.currentPhase) {
+    if (!game || !myCommander) return;
+
+    if (isMultiplayer && gameId) {
+      const currentPhase = useServerState ? serverState.currentPhase : game.currentPhase;
+      if (ability.phase !== currentPhase) {
+        toast({ title: `This ability can only be used during ${ability.phase} phase`, variant: "destructive" });
+        return;
+      }
+      if (myVP < ability.victoryCost || myWP < ability.withdrawalCost) {
+        toast({ title: "Not enough points to use this ability!", variant: "destructive" });
+        return;
+      }
+      sendGameAction(gameId, "use_ability", { abilityId: ability.id });
+      toast({ title: `Used ${ability.name}!` });
+      return;
+    }
+
+    if (!isMyTurn && !isMultiplayer) return;
+    if (ability.phase !== effectivePhase) {
       toast({ title: `This ability can only be used during ${ability.phase} phase`, variant: "destructive" });
       return;
     }
     
-    const currentVP = isPlayer1 ? game.player1VictoryPoints : game.player2VictoryPoints;
-    const currentWP = isPlayer1 ? game.player1WithdrawalPoints : game.player2WithdrawalPoints;
+    const currentVP = myVP;
+    const currentWP = myWP;
     
     if (currentVP < ability.victoryCost || currentWP < ability.withdrawalCost) {
       toast({ title: "Not enough points to use this ability!", variant: "destructive" });
@@ -2642,8 +2797,8 @@ export default function GameBoardPage() {
     }
     
     const abilityLogEntry = {
-      turn: game.currentTurn,
-      phase: game.currentPhase,
+      turn: effectiveTurn,
+      phase: effectivePhase,
       playerId: user?.id || "",
       abilityId: ability.id,
       abilityName: ability.name,
@@ -2701,7 +2856,7 @@ export default function GameBoardPage() {
   };
 
   const handleCardSelect = (cardId: string) => {
-    if (game.currentPhase !== "deployment" || !isMyTurn) return;
+    if (effectivePhase !== "deployment" || (!isMyTurn && !isMultiplayer)) return;
     
     if (selectedCards.includes(cardId)) {
       setSelectedCards(selectedCards.filter((id) => id !== cardId));
@@ -2711,7 +2866,20 @@ export default function GameBoardPage() {
   };
 
   const handleDraw = () => {
-    if (game.currentPhase !== "draw" || !isMyTurn) return;
+    const currentPhase = useServerState ? serverState.currentPhase : game.currentPhase;
+    if (currentPhase !== "draw") return;
+
+    if (isMultiplayer && gameId) {
+      if (useServerState && serverState.myHasDrawn) {
+        toast({ title: "You already drew this turn!", variant: "destructive" });
+        return;
+      }
+      sendGameAction(gameId, "draw", {});
+      toast({ title: `Drawing cards...` });
+      return;
+    }
+
+    if (!isMyTurn) return;
 
     const myDeck = isPlayer1 ? [...game.gameState.player1Deck] : [...game.gameState.player2Deck];
     const myNewHand = [...myHand];
@@ -2738,7 +2906,6 @@ export default function GameBoardPage() {
       newGameState.player2Battlefield = [];
     }
 
-    // In practice mode, also have AI draw simultaneously
     const isPractice = game.gameType === "practice";
     if (isPractice) {
       const aiDeck = [...newGameState.player2Deck];
@@ -2753,64 +2920,24 @@ export default function GameBoardPage() {
       }
     }
 
-    // In multiplayer, both players need to draw before moving to deployment
-    // In practice mode, AI draws simultaneously so we can go straight to deployment
-    const isMultiplayerGame = game.gameType === "multiplayer";
-    
-    if (isMultiplayerGame) {
-      const opponentId = isPlayer1 ? game.player2Id! : game.player1Id;
-      
-      // Default undefined flags to false for backwards compatibility
-      const prevP1Drawn = game.gameState.player1HasDrawn ?? false;
-      const prevP2Drawn = game.gameState.player2HasDrawn ?? false;
-      
-      // Guard against double-draw - if player already drew this phase, ignore
-      if ((isPlayer1 && prevP1Drawn) || (!isPlayer1 && prevP2Drawn)) {
-        toast({ title: "You already drew this turn!", variant: "destructive" });
-        return;
-      }
-      
-      // Track draw state in gameState - if both have drawn, move to deployment
-      if (isPlayer1) {
-        newGameState.player1HasDrawn = true;
-        newGameState.player2HasDrawn = prevP2Drawn;
-      } else {
-        newGameState.player1HasDrawn = prevP1Drawn;
-        newGameState.player2HasDrawn = true;
-      }
-      
-      const bothDrawn = newGameState.player1HasDrawn && newGameState.player2HasDrawn;
-      
-      if (bothDrawn) {
-        // Reset draw flags for next turn
-        newGameState.player1HasDrawn = false;
-        newGameState.player2HasDrawn = false;
-        updateGameMutation.mutate({
-          currentPhase: "deployment",
-          activePlayer: game.player1Id, // Player 1 deploys first
-          gameState: newGameState,
-        });
-      } else {
-        // Switch to other player for their draw
-        updateGameMutation.mutate({
-          currentPhase: "draw",
-          activePlayer: opponentId,
-          gameState: newGameState,
-        });
-      }
-    } else {
-      // Practice mode - go straight to deployment
-      updateGameMutation.mutate({
-        currentPhase: "deployment",
-        gameState: newGameState,
-      });
-    }
+    updateGameMutation.mutate({
+      currentPhase: "deployment",
+      gameState: newGameState,
+    });
     toast({ title: `Drew ${cardsToDraw} cards!` });
   };
 
   const handleDeploy = () => {
     if (selectedCards.length !== cardsToDeploy) {
       toast({ title: `Select ${cardsToDeploy} cards to deploy`, variant: "destructive" });
+      return;
+    }
+
+    if (isMultiplayer && gameId) {
+      sendGameAction(gameId, "deploy", { cardIds: selectedCards });
+      setSelectedCards([]);
+      setWaitingForOpponent(true);
+      toast({ title: "Cards deployed! Waiting for opponent..." });
       return;
     }
 
@@ -2831,7 +2958,6 @@ export default function GameBoardPage() {
 
     const isPractice = game.gameType === "practice";
     
-    // In practice mode, have AI deploy simultaneously
     if (isPractice && isPlayer1) {
       const aiHand = [...newGameState.player2Hand];
       const aiDifficulty = game.aiDifficulty || "medium";
@@ -2862,7 +2988,6 @@ export default function GameBoardPage() {
           const bottomCards = cardsWithPower.slice(mid);
           
           if (topCards.length > 0 && bottomCards.length > 0) {
-            // Mix high and low power cards based on cardsToDeploy
             const numFromTop = Math.ceil(cardsToDeploy / 2);
             const numFromBottom = cardsToDeploy - numFromTop;
             const selectedTop = topCards.slice(0, numFromTop).map(c => c.cardId);
@@ -2900,7 +3025,18 @@ export default function GameBoardPage() {
     toast({ title: "Cards deployed!" });
   };
 
+  const handleEndTurnMultiplayer = () => {
+    if (!isMultiplayer || !gameId) return;
+    sendGameAction(gameId, "end_turn", {});
+    setWaitingForOpponent(true);
+    toast({ title: "Turn ended. Waiting for opponent..." });
+  };
+
   const handleCombat = () => {
+    if (isMultiplayer) {
+      handleEndTurnMultiplayer();
+      return;
+    }
     const newGameState = { ...game.gameState };
     newGameState.player1Battlefield = newGameState.player1Battlefield.map((bf) => ({ ...bf, faceDown: false }));
     newGameState.player2Battlefield = newGameState.player2Battlefield.map((bf) => ({ ...bf, faceDown: false }));
@@ -2974,7 +3110,12 @@ export default function GameBoardPage() {
   };
 
   const handleCalculation = () => {
-    // Use the calculated breakdown if available, otherwise calculate now
+    if (isMultiplayer) {
+      setShowCombatResults(false);
+      setCombatBreakdown(null);
+      setCombatSummary(null);
+      return;
+    }
     let player1Breakdown = combatBreakdown?.player1;
     let player2Breakdown = combatBreakdown?.player2;
 
@@ -3107,13 +3248,13 @@ export default function GameBoardPage() {
   handleCalculationRef.current = handleCalculation;
 
   const handleEndPhase = () => {
-    // In multiplayer, new turns always start with player1 drawing first
-    // In practice mode, toggle between players (but typically player1 is always active)
-    const isMultiplayerGame = game.gameType === "multiplayer";
+    if (isMultiplayer) {
+      return;
+    }
     updateGameMutation.mutate({
       currentPhase: "draw",
       currentTurn: game.currentTurn + 1,
-      activePlayer: isMultiplayerGame ? game.player1Id : game.player1Id,
+      activePlayer: game.player1Id,
       gameState: {
         ...game.gameState,
         player1HasDrawn: false,
@@ -3122,7 +3263,7 @@ export default function GameBoardPage() {
     });
   };
 
-  if (game.status === "completed") {
+  if (effectiveStatus === "completed" || game.status === "completed") {
     return (
       <div className="min-h-full bg-gradient-to-br from-slate-900 via-purple-900/30 to-slate-900 flex items-center justify-center p-6">
         <Card className="bg-slate-800/50 border-purple-500/20 max-w-md w-full">
@@ -3130,7 +3271,7 @@ export default function GameBoardPage() {
             <Trophy className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
             <h1 className="text-3xl font-bold text-white mb-2">Game Over!</h1>
             <p className="text-purple-200 text-lg mb-6">
-              {game.winnerId === user?.id ? "You won!" : "You lost!"}
+              {(effectiveWinnerId || game.winnerId) === user?.id ? "You won!" : "You lost!"}
             </p>
             <div className="flex gap-4 justify-center">
               <Button variant="outline" onClick={() => navigate("/practice")} data-testid="button-back-to-practice">
@@ -3155,8 +3296,8 @@ export default function GameBoardPage() {
           <div className="flex items-center gap-2">
             <AnimatedHPBar current={opponentHP} max={GAME_CONSTANTS.STARTING_HP} isPlayer={false} label="Opponent" previousHP={previousOpponentHP} />
             <VictoryWithdrawalCounter 
-              victories={isPlayer1 ? game.player2VictoryPoints : game.player1VictoryPoints} 
-              withdrawals={isPlayer1 ? game.player2WithdrawalPoints : game.player1WithdrawalPoints} 
+              victories={opponentVP} 
+              withdrawals={opponentWP} 
               isPlayer={false} 
             />
             {isMultiplayer && spectatorCount > 0 && (
@@ -3175,16 +3316,16 @@ export default function GameBoardPage() {
             </Badge>
           </div>
           <PhaseIndicator 
-            currentPhase={game.currentPhase} 
+            currentPhase={effectivePhase} 
             isMyTurn={isMyTurn} 
-            turn={game.currentTurn}
-            combatHistoryCount={game.gameState.combatHistory?.length || 0}
+            turn={effectiveTurn}
+            combatHistoryCount={(useServerState ? serverState.combatHistory : game.gameState.combatHistory)?.length || 0}
             onViewCombatHistory={() => setShowCombatHistoryDialog(true)}
           />
           <div className="flex items-center gap-2">
             <VictoryWithdrawalCounter 
-              victories={isPlayer1 ? game.player1VictoryPoints : game.player2VictoryPoints} 
-              withdrawals={isPlayer1 ? game.player1WithdrawalPoints : game.player2WithdrawalPoints} 
+              victories={myVP} 
+              withdrawals={myWP} 
               isPlayer={true} 
             />
             <AnimatedHPBar current={myHP} max={GAME_CONSTANTS.STARTING_HP} isPlayer={true} label="You" previousHP={previousMyHP} />
@@ -3239,22 +3380,29 @@ export default function GameBoardPage() {
         <div className="flex justify-center items-center gap-2 flex-shrink-0 action-buttons-row">
           <Card className="bg-purple-900/50 border-purple-500/30 px-3 py-2 action-card">
             <div className="flex items-center gap-3">
-              {/* Multiplayer waiting message when it's not your turn */}
-              {game.gameType === "multiplayer" && !isMyTurn && (
-                <div className="flex items-center gap-2 text-amber-300" data-testid="text-waiting-opponent">
-                  <div className="animate-pulse w-2 h-2 rounded-full bg-amber-400"></div>
+              {opponentDisconnected && isMultiplayer && (
+                <div className="flex items-center gap-2 text-red-300" data-testid="text-opponent-disconnected">
+                  <div className="animate-pulse w-2 h-2 rounded-full bg-red-400"></div>
                   <span className="text-sm">
-                    Waiting for opponent to {game.currentPhase === "draw" ? "draw cards" : game.currentPhase === "deployment" ? "deploy cards" : "take action"}...
+                    Opponent disconnected. Reconnecting... ({disconnectCountdown}s)
                   </span>
                 </div>
               )}
-              {game.currentPhase === "draw" && isMyTurn && (
+              {waitingForOpponent && isMultiplayer && !opponentDisconnected && (
+                <div className="flex items-center gap-2 text-amber-300" data-testid="text-waiting-opponent">
+                  <div className="animate-pulse w-2 h-2 rounded-full bg-amber-400"></div>
+                  <span className="text-sm">
+                    Waiting for opponent to {effectivePhase === "draw" ? "draw cards" : effectivePhase === "deployment" ? "deploy cards" : "end turn"}...
+                  </span>
+                </div>
+              )}
+              {effectivePhase === "draw" && (isMyTurn || isMultiplayer) && !(useServerState && serverState.myHasDrawn) && (
                 <Button onClick={handleDraw} className="bg-gradient-to-r from-cyan-600 to-blue-600" data-testid="button-draw">
                   <ArrowRight className="w-4 h-4 mr-2" />
                   Draw Cards
                 </Button>
               )}
-              {game.currentPhase === "deployment" && isMyTurn && (
+              {effectivePhase === "deployment" && (isMyTurn || (isMultiplayer && !(useServerState && serverState.myHasDeployed))) && (
                 <Button 
                   onClick={handleDeploy} 
                   disabled={selectedCards.length !== cardsToDeploy}
@@ -3265,7 +3413,7 @@ export default function GameBoardPage() {
                   Deploy ({selectedCards.length}/{cardsToDeploy})
                 </Button>
               )}
-              {game.currentPhase === "combat" && (isMyTurn || game.gameType === "practice") && (
+              {effectivePhase === "combat" && (isMyTurn || game.gameType === "practice" || isMultiplayer) && (
                 <div className="flex items-center gap-3">
                   {game.gameType === "practice" && combatPhaseTimerActive && (
                     <div className="flex items-center gap-2">
@@ -3283,23 +3431,23 @@ export default function GameBoardPage() {
                     data-testid="button-combat"
                   >
                     <Swords className="w-4 h-4 mr-2" />
-                    {game.gameType === "practice" && combatPhaseTimerActive ? "Skip & Reveal" : "Reveal Cards"}
+                    {isMultiplayer ? "End Turn" : game.gameType === "practice" && combatPhaseTimerActive ? "Skip & Reveal" : "Reveal Cards"}
                   </Button>
                 </div>
               )}
-              {game.currentPhase === "calculation" && isMyTurn && !showCombatResults && (
+              {effectivePhase === "calculation" && isMyTurn && !showCombatResults && !isMultiplayer && (
                 <Button onClick={handleCalculation} className="bg-gradient-to-r from-yellow-600 to-orange-600" data-testid="button-calculate">
                   <Trophy className="w-4 h-4 mr-2" />
                   Calculate Damage
                 </Button>
               )}
-              {game.currentPhase === "end" && isMyTurn && (
+              {effectivePhase === "end" && isMyTurn && !isMultiplayer && (
                 <Button onClick={handleEndPhase} className="bg-gradient-to-r from-green-600 to-teal-600" data-testid="button-end">
                   <Flag className="w-4 h-4 mr-2" />
                   End Turn
                 </Button>
               )}
-              {!isMyTurn && (
+              {!isMyTurn && !isMultiplayer && (
                 <p className="text-purple-300">Waiting for opponent...</p>
               )}
             </div>
@@ -3338,7 +3486,7 @@ export default function GameBoardPage() {
         />
 
         {/* Combat Results Panel */}
-        {showCombatResults && combatBreakdown && game.currentPhase === "calculation" && (
+        {showCombatResults && combatBreakdown && (effectivePhase === "calculation" || (isMultiplayer && showCombatResults)) && (
           <CombatResultPanel
             player1Breakdown={combatBreakdown.player1}
             player2Breakdown={combatBreakdown.player2}
@@ -3399,7 +3547,7 @@ export default function GameBoardPage() {
                   <span className="text-green-400 font-medium">{myHand.length} cards</span>
                   <span className="text-slate-500">|</span>
                   <span className="text-green-400/70">Deck: {myDeckSize}</span>
-                  {game.currentPhase === "deployment" && isMyTurn && (
+                  {effectivePhase === "deployment" && (isMyTurn || isMultiplayer) && (
                     <Badge className="bg-purple-500/50 text-xs">
                       Select {cardsToDeploy - selectedCards.length} more
                     </Badge>
@@ -3430,7 +3578,7 @@ export default function GameBoardPage() {
               {myHand.map((cardId) => {
                 const card = getCardById(cardId);
                 if (!card) return null;
-                const isPlayable = game.currentPhase === "deployment" && isMyTurn;
+                const isPlayable = effectivePhase === "deployment" && (isMyTurn || isMultiplayer);
                 return (
                   <MiniCard 
                     key={cardId} 
@@ -3452,7 +3600,7 @@ export default function GameBoardPage() {
               {myCommander ? (
                 myCommander.abilities.map((ability) => {
                   const canAfford = myVP >= ability.victoryCost && myWP >= ability.withdrawalCost;
-                  const isCorrectPhase = ability.phase === game.currentPhase;
+                  const isCorrectPhase = ability.phase === effectivePhase;
                   return (
                     <AbilityCard
                       key={ability.id}

@@ -14,6 +14,7 @@ import jwt from "jsonwebtoken";
 import { generateImage, generateText } from "./replit_integrations/image/client";
 import { getWebSocketServer } from "./websocket";
 import { filterObscenity } from "./obscenity-filter";
+import { gameEngine } from "./gameEngine";
 
 const ADMIN_EMAIL = "redeagle28089@gmail.com";
 
@@ -299,6 +300,17 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
     if (!game) {
       return res.status(404).json({ message: "Game not found" });
     }
+
+    if (game.gameType === "multiplayer" && game.status === "in_progress" && req.user) {
+      const userId = (req.user as any).claims?.sub || (req.user as any).userId;
+      if (userId) {
+        const sanitized = gameEngine.getGameStateForPlayer(game.id, userId);
+        if (sanitized) {
+          return res.json({ ...game, sanitizedState: sanitized });
+        }
+      }
+    }
+
     res.json(game);
   });
 
@@ -312,6 +324,15 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
   });
 
   app.patch("/api/games/:id", async (req, res) => {
+    const existingGame = await storage.getGame(req.params.id);
+    if (!existingGame) {
+      return res.status(404).json({ message: "Game not found" });
+    }
+
+    if (existingGame.gameType === "multiplayer" && existingGame.status === "in_progress") {
+      return res.status(403).json({ message: "Multiplayer games can only be modified through the game engine" });
+    }
+
     const game = await storage.updateGame(req.params.id, req.body);
     if (!game) {
       return res.status(404).json({ message: "Game not found" });
