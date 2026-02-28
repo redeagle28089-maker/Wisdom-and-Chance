@@ -64,7 +64,7 @@ export default function AdminUserDatabasePage() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
-  const [hideTestUsers, setHideTestUsers] = useState(false);
+  const [hideTestUsers, setHideTestUsers] = useState(true);
   const [hideAiUsers, setHideAiUsers] = useState(false);
 
   const { data: adminCheck } = useQuery<{ isAdmin: boolean }>({
