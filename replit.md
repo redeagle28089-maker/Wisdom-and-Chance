@@ -38,6 +38,7 @@ Key features include:
 - **Admin Sync Endpoint:** GET /api/admin/sync?code=4838 — Returns complete app data dump (all cards, commanders, game constants, database schemas, API endpoints, WebSocket events, game mechanics) for mobile app development. Protected by access code, no auth required.
 - **Mobile Auth Flow:** POST /api/mobile/auth/login with email to get JWT token (7-day expiry). Token refresh via POST /api/mobile/auth/refresh.
 - **WebSocket Mobile:** Connect with `wss://wisdom-and-chance.replit.app/ws?token=<jwt>` for real-time multiplayer.
+- **Image Download Endpoints:** GET /api/cards/:id/image and GET /api/commanders/:id/image return binary image files for any authenticated user. GET /api/admin/card-images/:id/download returns a downloadable image file (admin only). GET /api/admin/card-images/bulk/download-manifest returns a JSON manifest of all images with download URLs (admin only).
 - **Key Files:** server/unifiedAuth.ts (JWT middleware), server/mobileAuth.ts (mobile auth endpoints), server/apiDocs.ts (API documentation).
 
 ## External Dependencies

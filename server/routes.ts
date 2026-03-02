@@ -773,6 +773,28 @@ IMPORTANT:
   // =============== Card Image Database Routes ===============
 
   // Get all images from card image database
+  app.get("/api/admin/card-images/bulk/download-manifest", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const images = await db.select({
+        id: cardImages.id,
+        name: cardImages.name,
+        element: cardImages.element,
+        cardType: cardImages.cardType,
+        createdAt: cardImages.createdAt,
+      }).from(cardImages).orderBy(cardImages.createdAt);
+
+      const manifest = images.map(img => ({
+        ...img,
+        downloadUrl: `/api/admin/card-images/${img.id}/download`,
+      }));
+
+      res.json({ total: manifest.length, images: manifest });
+    } catch (error) {
+      console.error("Error fetching image manifest:", error);
+      res.status(500).json({ error: "Failed to fetch image manifest" });
+    }
+  });
+
   app.get("/api/admin/card-images", isAuthenticated, isAdmin, async (req, res) => {
     try {
       const images = await db.select().from(cardImages).orderBy(cardImages.createdAt);
@@ -860,6 +882,83 @@ IMPORTANT:
     } catch (error) {
       console.error("Error deleting card image:", error);
       res.status(500).json({ error: "Failed to delete card image" });
+    }
+  });
+
+  app.get("/api/admin/card-images/:id/download", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const [image] = await db.select().from(cardImages).where(eq(cardImages.id, req.params.id));
+      if (!image) {
+        return res.status(404).json({ error: "Image not found" });
+      }
+
+      const base64Match = image.imageUrl.match(/^data:image\/(png|jpeg|jpg|webp|gif);base64,(.+)$/);
+      if (!base64Match) {
+        return res.status(400).json({ error: "Invalid image format" });
+      }
+
+      const mimeType = `image/${base64Match[1]}`;
+      const ext = base64Match[1] === "jpeg" ? "jpg" : base64Match[1];
+      const buffer = Buffer.from(base64Match[2], "base64");
+      const safeName = image.name.replace(/[^a-zA-Z0-9_-]/g, "_");
+
+      res.setHeader("Content-Type", mimeType);
+      res.setHeader("Content-Disposition", `attachment; filename="${safeName}.${ext}"`);
+      res.setHeader("Content-Length", buffer.length);
+      res.send(buffer);
+    } catch (error) {
+      console.error("Error downloading card image:", error);
+      res.status(500).json({ error: "Failed to download image" });
+    }
+  });
+
+  app.get("/api/cards/:id/image", isAuthenticated, async (req, res) => {
+    try {
+      const [mapping] = await db.select().from(cardImageMappings).where(eq(cardImageMappings.cardId, req.params.id));
+      if (!mapping || !mapping.imageUrl) {
+        return res.status(404).json({ error: "No image found for this card" });
+      }
+
+      const base64Match = mapping.imageUrl.match(/^data:image\/(png|jpeg|jpg|webp|gif);base64,(.+)$/);
+      if (!base64Match) {
+        return res.status(400).json({ error: "Invalid image format" });
+      }
+
+      const mimeType = `image/${base64Match[1]}`;
+      const buffer = Buffer.from(base64Match[2], "base64");
+
+      res.setHeader("Content-Type", mimeType);
+      res.setHeader("Cache-Control", "public, max-age=86400");
+      res.setHeader("Content-Length", buffer.length);
+      res.send(buffer);
+    } catch (error) {
+      console.error("Error fetching card image:", error);
+      res.status(500).json({ error: "Failed to fetch card image" });
+    }
+  });
+
+  app.get("/api/commanders/:id/image", isAuthenticated, async (req, res) => {
+    try {
+      const [mapping] = await db.select().from(commanderImageMappings).where(eq(commanderImageMappings.commanderId, req.params.id));
+      if (!mapping || !mapping.imageUrl) {
+        return res.status(404).json({ error: "No image found for this commander" });
+      }
+
+      const base64Match = mapping.imageUrl.match(/^data:image\/(png|jpeg|jpg|webp|gif);base64,(.+)$/);
+      if (!base64Match) {
+        return res.status(400).json({ error: "Invalid image format" });
+      }
+
+      const mimeType = `image/${base64Match[1]}`;
+      const buffer = Buffer.from(base64Match[2], "base64");
+
+      res.setHeader("Content-Type", mimeType);
+      res.setHeader("Cache-Control", "public, max-age=86400");
+      res.setHeader("Content-Length", buffer.length);
+      res.send(buffer);
+    } catch (error) {
+      console.error("Error fetching commander image:", error);
+      res.status(500).json({ error: "Failed to fetch commander image" });
     }
   });
 
@@ -1191,6 +1290,13 @@ IMPORTANT:
             stats: { method: "GET", path: "/api/stats", auth: "Bearer/session", response: "PlayerStats" },
             achievements: { method: "GET", path: "/api/achievements", auth: "Bearer/session", response: "{ achievements, playerAchievements }" },
             challenges: { method: "GET", path: "/api/daily-challenges", auth: "Bearer/session", response: "{ challenges, playerProgress }" },
+          },
+          images: {
+            cardImage: { method: "GET", path: "/api/cards/:id/image", auth: "Bearer/session", response: "Binary image (Content-Type varies: image/png, image/jpeg, etc.). Returns the mapped artwork for a specific unit card." },
+            commanderImage: { method: "GET", path: "/api/commanders/:id/image", auth: "Bearer/session", response: "Binary image (Content-Type varies: image/png, image/jpeg, etc.). Returns the mapped artwork for a specific commander." },
+            adminDownload: { method: "GET", path: "/api/admin/card-images/:id/download", auth: "Bearer (admin)", response: "Binary image download with Content-Disposition attachment header. Content-Type varies by stored format." },
+            adminManifest: { method: "GET", path: "/api/admin/card-images/bulk/download-manifest", auth: "Bearer (admin)", response: "{ total: number, images: [{ id, name, element, cardType, createdAt, downloadUrl }] }. Use downloadUrl for each image to fetch the binary file." },
+            adminList: { method: "GET", path: "/api/admin/card-images", auth: "Bearer (admin)", response: "CardImage[] with full base64 imageUrl included." },
           },
           health: { method: "GET", path: "/api/health", response: "{ status: 'ok', version, uptime }" },
           docs: { method: "GET", path: "/api/docs", response: "Full API documentation JSON" },

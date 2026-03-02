@@ -79,6 +79,8 @@ export default function AdminImageDatabasePage() {
   const [bulkFiles, setBulkFiles] = useState<{ file: File; name: string; preview: string }[]>([]);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(0);
 
   const { data: adminCheck, isLoading: adminLoading } = useQuery<{ isAdmin: boolean }>({
     queryKey: ["/api/admin/check"],
@@ -240,6 +242,34 @@ export default function AdminImageDatabasePage() {
     return matchesSearch && matchesElement && matchesType;
   });
 
+  const handleDownloadAll = async () => {
+    if (filteredImages.length === 0) {
+      toast({ title: "No images to download", variant: "destructive" });
+      return;
+    }
+    setIsDownloading(true);
+    setDownloadProgress(0);
+    let downloaded = 0;
+    for (const img of filteredImages) {
+      try {
+        const link = document.createElement("a");
+        link.href = img.imageUrl;
+        const safeName = img.name.replace(/[^a-zA-Z0-9_-]/g, "_");
+        link.download = `${safeName}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        downloaded++;
+        setDownloadProgress(Math.round((downloaded / filteredImages.length) * 100));
+        await new Promise(r => setTimeout(r, 300));
+      } catch {
+        console.error(`Failed to download ${img.name}`);
+      }
+    }
+    setIsDownloading(false);
+    toast({ title: `Downloaded ${downloaded} of ${filteredImages.length} images` });
+  };
+
   if (authLoading || adminLoading) {
     return (
       <div className="min-h-full bg-gradient-to-br from-slate-900 via-purple-900/30 to-slate-900 p-6 flex items-center justify-center">
@@ -312,14 +342,35 @@ export default function AdminImageDatabasePage() {
             </div>
           </div>
           
-          <Button 
-            className="gap-2" 
-            onClick={() => setShowUploadDialog(true)}
-            data-testid="button-upload-new"
-          >
-            <Upload className="w-4 h-4" />
-            Upload Image
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline"
+              className="gap-2"
+              onClick={handleDownloadAll}
+              disabled={isDownloading || filteredImages.length === 0}
+              data-testid="button-download-all"
+            >
+              {isDownloading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  {downloadProgress}%
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4" />
+                  Download All ({filteredImages.length})
+                </>
+              )}
+            </Button>
+            <Button 
+              className="gap-2" 
+              onClick={() => setShowUploadDialog(true)}
+              data-testid="button-upload-new"
+            >
+              <Upload className="w-4 h-4" />
+              Upload Image
+            </Button>
+          </div>
         </div>
 
         {/* Filters */}
