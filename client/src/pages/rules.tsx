@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Flame, Droplet, Mountain, Wind, Leaf, Trophy, Flag, Zap, Heart, Shield, ArrowRight, Plus } from "lucide-react";
+import { Flame, Droplet, Mountain, Wind, Leaf, Trophy, Flag, Zap, Heart, Shield, ArrowRight, Plus, Swords, Crown, Users, Layers } from "lucide-react";
 
 const phases = [
   { name: "Draw Phase", description: "Draw 2 cards from your deck", icon: ArrowRight },
@@ -173,6 +173,125 @@ export default function RulesPage() {
                 <li><strong className="text-white">Withdrawal Costs:</strong> Earned by losing combat rounds - used for defensive abilities</li>
                 <li><strong className="text-white">Tactical Abilities:</strong> Each commander has 4-6 unique abilities with various effects</li>
               </ul>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-slate-800/50 border-purple-500/20 mb-6 md:mb-8">
+          <CardHeader>
+            <CardTitle className="text-white text-xl md:text-2xl flex items-center gap-3 flex-wrap">
+              <Crown className="w-6 h-6 text-yellow-500" />
+              Commander Ability Categories
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-purple-200 space-y-6">
+            <p className="text-sm md:text-base">
+              Each commander has unique abilities that cost advance counters (earned from winning combat) or defeat counters (earned from losing combat). Abilities fall into four categories, each usable only during specific phases.
+            </p>
+
+            <div className="space-y-4">
+              <div className="p-4 bg-slate-900/50 rounded-lg" data-testid="ability-category-group-buffs">
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="p-2 bg-blue-600 rounded-lg shrink-0">
+                    <Users className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-white font-semibold text-base md:text-lg">1. Group Buffs & Debuffs</h3>
+                    <Badge variant="outline" className="text-blue-300 border-blue-500/40 mt-1">Combat Phase</Badge>
+                  </div>
+                </div>
+                <p className="text-purple-300 text-sm md:text-base mb-3">
+                  Abilities that boost the power of your units or weaken your opponent's units. These can target all units or only those matching a specific element.
+                </p>
+                <ul className="list-disc list-inside space-y-1 text-sm text-purple-300">
+                  <li><strong className="text-white">Element Buff:</strong> Increase power of your units matching a specific element (e.g., +4 to all your Fire units)</li>
+                  <li><strong className="text-white">Universal Debuff:</strong> Reduce power of all enemy units</li>
+                  <li><strong className="text-white">Targeted Debuff:</strong> Reduce power of enemy units that don't match your element</li>
+                  <li><strong className="text-white">Effect Blocking:</strong> Disable enemy card buff/debuff effects</li>
+                  <li><strong className="text-white">Protection:</strong> Prevent your element's units from receiving debuffs</li>
+                </ul>
+              </div>
+
+              <div className="p-4 bg-slate-900/50 rounded-lg" data-testid="ability-category-trait-activation">
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="p-2 bg-amber-600 rounded-lg shrink-0">
+                    <Zap className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-white font-semibold text-base md:text-lg">2. Trait Activation</h3>
+                    <Badge variant="outline" className="text-amber-300 border-amber-500/40 mt-1">Combat Phase</Badge>
+                  </div>
+                </div>
+                <p className="text-purple-300 text-sm md:text-base mb-3">
+                  Abilities that grant trait-like effects to your units, mimicking card traits with a specific power value. These only work during combat.
+                </p>
+                <ul className="list-disc list-inside space-y-1 text-sm text-purple-300">
+                  <li><strong className="text-white">Quick Strike:</strong> Deal pre-combat damage to the opponent before power is compared</li>
+                  <li><strong className="text-white">Guardian/Shield:</strong> Block incoming damage, reducing how much HP you lose</li>
+                  <li><strong className="text-white">Restoration:</strong> Heal your HP after combat resolves</li>
+                </ul>
+              </div>
+
+              <div className="p-4 bg-slate-900/50 rounded-lg" data-testid="ability-category-group-traits">
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="p-2 bg-purple-600 rounded-lg shrink-0">
+                    <Swords className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-white font-semibold text-base md:text-lg">3. Trait-Like Group Effects</h3>
+                    <Badge variant="outline" className="text-purple-300 border-purple-500/40 mt-1">Combat Phase</Badge>
+                  </div>
+                </div>
+                <p className="text-purple-300 text-sm md:text-base mb-3">
+                  Broader versions of trait activation that apply to all your units regardless of element. These provide powerful board-wide effects.
+                </p>
+                <ul className="list-disc list-inside space-y-1 text-sm text-purple-300">
+                  <li><strong className="text-white">Group Shield:</strong> All your units gain damage blocking</li>
+                  <li><strong className="text-white">Group Quick Strike:</strong> All your units deal pre-combat damage</li>
+                  <li><strong className="text-white">Group Healing:</strong> Heal HP based on all deployed units</li>
+                </ul>
+              </div>
+
+              <div className="p-4 bg-slate-900/50 rounded-lg" data-testid="ability-category-extra-deploy">
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="p-2 bg-green-600 rounded-lg shrink-0">
+                    <Layers className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-white font-semibold text-base md:text-lg">4. Extra Deployments</h3>
+                    <Badge variant="outline" className="text-green-300 border-green-500/40 mt-1">Deployment Phase Only</Badge>
+                  </div>
+                </div>
+                <p className="text-purple-300 text-sm md:text-base mb-3">
+                  Abilities that let you play additional cards beyond the normal 2-card limit. These can only be activated during the deployment phase.
+                </p>
+                <ul className="list-disc list-inside space-y-1 text-sm text-purple-300">
+                  <li><strong className="text-white">Extra Unit:</strong> Deploy 1 additional card from your hand this turn</li>
+                  <li><strong className="text-white">Phase Restriction:</strong> Can only be used while placing cards face-down, before combat begins</li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="p-4 bg-purple-900/20 rounded-lg border border-purple-500/30">
+              <h3 className="text-white font-semibold mb-2">Phase Quick Reference</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="bg-slate-700 text-purple-200">Draw</Badge>
+                  <span>Card cycling, extra draws</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="bg-slate-700 text-purple-200">Deployment</Badge>
+                  <span>Extra deploys, unit swaps</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="bg-slate-700 text-purple-200">Combat</Badge>
+                  <span>Buffs, debuffs, traits, damage</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="bg-slate-700 text-purple-200">End</Badge>
+                  <span>Healing, revival, restoration</span>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>

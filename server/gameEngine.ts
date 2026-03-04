@@ -51,6 +51,7 @@ interface CombatSummary {
   baseDamageToPlayer2: number;
   finalDamageToPlayer1: number;
   finalDamageToPlayer2: number;
+  abilityEffects: Array<{ playerSide: string; abilityName: string; effectDescription: string; phase: string }>;
 }
 
 interface ActivePvPGame {
@@ -552,10 +553,11 @@ class ServerGameEngine {
         break;
       }
       case "first_strike": {
+        const fsValue = effect.value || 3;
         const fsEl = (effect.target || commander.element).toLowerCase();
         const currentFSBuffs: AbilityBuff[] = (gs as any)[myBuffsKey] || [];
-        (gs as any)[myBuffsKey] = [...currentFSBuffs, { targetElement: fsEl, amount: 3, type: "first_strike" }];
-        effectDescription = `First strike +3`;
+        (gs as any)[myBuffsKey] = [...currentFSBuffs, { targetElement: fsEl, amount: fsValue, type: "first_strike" }];
+        effectDescription = `First strike +${fsValue}`;
         break;
       }
       case "add_evasion": {
@@ -692,7 +694,11 @@ class ServerGameEngine {
     const damage = Math.abs(p1Total - p2Total);
     const winner: "player1" | "player2" | "tie" = p1Total > p2Total ? "player1" : p2Total > p1Total ? "player2" : "tie";
 
-    const combatSummary = this.generateCombatSummary(p1Breakdown, p2Breakdown, p1Total, p2Total);
+    const combatSummary = this.generateCombatSummary(
+      p1Breakdown, p2Breakdown, p1Total, p2Total,
+      gs.player1AbilityBuffs || [], gs.player2AbilityBuffs || [],
+      gs.abilityLog || [], game.currentTurn
+    );
 
     let newP1HP = game.player1HP - combatSummary.finalDamageToPlayer1 + combatSummary.player1Healing;
     let newP2HP = game.player2HP - combatSummary.finalDamageToPlayer2 + combatSummary.player2Healing;
@@ -758,6 +764,7 @@ class ServerGameEngine {
       damage,
       winner,
       turn: game.currentTurn,
+      abilityEffects: combatSummary.abilityEffects,
     };
 
     game.player1HP = newP1HP;
@@ -943,6 +950,10 @@ class ServerGameEngine {
     p2Breakdown: ServerCardBreakdown[],
     p1Total: number,
     p2Total: number,
+    p1AbilityBuffs: AbilityBuff[] = [],
+    p2AbilityBuffs: AbilityBuff[] = [],
+    abilityLog: any[] = [],
+    currentTurn: number = 0,
   ): CombatSummary {
     let player1QuickStrikeDamage = 0;
     let player2QuickStrikeDamage = 0;
@@ -958,6 +969,13 @@ class ServerGameEngine {
     });
     p2Breakdown.filter(b => b.traitInfo?.trait === "Quick Strike").forEach(b => {
       player2QuickStrikeDamage += b.traitInfo!.value;
+    });
+
+    p1AbilityBuffs.filter(ab => ab.type === "first_strike").forEach(ab => {
+      player1QuickStrikeDamage += ab.amount;
+    });
+    p2AbilityBuffs.filter(ab => ab.type === "first_strike").forEach(ab => {
+      player2QuickStrikeDamage += ab.amount;
     });
 
     const baseDamage = Math.abs(p1Total - p2Total);
@@ -976,11 +994,27 @@ class ServerGameEngine {
       if (blockAmount > 0) player2GuardianBlocked += blockAmount;
     });
 
+    p1AbilityBuffs.filter(ab => ab.type === "shield").forEach(ab => {
+      const blockAmount = Math.min(ab.amount, totalIncomingToP1 - player1GuardianBlocked);
+      if (blockAmount > 0) player1GuardianBlocked += blockAmount;
+    });
+    p2AbilityBuffs.filter(ab => ab.type === "shield").forEach(ab => {
+      const blockAmount = Math.min(ab.amount, totalIncomingToP2 - player2GuardianBlocked);
+      if (blockAmount > 0) player2GuardianBlocked += blockAmount;
+    });
+
     p1Breakdown.filter(b => b.traitInfo?.trait === "Restoration").forEach(b => {
       player1Healing += b.traitInfo!.value;
     });
     p2Breakdown.filter(b => b.traitInfo?.trait === "Restoration").forEach(b => {
       player2Healing += b.traitInfo!.value;
+    });
+
+    p1AbilityBuffs.filter(ab => ab.type === "heal").forEach(ab => {
+      player1Healing += ab.amount;
+    });
+    p2AbilityBuffs.filter(ab => ab.type === "heal").forEach(ab => {
+      player2Healing += ab.amount;
     });
 
     p1Breakdown.filter(b => b.traitInfo?.trait === "Care Package").forEach(b => {
@@ -993,6 +1027,17 @@ class ServerGameEngine {
     const finalDamageToPlayer1 = Math.max(0, baseDamageToPlayer1 + player2QuickStrikeDamage - player1GuardianBlocked);
     const finalDamageToPlayer2 = Math.max(0, baseDamageToPlayer2 + player1QuickStrikeDamage - player2GuardianBlocked);
 
+    const abilityEffects: Array<{ playerSide: string; abilityName: string; effectDescription: string; phase: string }> = [];
+    const turnEntries = abilityLog.filter((entry: any) => entry.turn === currentTurn);
+    for (const entry of turnEntries) {
+      abilityEffects.push({
+        playerSide: entry.playerId || "unknown",
+        abilityName: entry.abilityName || entry.name || "Unknown Ability",
+        effectDescription: entry.effectDescription || entry.description || "",
+        phase: entry.phase || "",
+      });
+    }
+
     return {
       player1QuickStrikeDamage, player2QuickStrikeDamage,
       player1GuardianBlocked, player2GuardianBlocked,
@@ -1000,6 +1045,7 @@ class ServerGameEngine {
       player1CardsDrawn, player2CardsDrawn,
       baseDamageToPlayer1, baseDamageToPlayer2,
       finalDamageToPlayer1, finalDamageToPlayer2,
+      abilityEffects,
     };
   }
 

@@ -1209,7 +1209,7 @@ IMPORTANT:
       const allCommanders = await storage.getCommanders();
 
       res.json({
-        version: "2.1.0",
+        version: "2.2.0",
         syncedAt: new Date().toISOString(),
         cards: allCards,
         commanders: allCommanders,
@@ -1321,6 +1321,54 @@ IMPORTANT:
           victoryConditions: "Reduce opponent HP from 40 to 0",
           elements: { Fire: "Offensive power, direct damage abilities", Water: "Control and healing abilities", Earth: "Defensive and resilient abilities", Air: "Speed and evasion abilities", Nature: "Growth and resource abilities" },
           counterSystem: "Commanders earn advance counters from won battles and defeat counters from lost battles. Abilities cost advance or defeat counters to activate.",
+          commanderAbilityCategories: {
+            groupBuffsDebuffs: {
+              description: "Abilities that modify power for groups of units (all allies, all enemies, or units matching element/trait criteria).",
+              effectTypes: ["buff_element_unit", "debuff_enemy", "reduce_power", "growth_buff", "block_effects", "negate_and_halve", "protect_element"],
+              validPhase: "combat",
+            },
+            traitActivation: {
+              description: "Abilities that grant trait-like effects (Quick Strike, Guardian/Shield, Restoration) with numeric values.",
+              effectTypes: ["first_strike", "add_shield", "healing_factor", "add_evasion"],
+              validPhase: "combat",
+              mechanicDetails: {
+                first_strike: "AbilityBuff type 'first_strike' — deals pre-combat damage equal to value AND adds power to matching units",
+                add_shield: "AbilityBuff type 'shield' — blocks incoming damage equal to value AND adds power to matching units",
+                healing_factor: "AbilityBuff type 'heal' — heals player HP equal to value after combat AND adds power to matching units",
+                add_evasion: "Same as add_shield (uses 'shield' buff type)",
+              },
+            },
+            traitLikeGroupEffects: {
+              description: "Broader versions of trait activation that apply to ALL units or enemy units, not just a specific element.",
+              note: "Use same effect types as traitActivation but with target='all' for broader reach.",
+            },
+            extraDeployments: {
+              description: "Abilities that allow deploying additional units beyond the normal 2-card limit.",
+              effectTypes: ["extra_deploy"],
+              validPhase: "deployment (ONLY — this is critical)",
+            },
+          },
+          abilityBuffTypes: {
+            note: "AbilityBuff entries have a 'type' field that determines special behavior beyond power modification.",
+            types: {
+              buff: "Pure power buff (no special mechanic)",
+              debuff: "Pure power debuff (no special mechanic)",
+              reduce: "Same as debuff",
+              growth: "Same as buff",
+              shield: "ALSO blocks incoming damage equal to value (like Guardian trait)",
+              first_strike: "ALSO deals pre-combat damage equal to value (like Quick Strike trait)",
+              heal: "ALSO heals player HP equal to value after combat (like Restoration trait)",
+              heal_buff: "Power buff only (heal_and_buff ability heals HP directly, not through this type)",
+            },
+          },
+          combatLogSchema: {
+            note: "Combat log now includes abilityEffects field showing which commander abilities were active during each round.",
+            abilityEffects: "Array<{ playerSide: string, abilityName: string, effectDescription: string, phase: string }>",
+            displayNote: "Show ability effects as a separate step in combat log UI. Color-code by player side (green=you, red=opponent).",
+          },
+          commanderInfoButtons: {
+            note: "Game board has two 'Commander' buttons — one showing your commander details/abilities, one showing opponent's. Both visible during gameplay. Use allCommanders + opponentCommanderId from server state to look up opponent commander.",
+          },
         },
       });
     } catch (error) {

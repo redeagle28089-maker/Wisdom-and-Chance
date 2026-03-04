@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useWebSocket } from "@/hooks/use-websocket";
-import { Heart, Swords, Trophy, Flag, ArrowRight, Shield, Flame, Droplet, Mountain, Wind, Leaf, RotateCcw, LogIn, MessageSquare, Eye, Send, X, Zap, Sparkles, Plus, Scroll, History } from "lucide-react";
+import { Heart, Swords, Trophy, Flag, ArrowRight, Shield, Flame, Droplet, Mountain, Wind, Leaf, RotateCcw, LogIn, MessageSquare, Eye, Send, X, Zap, Sparkles, Plus, Scroll, History, Crown } from "lucide-react";
 import type { Game, Card as CardType, Element, BattlefieldCard, GameMode, Commander, CommanderAbility } from "@shared/schema";
 import { GAME_CONSTANTS, GAME_MODE_CONFIG } from "@shared/schema";
 import { getCardIdFromInstance } from "@/lib/card-utils";
@@ -104,6 +104,7 @@ interface CombatSummary {
   finalDamageToPlayer1: number;
   finalDamageToPlayer2: number;
   log: CombatLogEntry[];
+  abilityEffects?: Array<{ playerSide: string; abilityName: string; effectDescription: string; phase: string }>;
 }
 
 interface AbilityBuff {
@@ -216,12 +217,15 @@ function generateCombatLog(
   player1Breakdown: CardPowerBreakdown[],
   player2Breakdown: CardPowerBreakdown[],
   player1Total: number,
-  player2Total: number
+  player2Total: number,
+  p1AbilityBuffs: AbilityBuff[] = [],
+  p2AbilityBuffs: AbilityBuff[] = [],
+  abilityLog: any[] = [],
+  currentTurn: number = 0,
 ): CombatSummary {
   const log: CombatLogEntry[] = [];
   let step = 1;
   
-  // Track trait effects
   let player1QuickStrikeDamage = 0;
   let player2QuickStrikeDamage = 0;
   let player1GuardianBlocked = 0;
@@ -231,7 +235,6 @@ function generateCombatLog(
   let player1CardsDrawn = 0;
   let player2CardsDrawn = 0;
 
-  // Phase 1: Quick Strike (bypasses combat, deals direct HP damage regardless of combat outcome)
   const player1QuickStrikers = player1Breakdown.filter(b => b.traitInfo?.trait === "Quick Strike");
   const player2QuickStrikers = player2Breakdown.filter(b => b.traitInfo?.trait === "Quick Strike");
   
@@ -277,7 +280,46 @@ function generateCombatLog(
     });
   }
 
-  // Phase 2: Power Calculation
+  const p1FSBuffs = p1AbilityBuffs.filter(ab => ab.type === "first_strike");
+  const p2FSBuffs = p2AbilityBuffs.filter(ab => ab.type === "first_strike");
+  if (p1FSBuffs.length > 0 || p2FSBuffs.length > 0) {
+    if (player1QuickStrikers.length === 0 && player2QuickStrikers.length === 0) {
+      log.push({
+        step: step++,
+        phase: "quick_strike",
+        description: "Commander Quick Strike - Direct HP damage from commander ability!",
+        icon: "zap",
+        actor: "system"
+      });
+    }
+    p1FSBuffs.forEach(ab => {
+      player1QuickStrikeDamage += ab.amount;
+      log.push({
+        step: step++,
+        phase: "quick_strike",
+        description: `[P1] Commander ability grants First Strike (${ab.amount}) - ${ab.amount} direct HP damage to P2!`,
+        icon: "zap",
+        actor: "player1",
+        traitName: "First Strike (Ability)",
+        value: ab.amount,
+        targetAffected: "player2_hp"
+      });
+    });
+    p2FSBuffs.forEach(ab => {
+      player2QuickStrikeDamage += ab.amount;
+      log.push({
+        step: step++,
+        phase: "quick_strike",
+        description: `[P2] Commander ability grants First Strike (${ab.amount}) - ${ab.amount} direct HP damage to P1!`,
+        icon: "zap",
+        actor: "player2",
+        traitName: "First Strike (Ability)",
+        value: ab.amount,
+        targetAffected: "player1_hp"
+      });
+    });
+  }
+
   log.push({
     step: step++,
     phase: "power_calculation",
@@ -285,8 +327,6 @@ function generateCombatLog(
     icon: "calculator",
     actor: "system"
   });
-
-  // Show power breakdown for each side (neutral perspective)
   log.push({
     step: step++,
     phase: "power_calculation",
@@ -404,7 +444,52 @@ function generateCombatLog(
     }
   }
 
-  // Phase 5: Restoration (healing)
+  const p1ShieldBuffs = p1AbilityBuffs.filter(ab => ab.type === "shield");
+  const p2ShieldBuffs = p2AbilityBuffs.filter(ab => ab.type === "shield");
+  if ((p1ShieldBuffs.length > 0 && totalIncomingToP1 > 0) || (p2ShieldBuffs.length > 0 && totalIncomingToP2 > 0)) {
+    if (player1Guardians.length === 0 && player2Guardians.length === 0) {
+      log.push({
+        step: step++,
+        phase: "guardian_block",
+        description: "Commander Shield - Blocking incoming damage from commander ability!",
+        icon: "shield",
+        actor: "system"
+      });
+    }
+    p1ShieldBuffs.forEach(ab => {
+      const blockAmount = Math.min(ab.amount, totalIncomingToP1 - player1GuardianBlocked);
+      if (blockAmount > 0) {
+        player1GuardianBlocked += blockAmount;
+        log.push({
+          step: step++,
+          phase: "guardian_block",
+          description: `[P1] Commander Shield blocks ${blockAmount} incoming damage!`,
+          icon: "shield",
+          actor: "player1",
+          traitName: "Shield (Ability)",
+          value: blockAmount,
+          targetAffected: "player1_damage"
+        });
+      }
+    });
+    p2ShieldBuffs.forEach(ab => {
+      const blockAmount = Math.min(ab.amount, totalIncomingToP2 - player2GuardianBlocked);
+      if (blockAmount > 0) {
+        player2GuardianBlocked += blockAmount;
+        log.push({
+          step: step++,
+          phase: "guardian_block",
+          description: `[P2] Commander Shield blocks ${blockAmount} incoming damage!`,
+          icon: "shield",
+          actor: "player2",
+          traitName: "Shield (Ability)",
+          value: blockAmount,
+          targetAffected: "player2_damage"
+        });
+      }
+    });
+  }
+
   const player1Healers = player1Breakdown.filter(b => b.traitInfo?.trait === "Restoration");
   const player2Healers = player2Breakdown.filter(b => b.traitInfo?.trait === "Restoration");
   
@@ -450,7 +535,46 @@ function generateCombatLog(
     });
   }
 
-  // Phase 6: Care Package (card draw)
+  const p1HealBuffs = p1AbilityBuffs.filter(ab => ab.type === "heal");
+  const p2HealBuffs = p2AbilityBuffs.filter(ab => ab.type === "heal");
+  if (p1HealBuffs.length > 0 || p2HealBuffs.length > 0) {
+    if (player1Healers.length === 0 && player2Healers.length === 0) {
+      log.push({
+        step: step++,
+        phase: "healing",
+        description: "Commander Healing - Healing effects from commander ability!",
+        icon: "heart",
+        actor: "system"
+      });
+    }
+    p1HealBuffs.forEach(ab => {
+      player1Healing += ab.amount;
+      log.push({
+        step: step++,
+        phase: "healing",
+        description: `[P1] Commander ability heals P1 for ${ab.amount} HP!`,
+        icon: "heart",
+        actor: "player1",
+        traitName: "Healing (Ability)",
+        value: ab.amount,
+        targetAffected: "player1_hp"
+      });
+    });
+    p2HealBuffs.forEach(ab => {
+      player2Healing += ab.amount;
+      log.push({
+        step: step++,
+        phase: "healing",
+        description: `[P2] Commander ability heals P2 for ${ab.amount} HP!`,
+        icon: "heart",
+        actor: "player2",
+        traitName: "Healing (Ability)",
+        value: ab.amount,
+        targetAffected: "player2_hp"
+      });
+    });
+  }
+
   const player1Drawers = player1Breakdown.filter(b => b.traitInfo?.trait === "Care Package");
   const player2Drawers = player2Breakdown.filter(b => b.traitInfo?.trait === "Care Package");
   
@@ -501,6 +625,17 @@ function generateCombatLog(
   const finalDamageToPlayer1 = Math.max(0, baseDamageToPlayer1 + player2QuickStrikeDamage - player1GuardianBlocked);
   const finalDamageToPlayer2 = Math.max(0, baseDamageToPlayer2 + player1QuickStrikeDamage - player2GuardianBlocked);
 
+  const abilityEffects: Array<{ playerSide: string; abilityName: string; effectDescription: string; phase: string }> = [];
+  const turnEntries = abilityLog.filter((entry: any) => entry.turn === currentTurn);
+  for (const entry of turnEntries) {
+    abilityEffects.push({
+      playerSide: entry.playerId || "unknown",
+      abilityName: entry.abilityName || entry.commanderName || "Unknown Ability",
+      effectDescription: entry.effectDescription || entry.description || "",
+      phase: entry.phase || "",
+    });
+  }
+
   return {
     player1QuickStrikeDamage,
     player2QuickStrikeDamage,
@@ -514,7 +649,8 @@ function generateCombatLog(
     baseDamageToPlayer2,
     finalDamageToPlayer1,
     finalDamageToPlayer2,
-    log
+    log,
+    abilityEffects,
   };
 }
 
@@ -1634,6 +1770,141 @@ function AbilityCard({
   );
 }
 
+function CommanderInfoDialog({
+  commander,
+  open,
+  onClose,
+  label,
+}: {
+  commander: Commander | null | undefined;
+  open: boolean;
+  onClose: () => void;
+  label: string;
+}) {
+  if (!commander) return null;
+
+  const config = elementConfig[commander.element];
+  const Icon = config.icon;
+
+  const effectTypeLabels: Record<string, string> = {
+    direct_damage: "Direct Damage",
+    element_power_damage: "Elemental Power Damage",
+    buff_element_unit: "Buff Element Units",
+    extra_deploy: "Extra Deployment",
+    cycle_element_cards: "Cycle Element Cards",
+    block_effects: "Block Enemy Effects",
+    negate_and_halve: "Negate & Halve",
+    healing_factor: "Healing Factor",
+    draw_cards: "Draw Cards",
+    protect_element: "Protect Element",
+    debuff_enemy: "Debuff Enemy Units",
+    swap_units: "Swap Units",
+    revive_unit: "Revive Unit",
+    growth_buff: "Growth Buff",
+    prevent_ward: "Ward Prevention",
+    destroy_unit: "Destroy Unit",
+    add_shield: "Add Shield",
+    reduce_power: "Reduce Power",
+    first_strike: "First Strike",
+    add_evasion: "Add Shield",
+    set_power: "Set Power",
+    restore_from_ward: "Restore from Ward",
+    heal_and_buff: "Heal & Buff",
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="bg-slate-900 border-purple-500/30 max-w-md max-h-[85vh] overflow-hidden" data-testid={`dialog-commander-info-${label.toLowerCase().replace(/\s+/g, '-')}`}>
+        <DialogHeader>
+          <DialogTitle className={`flex items-center gap-2 ${config.color}`}>
+            <Crown className="w-5 h-5" />
+            {label}
+          </DialogTitle>
+        </DialogHeader>
+        <ScrollArea className="max-h-[70vh] pr-2">
+          <div className="space-y-4">
+            <div className="flex items-start gap-3">
+              {commander.imageUrl && (
+                <img
+                  src={commander.imageUrl}
+                  alt={commander.name}
+                  className="w-20 h-20 rounded-lg object-cover border-2 border-purple-500/30"
+                />
+              )}
+              <div className="flex-1">
+                <h3 className="text-white font-bold text-lg">{commander.name}</h3>
+                <p className={`text-sm font-medium ${config.color}`}>{commander.title}</p>
+                <div className="flex items-center gap-1.5 mt-1">
+                  <Icon className={`w-4 h-4 ${config.color}`} />
+                  <Badge className={`${config.bgColor} text-white text-xs`}>
+                    {commander.element}
+                  </Badge>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-slate-300 text-sm leading-relaxed">{commander.description}</p>
+
+            <div className="space-y-2">
+              <h4 className="text-amber-300 font-bold text-sm flex items-center gap-1.5">
+                <Scroll className="w-4 h-4" />
+                Abilities ({commander.abilities.length})
+              </h4>
+              {commander.abilities.map((ability) => (
+                <div
+                  key={ability.id}
+                  className="bg-slate-800/60 border border-slate-700/50 rounded-lg p-3 space-y-2"
+                  data-testid={`commander-ability-info-${ability.id}`}
+                >
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <span className={`font-bold text-sm ${config.color}`}>{ability.name}</span>
+                    <Badge className={`${ability.phase === "combat" ? "bg-red-600/80" : ability.phase === "deployment" ? "bg-blue-600/80" : ability.phase === "draw" ? "bg-cyan-600/80" : "bg-slate-600/80"} text-[10px]`}>
+                      {ability.phase} phase
+                    </Badge>
+                  </div>
+                  <p className="text-slate-300 text-xs leading-relaxed">{ability.description}</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-slate-500 text-[10px] uppercase tracking-wider">Effect:</span>
+                    <span className="text-white text-xs">
+                      {effectTypeLabels[ability.effect.type] || ability.effect.type}
+                    </span>
+                    {ability.effect.value !== undefined && (
+                      <span className="text-yellow-300 text-xs font-bold">(Value: {ability.effect.value})</span>
+                    )}
+                    {ability.effect.target && (
+                      <span className="text-white/70 text-xs capitalize">Target: {ability.effect.target}</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {ability.victoryCost > 0 && (
+                      <div className="flex items-center gap-0.5 text-green-300 text-xs">
+                        <Trophy className="w-3 h-3" />
+                        <span>-{ability.victoryCost} Advance</span>
+                      </div>
+                    )}
+                    {ability.withdrawalCost > 0 && (
+                      <div className="flex items-center gap-0.5 text-blue-300 text-xs">
+                        <Flag className="w-3 h-3" />
+                        <span>-{ability.withdrawalCost} Withdrawal</span>
+                      </div>
+                    )}
+                    {ability.victoryCost === 0 && ability.withdrawalCost === 0 && (
+                      <div className="flex items-center gap-0.5 text-slate-400 text-xs">
+                        <Sparkles className="w-3 h-3 text-yellow-400" />
+                        <span>Free</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </ScrollArea>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function GameBoardPage() {
   const { toast } = useToast();
   const [, params] = useRoute("/game/:id");
@@ -1663,6 +1934,8 @@ export default function GameBoardPage() {
   const [handView, setHandView] = useState<"units" | "abilities">("units");
   const [usedAbilitiesThisTurn, setUsedAbilitiesThisTurn] = useState<Set<string>>(new Set());
   const [showAbilityLogDialog, setShowAbilityLogDialog] = useState(false);
+  const [showMyCommanderDialog, setShowMyCommanderDialog] = useState(false);
+  const [showOpponentCommanderDialog, setShowOpponentCommanderDialog] = useState(false);
   const [selectedHistoryRound, setSelectedHistoryRound] = useState<number | null>(null);
   const [combatPhaseTimer, setCombatPhaseTimer] = useState(30);
   const [combatPhaseTimerActive, setCombatPhaseTimerActive] = useState(false);
@@ -1927,6 +2200,8 @@ export default function GameBoardPage() {
   const myWP = useServerState ? serverState.myWP : (game ? (isPlayer1 ? game.player1WithdrawalPoints : game.player2WithdrawalPoints) : 0);
   const myCommanderId = useServerState ? serverState.myCommanderId : (game ? (isPlayer1 ? game.gameState.player1CommanderId : game.gameState.player2CommanderId) : undefined);
   const myCommander = myCommanderId ? allCommanders.find(c => c.id === myCommanderId) : undefined;
+  const opponentCommanderId = useServerState ? serverState.opponentCommanderId : (game ? (isPlayer1 ? game.gameState.player2CommanderId : game.gameState.player1CommanderId) : undefined);
+  const opponentCommander = opponentCommanderId ? allCommanders.find(c => c.id === opponentCommanderId) : undefined;
   
   // Get game mode config (draw/deploy counts)
   const gameMode: GameMode = game?.gameMode || "standard";
@@ -2226,10 +2501,11 @@ export default function GameBoardPage() {
                 break;
               }
               case "first_strike": {
+                const fsValue = aiEffect.value || 3;
                 const ft = (aiEffect.target || aiCommander.element).toLowerCase();
                 const fb = updatedGameState.player2AbilityBuffs || [];
-                updatedGameState.player2AbilityBuffs = [...fb, { targetElement: ft, amount: 3, type: "first_strike" }];
-                aiEffectDesc = `AI's ${aiCommander.element} units attack first!`;
+                updatedGameState.player2AbilityBuffs = [...fb, { targetElement: ft, amount: fsValue, type: "first_strike" }];
+                aiEffectDesc = `AI's ${aiCommander.element} units attack first with +${fsValue}!`;
                 break;
               }
               case "add_evasion": {
@@ -2727,10 +3003,11 @@ export default function GameBoardPage() {
         break;
       }
       case "first_strike": {
+        const fsValue = effect.value || 3;
         const fsEl = (effect.target || myCommander.element).toLowerCase();
         const currentFSBuffs = (newGameState as any)[myBuffsKey] || [];
-        (newGameState as any)[myBuffsKey] = [...currentFSBuffs, { targetElement: fsEl, amount: 3, type: "first_strike" }];
-        effectDescription = `${myCommander.element} units attack first with +3 power bonus!`;
+        (newGameState as any)[myBuffsKey] = [...currentFSBuffs, { targetElement: fsEl, amount: fsValue, type: "first_strike" }];
+        effectDescription = `${myCommander.element} units attack first with +${fsValue} power bonus!`;
         break;
       }
       case "add_evasion": {
@@ -3057,7 +3334,11 @@ export default function GameBoardPage() {
     
     const player1Total = player1Breakdown.reduce((sum, b) => sum + b.finalPower, 0);
     const player2Total = player2Breakdown.reduce((sum, b) => sum + b.finalPower, 0);
-    const summary = generateCombatLog(player1Breakdown, player2Breakdown, player1Total, player2Total);
+    const summary = generateCombatLog(
+      player1Breakdown, player2Breakdown, player1Total, player2Total,
+      gs2.player1AbilityBuffs || [], gs2.player2AbilityBuffs || [],
+      (game.gameState as any).abilityLog || [], game.currentTurn
+    );
     
     setCombatBreakdown({ player1: player1Breakdown, player2: player2Breakdown });
     setCombatSummary(summary);
@@ -3118,6 +3399,7 @@ export default function GameBoardPage() {
     }
     let player1Breakdown = combatBreakdown?.player1;
     let player2Breakdown = combatBreakdown?.player2;
+    let currentSummary = combatSummary;
 
     
     if (!player1Breakdown || !player2Breakdown) {
@@ -3132,12 +3414,18 @@ export default function GameBoardPage() {
         p2Cards, p1Cards, getCardById,
         gs3.player2AbilityBuffs, gs3.player2BlockedEffects, gs3.player1NegateAndHalve, gs3.player2ProtectedElement
       );
+      const p1T = player1Breakdown.reduce((sum, b) => sum + b.finalPower, 0);
+      const p2T = player2Breakdown.reduce((sum, b) => sum + b.finalPower, 0);
+      currentSummary = generateCombatLog(
+        player1Breakdown, player2Breakdown, p1T, p2T,
+        gs3.player1AbilityBuffs || [], gs3.player2AbilityBuffs || [],
+        (gs3 as any).abilityLog || [], game.currentTurn
+      );
     }
     
     const p1Power = player1Breakdown.reduce((sum, b) => sum + b.finalPower, 0);
     const p2Power = player2Breakdown.reduce((sum, b) => sum + b.finalPower, 0);
 
-    const damage = Math.abs(p1Power - p2Power);
     let newP1HP = game.player1HP;
     let newP2HP = game.player2HP;
     let newP1VP = game.player1VictoryPoints;
@@ -3145,23 +3433,53 @@ export default function GameBoardPage() {
     let newP1WP = game.player1WithdrawalPoints;
     let newP2WP = game.player2WithdrawalPoints;
 
-    if (p1Power > p2Power) {
-      newP2HP -= damage;
-      newP1VP += 1;
-      newP2WP += 1;
-      toast({ title: `Player 1 wins! ${damage} damage dealt.` });
-    } else if (p2Power > p1Power) {
-      newP1HP -= damage;
-      newP2VP += 1;
-      newP1WP += 1;
-      toast({ title: `Player 2 wins! ${damage} damage dealt.` });
+    if (currentSummary) {
+      newP1HP -= currentSummary.finalDamageToPlayer1;
+      newP2HP -= currentSummary.finalDamageToPlayer2;
+      newP1HP += currentSummary.player1Healing;
+      newP2HP += currentSummary.player2Healing;
+
+      const p1WonRound = currentSummary.finalDamageToPlayer2 > 0 && currentSummary.finalDamageToPlayer1 === 0;
+      const p2WonRound = currentSummary.finalDamageToPlayer1 > 0 && currentSummary.finalDamageToPlayer2 === 0;
+      const tiedRound = (currentSummary.finalDamageToPlayer1 === 0 && currentSummary.finalDamageToPlayer2 === 0) || 
+                         (currentSummary.finalDamageToPlayer1 > 0 && currentSummary.finalDamageToPlayer2 > 0);
+
+      if (p1WonRound) {
+        newP1VP += 1;
+        newP2WP += 1;
+        const totalDmg = currentSummary.finalDamageToPlayer2;
+        toast({ title: `Player 1 wins! ${totalDmg} damage dealt.` });
+      } else if (p2WonRound) {
+        newP2VP += 1;
+        newP1WP += 1;
+        const totalDmg = currentSummary.finalDamageToPlayer1;
+        toast({ title: `Player 2 wins! ${totalDmg} damage dealt.` });
+      } else {
+        newP1VP += 1;
+        newP2VP += 1;
+        newP1WP += 1;
+        newP2WP += 1;
+        toast({ title: "Draw! Both players get +1 Advance and +1 Withdraw." });
+      }
     } else {
-      // Tie - both get +1 advance and +1 withdraw
-      newP1VP += 1;
-      newP2VP += 1;
-      newP1WP += 1;
-      newP2WP += 1;
-      toast({ title: "Draw! Both players get +1 Advance and +1 Withdraw." });
+      const damage = Math.abs(p1Power - p2Power);
+      if (p1Power > p2Power) {
+        newP2HP -= damage;
+        newP1VP += 1;
+        newP2WP += 1;
+        toast({ title: `Player 1 wins! ${damage} damage dealt.` });
+      } else if (p2Power > p1Power) {
+        newP1HP -= damage;
+        newP2VP += 1;
+        newP1WP += 1;
+        toast({ title: `Player 2 wins! ${damage} damage dealt.` });
+      } else {
+        newP1VP += 1;
+        newP2VP += 1;
+        newP1WP += 1;
+        newP2WP += 1;
+        toast({ title: "Draw! Both players get +1 Advance and +1 Withdraw." });
+      }
     }
 
     const p1Yard = [...game.gameState.player1Yard, ...game.gameState.player1Battlefield.map((bf) => bf.cardId)];
@@ -3198,8 +3516,6 @@ export default function GameBoardPage() {
       toast({ title: "Game Over! You win!", variant: "default" });
     }
 
-    // Save combat log to game state for persistence
-    // Map CardPowerBreakdown to schema format
     const mapBreakdownToSchema = (breakdowns: CardPowerBreakdown[]) => breakdowns.map(b => ({
       cardId: b.card.id,
       cardName: b.card.name,
@@ -3211,6 +3527,7 @@ export default function GameBoardPage() {
       traitValue: b.traitInfo?.value,
     }));
     
+    const damage = currentSummary ? (currentSummary.finalDamageToPlayer1 + currentSummary.finalDamageToPlayer2) : Math.abs(p1Power - p2Power);
     const combatLog = {
       player1Cards: mapBreakdownToSchema(player1Breakdown),
       player2Cards: mapBreakdownToSchema(player2Breakdown),
@@ -3219,6 +3536,7 @@ export default function GameBoardPage() {
       damage,
       winner: p1Power > p2Power ? "player1" as const : p2Power > p1Power ? "player2" as const : "tie" as const,
       turn: game.currentTurn,
+      abilityEffects: currentSummary?.abilityEffects || [],
     };
     
     newGameState.lastCombatLog = combatLog;
@@ -3294,6 +3612,19 @@ export default function GameBoardPage() {
       <div className="max-w-6xl mx-auto flex flex-col h-full gap-1.5 relative z-10 main-game-column">
         <div className="flex items-center justify-between flex-shrink-0 gap-2 top-status-bar">
           <div className="flex items-center gap-2">
+            {opponentCommander && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowOpponentCommanderDialog(true)}
+                className="border-red-500/40 text-red-300 gap-1"
+                data-testid="button-opponent-commander"
+              >
+                <Crown className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">{opponentCommander.name}</span>
+                <span className="sm:hidden">Cmdr</span>
+              </Button>
+            )}
             <AnimatedHPBar current={opponentHP} max={GAME_CONSTANTS.STARTING_HP} isPlayer={false} label="Opponent" previousHP={previousOpponentHP} />
             <VictoryWithdrawalCounter 
               victories={opponentVP} 
@@ -3329,6 +3660,19 @@ export default function GameBoardPage() {
               isPlayer={true} 
             />
             <AnimatedHPBar current={myHP} max={GAME_CONSTANTS.STARTING_HP} isPlayer={true} label="You" previousHP={previousMyHP} />
+            {myCommander && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowMyCommanderDialog(true)}
+                className="border-green-500/40 text-green-300 gap-1"
+                data-testid="button-my-commander"
+              >
+                <Crown className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">{myCommander.name}</span>
+                <span className="sm:hidden">Cmdr</span>
+              </Button>
+            )}
             <div className="flex items-center gap-1.5">
               {isMultiplayer && (
                 <Button 
@@ -3633,6 +3977,18 @@ export default function GameBoardPage() {
         open={!!previewAbility}
         onClose={() => setPreviewAbility(null)}
       />
+      <CommanderInfoDialog
+        commander={myCommander}
+        open={showMyCommanderDialog}
+        onClose={() => setShowMyCommanderDialog(false)}
+        label="Your Commander"
+      />
+      <CommanderInfoDialog
+        commander={opponentCommander}
+        open={showOpponentCommanderDialog}
+        onClose={() => setShowOpponentCommanderDialog(false)}
+        label="Opponent's Commander"
+      />
       {chatOpen && isMultiplayer && (
         <div className="fixed bottom-4 right-4 w-80 h-96 bg-slate-800 border border-purple-500/30 rounded-lg shadow-xl flex flex-col z-50">
           <div className="flex items-center justify-between p-3 border-b border-purple-500/20">
@@ -3894,6 +4250,31 @@ export default function GameBoardPage() {
                     )}
                   </div>
                 </div>
+
+                {game.gameState.lastCombatLog?.abilityEffects && game.gameState.lastCombatLog.abilityEffects.length > 0 && (
+                  <div className="bg-slate-800/80 border border-amber-500/30 rounded-lg p-4" data-testid="combat-log-ability-effects">
+                    <div className="text-amber-400 font-bold mb-3 flex items-center gap-2">
+                      <span className="bg-amber-600 text-black px-2 py-0.5 rounded text-xs">STEP 5</span>
+                      Commander Ability Effects This Round
+                    </div>
+                    <div className="space-y-2">
+                      {game.gameState.lastCombatLog.abilityEffects.map((ae, i) => {
+                        const isYou = (isPlayer1 && ae.playerSide === game.player1Id) || (!isPlayer1 && ae.playerSide === game.player2Id);
+                        return (
+                          <div key={i} className={`rounded p-2 text-xs border ${isYou ? 'bg-green-900/30 border-green-700/50' : 'bg-red-900/30 border-red-700/50'}`} data-testid={`combat-log-ability-${i}`}>
+                            <div className={`font-bold ${isYou ? 'text-green-300' : 'text-red-300'}`}>
+                              {isYou ? 'YOU' : 'OPPONENT'}: {ae.abilityName}
+                            </div>
+                            <div className="text-slate-400 mt-0.5">
+                              {ae.effectDescription}
+                              {ae.phase && <span className="text-amber-400/70 ml-2">({ae.phase} phase)</span>}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             </ScrollArea>
           )}

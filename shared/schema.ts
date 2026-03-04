@@ -122,6 +122,13 @@ export const cardPowerBreakdownSchema = z.object({
 
 export type CardPowerBreakdown = z.infer<typeof cardPowerBreakdownSchema>;
 
+export const abilityEffectEntrySchema = z.object({
+  playerSide: z.string(),
+  abilityName: z.string(),
+  effectDescription: z.string(),
+  phase: z.string(),
+});
+
 export const combatLogSchema = z.object({
   player1Cards: z.array(cardPowerBreakdownSchema),
   player2Cards: z.array(cardPowerBreakdownSchema),
@@ -130,6 +137,7 @@ export const combatLogSchema = z.object({
   damage: z.number(),
   winner: z.enum(["player1", "player2", "tie"]),
   turn: z.number(),
+  abilityEffects: z.array(abilityEffectEntrySchema).optional(),
 });
 
 export type CombatLog = z.infer<typeof combatLogSchema>;
