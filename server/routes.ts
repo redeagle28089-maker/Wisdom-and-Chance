@@ -1196,6 +1196,68 @@ IMPORTANT:
     }
   });
 
+  app.get("/api/admin/database-export", isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const fs = await import("fs");
+      const path = await import("path");
+
+      const tables = [
+        "users", "user_decks", "friend_requests", "friendships", "friend_messages",
+        "game_rooms", "room_spectators", "chat_messages",
+        "player_ratings", "player_stats", "achievements", "player_achievements",
+        "daily_challenges", "player_challenges", "deck_codes",
+        "card_images", "card_image_mappings", "commander_image_mappings",
+        "user_presence", "matchmaking_queue"
+      ];
+
+      const exportData: Record<string, any> = {
+        exportedAt: new Date().toISOString(),
+        version: "2.2.0",
+        tables: {},
+      };
+
+      for (const table of tables) {
+        try {
+          const result = await db.execute(sql`SELECT * FROM ${sql.identifier(table)}`);
+          exportData.tables[table] = {
+            rowCount: result.rows.length,
+            rows: result.rows,
+          };
+        } catch (err: any) {
+          exportData.tables[table] = { error: err.message, rowCount: 0, rows: [] };
+        }
+      }
+
+      const saveToFile = req.query.save === "true";
+      if (saveToFile) {
+        const backupDir = path.default.join(process.cwd(), "backups");
+        if (!fs.default.existsSync(backupDir)) {
+          fs.default.mkdirSync(backupDir, { recursive: true });
+        }
+        const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+        const filename = `db-backup-${timestamp}.json`;
+        const filepath = path.default.join(backupDir, filename);
+
+        const exportWithoutImages = JSON.parse(JSON.stringify(exportData));
+        if (exportWithoutImages.tables.card_images?.rows) {
+          exportWithoutImages.tables.card_images.rows = exportWithoutImages.tables.card_images.rows.map((row: any) => ({
+            ...row,
+            image_url: row.image_url ? `[BASE64_IMAGE_${row.image_url.length}_CHARS]` : null,
+          }));
+        }
+
+        fs.default.writeFileSync(filepath, JSON.stringify(exportWithoutImages, null, 2));
+        exportData.savedToFile = filepath;
+        exportData.note = "Image data was excluded from the file backup to keep file size manageable. Full image data is included in this API response.";
+      }
+
+      res.json(exportData);
+    } catch (error: any) {
+      console.error("Error exporting database:", error);
+      res.status(500).json({ error: "Failed to export database" });
+    }
+  });
+
   const SYNC_ACCESS_CODE = "4838";
 
   app.get("/api/admin/sync", async (req, res) => {

@@ -44,6 +44,11 @@ Key features include:
 - **Image Download Endpoints:** GET /api/cards/:id/image and GET /api/commanders/:id/image return binary image files for any authenticated user. GET /api/admin/card-images/:id/download returns a downloadable image file (admin only). GET /api/admin/card-images/bulk/download-manifest returns a JSON manifest of all images with download URLs (admin only).
 - **Key Files:** server/unifiedAuth.ts (JWT middleware), server/mobileAuth.ts (mobile auth endpoints), server/apiDocs.ts (API documentation).
 
+### Database Backup
+- **Admin Export Endpoint:** GET /api/admin/database-export — Admin-only endpoint that exports all database tables as JSON. Add `?save=true` to also save a backup file to `backups/` directory. Image data is excluded from file backups to keep size manageable but included in the API response.
+- **SQL Backups:** Full SQL dumps can be created via `pg_dump` and are stored in the `backups/` directory. These include all data including card images.
+- **GitHub Backup:** The project is connected to GitHub for code version control. Database backup files in `backups/` can be committed and pushed to GitHub for offsite storage.
+
 ## External Dependencies
 
 - **PostgreSQL:** Primary database for persistent user data, saved decks, friend lists, and game statistics.
