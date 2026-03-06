@@ -45,7 +45,7 @@ Key features include:
 - **Key Files:** server/unifiedAuth.ts (JWT middleware), server/mobileAuth.ts (mobile auth endpoints), server/apiDocs.ts (API documentation).
 
 ### Database Backup
-- **Admin Export Endpoint:** GET /api/admin/database-export — Admin-only endpoint that exports all database tables as JSON. Add `?save=true` to also save a backup file to `backups/` directory. Image data is excluded from file backups to keep size manageable but included in the API response.
+- **Admin Export Endpoint:** GET /api/admin/database-export — Admin-only endpoint that exports all database tables as JSON. Add `?save=true` to also save a backup file to `backups/` directory. Image data is included in file backups.
 - **SQL Backups:** Full SQL dumps can be created via `pg_dump` and are stored in the `backups/` directory. These include all data including card images.
 - **GitHub Backup:** The project is connected to GitHub for code version control. Database backup files in `backups/` can be committed and pushed to GitHub for offsite storage.
 

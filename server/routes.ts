@@ -1238,17 +1238,9 @@ IMPORTANT:
         const filename = `db-backup-${timestamp}.json`;
         const filepath = path.default.join(backupDir, filename);
 
-        const exportWithoutImages = JSON.parse(JSON.stringify(exportData));
-        if (exportWithoutImages.tables.card_images?.rows) {
-          exportWithoutImages.tables.card_images.rows = exportWithoutImages.tables.card_images.rows.map((row: any) => ({
-            ...row,
-            image_url: row.image_url ? `[BASE64_IMAGE_${row.image_url.length}_CHARS]` : null,
-          }));
-        }
-
-        fs.default.writeFileSync(filepath, JSON.stringify(exportWithoutImages, null, 2));
+        fs.default.writeFileSync(filepath, JSON.stringify(exportData, null, 2));
         exportData.savedToFile = filepath;
-        exportData.note = "Image data was excluded from the file backup to keep file size manageable. Full image data is included in this API response.";
+        exportData.note = "Full backup including card image data saved to file.";
       }
 
       res.json(exportData);
