@@ -19,21 +19,43 @@ This document tells you (or your AI agent) exactly how to recreate the Wisdom & 
 
 ---
 
+## BEFORE YOU START — GET YOUR FILES READY
+
+You need two things before setting up the new workspace:
+
+**1. The ZIP file (contains all code + database backup):**
+- In your CURRENT Replit workspace, click the three-dot menu (⋮) at the top of the file panel on the left sidebar
+- Select "Download as ZIP" — this downloads the entire project
+- OR go to https://github.com/redeagle28089-maker/Wisdom-and-Chance → click green "Code" button → "Download ZIP"
+- The ZIP includes a `backups/` folder with SQL database dumps — this is how your data transfers to the new workspace
+
+**2. This PDF (the instructions you're reading right now)**
+
+Give BOTH the ZIP file and this PDF to the AI agent in your new workspace.
+
+---
+
+## IMPORTANT: THE ZIP CONTAINS YOUR CODE BUT NOT A LIVE DATABASE
+
+The ZIP file has everything: all source code, config files, and a `backups/` folder with SQL dump files. However, the database itself does NOT transfer — it stays in the old workspace. The SQL dump files in `backups/` are a complete snapshot of all your data (users, cards, card artwork, decks, ratings, achievements, friends, etc.). Step 4 below shows how to restore this data into the new database.
+
+---
+
 ## STEP-BY-STEP SETUP INSTRUCTIONS
 
 ### STEP 1: Import the Code
 
-**Option A — From GitHub (recommended):**
+**Option A — From ZIP file (if you downloaded from Replit):**
+1. In your new Replit personal account, click "Create Repl"
+2. Choose a blank Node.js template
+3. Upload all files from the ZIP into the workspace (drag and drop or use the upload button)
+
+**Option B — From GitHub:**
 1. In your new Replit account, click "Create Repl"
 2. Choose "Import from GitHub"
 3. Paste: `https://github.com/redeagle28089-maker/Wisdom-and-Chance`
 4. Set language to Node.js
 5. Click Import
-
-**Option B — From ZIP file:**
-1. Download the ZIP from the current Replit workspace or GitHub
-2. In your new Replit account, click "Create Repl"
-3. Upload all files from the ZIP
 
 ---
 
@@ -60,28 +82,56 @@ This creates all the database tables from the Drizzle schema.
 
 ---
 
-### STEP 4: Restore Database Data
+### STEP 4: Restore Database Data from the SQL Backup
 
-**THIS IS CRITICAL — without this step, you lose all game data (users, cards, images, decks, ratings, etc.)**
+**THIS IS THE MOST CRITICAL STEP — without this, you lose ALL game data**
 
-There is a SQL backup file in the `backups/` directory. Use the most recent one.
+The ZIP file includes a `backups/` folder containing SQL dump files. These files are a complete snapshot of the database from the original workspace — they contain ALL data: user accounts, card artwork (stored as base64 images), saved decks, friend lists, ratings, achievements, leaderboard data, and everything else.
 
-Run in the Shell:
+**The database does NOT transfer between Replit workspaces automatically.** Only the code transfers via ZIP/GitHub. You MUST restore the backup to get the data.
+
+**Step 4a: Find the backup file**
+
+List the backup files to find the most recent one:
 ```
-psql $DATABASE_URL < backups/full-backup-20260316-005942.sql
+ls -lh backups/*.sql
 ```
 
-If that gives errors about existing tables, drop all tables first:
+The most recent file is: `backups/full-backup-20260316-005942.sql` (about 12MB — large because it contains all card artwork images as base64 data).
+
+**Step 4b: Drop any empty tables created by Step 3**
+
+Since Step 3 created empty tables, and the backup file will try to create the same tables with data, you need to clear them first:
 ```
 psql $DATABASE_URL -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+```
+
+**Step 4c: Restore the backup**
+```
 psql $DATABASE_URL < backups/full-backup-20260316-005942.sql
 ```
 
-After restoring, verify the data loaded:
+This will take a minute or two because of the image data. You may see some notices — those are fine. Watch for actual ERROR messages.
+
+**Step 4d: Verify the data loaded correctly**
+
+Run these commands to confirm data is present:
 ```
 psql $DATABASE_URL -c "SELECT COUNT(*) FROM users;"
 psql $DATABASE_URL -c "SELECT COUNT(*) FROM card_images;"
+psql $DATABASE_URL -c "SELECT COUNT(*) FROM card_image_mappings;"
+psql $DATABASE_URL -c "SELECT COUNT(*) FROM player_stats;"
 ```
+
+You should see non-zero counts. If any table returns 0 or an error, the restore did not work — try running Step 4b and 4c again.
+
+**Step 4e: If the SQL restore fails entirely**
+
+If `psql` is not available or the SQL file won't restore, there is a fallback:
+1. Start the app (Step 7) — it will create empty tables
+2. From the OLD workspace (if still accessible), visit: `https://[old-app-url]/api/admin/database-export?save=true`
+3. This produces a JSON export. The AI agent can use this to write import scripts
+4. But the SQL dump method above is strongly preferred — it's a complete, exact copy
 
 ---
 
