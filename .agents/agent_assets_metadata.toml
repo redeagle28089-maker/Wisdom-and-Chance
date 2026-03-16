@@ -12,3 +12,9 @@ id = "57ULKNtXPtLOb1dbYukeh"
 uri = "file://Wisdom_and_Chance_Clone_Instructions.md"
 type = "text"
 title = "Wisdom & Chance TCG - Complete Clone Setup Instructions"
+
+[[outputs]]
+id = "5dXSBwcRtJcc8If99SBbv"
+uri = "file://Wisdom_and_Chance_Clone_Instructions.pdf"
+type = "pdf"
+title = "Wisdom & Chance TCG - Clone Setup Instructions (PDF)"
