@@ -6,3 +6,9 @@ id = "pc7c_Sufd2ToFd7MWQbD3"
 uri = "file://Wisdom_and_Chance_TCG_Feature_Roadmap.md"
 type = "text"
 title = "Wisdom & Chance TCG - Feature Roadmap Plan"
+
+[[outputs]]
+id = "57ULKNtXPtLOb1dbYukeh"
+uri = "file://Wisdom_and_Chance_Clone_Instructions.md"
+type = "text"
+title = "Wisdom & Chance TCG - Complete Clone Setup Instructions"

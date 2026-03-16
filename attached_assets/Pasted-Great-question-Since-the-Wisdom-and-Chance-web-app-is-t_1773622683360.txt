@@ -1,0 +1,48 @@
+Great question. Since the Wisdom and Chance web app is the server that both the website and this mobile app depend on, you'll want to handle it carefully. Here's the overall plan:
+
+Order of operations:
+
+Back up the web app first (from its current Replit workspace)
+Import it into your new personal workspace
+Get it running and deployed
+Then import the mobile app (which connects to the web app)
+For the web app (Wisdom and Chance), tell the new AI:
+
+This is the Wisdom and Chance web app — a full-stack Trading Card Game with a Node.js/Express backend, PostgreSQL database, and web frontend. Here's what I need:
+
+1. Install dependencies: Run npm install
+
+2. Set up the database:
+
+Create a PostgreSQL database
+Set the DATABASE_URL environment secret
+Run the database migration/push command to create all tables
+IMPORTANT: I need to migrate my existing game data (users, cards, decks, achievements, etc.) — check the schema and help me import it
+3. Restore environment secrets:
+
+SESSION_SECRET — generate a new random string
+Any API keys the app uses (check the code for references to environment variables)
+4. Set up the workflow to start the server
+
+5. Deploy/publish the app so it has a public URL
+
+6. Connect to GitHub: Link to https://github.com/redeagle28089-maker/wisdom-and-chance-web
+
+7. Read the replit.md or README for full architecture details
+The critical part — your database data:
+
+This is the most important thing. Your web app's PostgreSQL database has all your game data — users, cards, commanders, decks, game history, achievements, leaderboards, friends lists, etc. When you move workspaces:
+
+The code transfers via zip or GitHub
+The database data does NOT transfer automatically
+You'll need to export your database from the current workspace before cancelling anything
+Before you leave the current workspace, ask the web app AI to:
+
+Export the full database to a SQL dump file (pg_dump)
+Download that file
+After importing the app in the new workspace, restore the dump into the new database
+After the web app is deployed in the new workspace:
+
+The new app will get a new URL (something like your-new-app.replit.app). You'll then need to update this mobile app to point to that new URL instead of wisdom-and-chance.replit.app. That's a simple find-and-replace in a few files.
+
+Want me to identify exactly which files in this mobile app reference the old server URL, so you have that ready when the time comes?
