@@ -604,6 +604,13 @@ export async function setupAuth(app: Express) {
       const claims = await verifyAndDecodeJWT(tokens.id_token, metadata, pending.nonce);
       
       await upsertUser(claims);
+
+      try {
+        const { seedStarterDecks } = await import("../starter-decks");
+        await seedStarterDecks(claims.sub);
+      } catch (error) {
+        console.warn("[auth] Failed to seed starter decks:", error);
+      }
       
       const user = {
         claims,

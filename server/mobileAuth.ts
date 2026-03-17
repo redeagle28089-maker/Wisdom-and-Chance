@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import { db } from "./db";
 import { users } from "@shared/schema";
 import { eq } from "drizzle-orm";
+import { seedStarterDecks } from "./starter-decks";
 
 const JWT_SECRET = process.env.SESSION_SECRET;
 if (!JWT_SECRET) {
@@ -83,6 +84,12 @@ export function registerMobileAuthRoutes(app: Express) {
             .returning();
           user = updated;
         }
+      }
+
+      try {
+        await seedStarterDecks(user.id);
+      } catch (error) {
+        console.warn("[mobile-auth] Failed to seed starter decks:", error);
       }
 
       const token = generateToken({ userId: user.id, email: user.email || email });
