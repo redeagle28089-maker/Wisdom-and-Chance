@@ -24,3 +24,9 @@ id = "0g4IURAMJAskh9_rNWvJa"
 uri = "file://Mobile_App_Server_Sync_Instructions.md"
 type = "text"
 title = "Mobile App Server Sync Instructions"
+
+[[outputs]]
+id = "SJMR7n6qrUWd3rcpsrDVC"
+uri = "file://Mobile_App_Server_Sync_Instructions.pdf"
+type = "pdf"
+title = "Mobile App Server Sync Instructions (PDF)"
