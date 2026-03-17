@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset='UTF-8'>
+<style>
+@page { size: A4; margin: 2cm; }
+body { font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 800px; margin: 0 auto; padding: 20px; }
+h1 { color: #1a365d; border-bottom: 3px solid #2b6cb0; padding-bottom: 10px; font-size: 24px; }
+h2 { color: #2b6cb0; border-bottom: 1px solid #bee3f8; padding-bottom: 5px; margin-top: 30px; font-size: 20px; page-break-after: avoid; }
+h3 { color: #2c5282; margin-top: 20px; font-size: 16px; page-break-after: avoid; }
+h4 { color: #2d3748; font-size: 14px; }
+code { background: #edf2f7; padding: 2px 6px; border-radius: 3px; font-family: 'Consolas', monospace; font-size: 13px; }
+pre { background: #1a202c; color: #e2e8f0; padding: 15px; border-radius: 6px; overflow-x: auto; font-size: 12px; page-break-inside: avoid; }
+pre code { background: none; color: #e2e8f0; padding: 0; }
+table { border-collapse: collapse; width: 100%; margin: 10px 0; page-break-inside: avoid; }
+th { background: #2b6cb0; color: white; padding: 8px 12px; text-align: left; font-size: 13px; }
+td { border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 13px; }
+tr:nth-child(even) { background: #f7fafc; }
+blockquote { background: #ebf8ff; border-left: 4px solid #2b6cb0; padding: 10px 15px; margin: 10px 0; }
+hr { border: none; border-top: 2px solid #e2e8f0; margin: 20px 0; }
+strong { color: #1a365d; }
+ul, ol { padding-left: 25px; }
+li { margin: 4px 0; }
+.header-info { text-align: center; color: #4a5568; margin-bottom: 30px; }
+</style>
+</head>
+<body>
+<h1>Wisdom & Chance TCG — Mobile App Server Sync Instructions</h1>
+
+<h2>Connecting the Mobile App to the New Server & Database</h2>
+
+<p><strong>Prepared: March 17, 2026</strong></p>
+
+<hr>
+
+<h2>OVERVIEW</h2>
+
+<p>The Wisdom & Chance web server has been migrated to a new Replit personal account. The mobile app needs to be updated to connect to this new server. The server provides:</p>
+
+<ul><li>REST API for all game data (cards, decks, users, achievements, leaderboard, etc.)</li>
+<li>WebSocket server for real-time multiplayer, chat, and presence</li>
+<li>JWT authentication for mobile clients</li>
+<li>PostgreSQL database with all existing user data, cards, and artwork</li>
+</ul>
+<hr>
+
+<h2>STEP 1: UPDATE THE SERVER URL</h2>
+
+<h3>Old URL (no longer active):</h3>
+<pre><code>https://wisdom-and-chance.replit.app
+</code></pre>
+
+<h3>New URL (use this everywhere):</h3>
+<p><strong>Check your Replit deployment for the exact URL</strong> — it will be something like:</p>
+<pre><code>https://YOUR-NEW-APP-NAME.replit.app
+</code></pre>
+
+<h3>Files to Update</h3>
+<p>Search the entire mobile app codebase for any reference to the old URL and replace it with the new one. Common locations:</p>
+
+<li><strong>API base URL / HTTP client configuration</strong> — wherever the base URL for REST API calls is defined</li>
+<li><strong>WebSocket connection URL</strong> — change from <code>wss://OLD-URL/ws</code> to <code>wss://NEW-URL/ws</code></li>
+<li><strong>Image URLs</strong> — card artwork URLs that reference the old server domain</li>
+<li><strong>Environment/config files</strong> — <code>.env</code>, config constants, or build configuration</li>
+
+<h3>Search command:</h3>
+<pre><code>grep -r "wisdom-and-chance" --include="*.ts" --include="*.tsx" --include="*.js" --include="*.json" --include="*.env" .
+</code></pre>
+
+<p>Replace ALL occurrences with the new deployed URL.</p>
+
+<hr>
+
+<h2>STEP 2: VERIFY AUTHENTICATION (JWT)</h2>
+
+<p>The mobile app uses JWT (JSON Web Token) authentication. The flow has NOT changed:</p>
+
+<h3>Login Flow:</h3>
+<pre><code>POST https://NEW-URL/api/mobile/auth/login
+<p>Content-Type: application/json</p>
+
+<p>{</p>
+<p>  "email": "user@example.com",</p>
+<p>  "firstName": "John",          // optional</p>
+<p>  "lastName": "Doe",            // optional</p>
+<p>  "profileImageUrl": "https://...",  // optional</p>
+<p>  "provider": "google",         // optional: "google" or "apple"</p>
+<p>  "providerToken": "..."        // optional: for server-side verification</p>
+<p>}</p>
+</code></pre>
+
+<h3>Response:</h3>
+<pre><code>{
+<p>  "token": "eyJhbGciOi...",</p>
+<p>  "user": {</p>
+<p>    "id": "uuid-string",</p>
+<p>    "email": "user@example.com",</p>
+<p>    "firstName": "John",</p>
+<p>    "lastName": "Doe",</p>
+<p>    "profileImageUrl": "https://..."</p>
+<p>  }</p>
+<p>}</p>
+</code></pre>
+
+<h3>Using the Token:</h3>
+<p>Include the JWT in ALL subsequent API requests:</p>
+<pre><code>Authorization: Bearer eyJhbGciOi...
+</code></pre>
+
+<h3>Token Refresh (before expiry — tokens last 7 days):</h3>
+<pre><code>POST https://NEW-URL/api/mobile/auth/refresh
+<p>Authorization: Bearer CURRENT_TOKEN</p>
+</code></pre>
+<p>Returns: <code>{ "token": "new-jwt-token" }</code></p>
+
+<h3>Get Current User:</h3>
+<pre><code>GET https://NEW-URL/api/mobile/auth/me
+<p>Authorization: Bearer TOKEN</p>
+</code></pre>
+
+<hr>
+
+<h2>STEP 3: VERIFY WEBSOCKET CONNECTION</h2>
+
+<p>The WebSocket server is at path <code>/ws</code> on the same domain.</p>
+
+<h3>Connection URL for Mobile (with JWT):</h3>
+<pre><code>wss://NEW-URL/ws?token=YOUR_JWT_TOKEN
+</code></pre>
+
+<h3>Connection Flow:</h3>
+<li>Connect to the WebSocket URL with token query parameter</li>
+<li>Receive <code>auth_success</code> message: <code>{ type: "auth_success", payload: { userId, displayName } }</code></li>
+<li>If auth fails, receive <code>auth_error</code>: <code>{ type: "auth_error", payload: { message } }</code></li>
+<li>Once authenticated, send/receive game events</li>
+
+<h3>Message Format (all messages):</h3>
+<pre><code>{ "type": "event_name", "payload": { ... } }
+</code></pre>
+
+<h3>Client-to-Server Events:</h3>
+<table><thead><tr><th>Event</th><th>Payload</th><th>Description</th></tr></thead><tbody><tr><td><code>join_room</code></td><td><code>{ roomId }</code></td><td>Subscribe to room updates</td></tr><tr><td><code>leave_room</code></td><td><code>{ roomId }</code></td><td>Unsubscribe from room</td></tr><tr><td><code>join_game</code></td><td><code>{ gameId }</code></td><td>Subscribe to game state</td></tr><tr><td><code>leave_game</code></td><td><code>{ gameId }</code></td><td>Unsubscribe from game</td></tr><tr><td><code>room_message</code></td><td><code>{ roomId, message }</code></td><td>Send chat in room</td></tr><tr><td><code>game_message</code></td><td><code>{ gameId, message }</code></td><td>Send chat in game</td></tr><tr><td><code>game_action</code></td><td><code>{ gameId, action }</code></td><td>Send game action (card play, attack, etc.)</td></tr></tbody></table>
+<h3>Server-to-Client Events:</h3>
+<table><thead><tr><th>Event</th><th>Payload</th><th>Description</th></tr></thead><tbody><tr><td><code>auth_success</code></td><td><code>{ userId, displayName }</code></td><td>Connection authenticated</td></tr><tr><td><code>auth_error</code></td><td><code>{ message }</code></td><td>Auth failed</td></tr><tr><td><code>room_update</code></td><td>Room state object</td><td>Room state changed</td></tr><tr><td><code>player_joined</code></td><td><code>{ roomId, userId }</code></td><td>Player joined room</td></tr><tr><td><code>player_left</code></td><td><code>{ roomId, userId }</code></td><td>Player left room</td></tr><tr><td><code>player_ready_update</code></td><td><code>{ roomId, userId, ready, deckId }</code></td><td>Ready status changed</td></tr><tr><td><code>game_start</code></td><td><code>{ roomId, gameId }</code></td><td>Game started</td></tr><tr><td><code>game_action</code></td><td>Game action object</td><td>Game state update</td></tr><tr><td><code>chat_message</code></td><td><code>{ roomId, senderId, message, createdAt }</code></td><td>Room chat</td></tr><tr><td><code>game_message</code></td><td><code>{ userId, displayName, message, timestamp }</code></td><td>In-game chat</td></tr><tr><td><code>friend_message</code></td><td><code>{ id, senderId, receiverId, message, createdAt }</code></td><td>Direct message</td></tr><tr><td><code>friend_request</code></td><td><code>{ requestId, senderId }</code></td><td>Incoming friend request</td></tr><tr><td><code>friend_request_accepted</code></td><td><code>{ requestId, friendId }</code></td><td>Request accepted</td></tr><tr><td><code>presence_update</code></td><td><code>{ userId, status: "online"/"offline" }</code></td><td>Friend online status</td></tr><tr><td><code>spectator_joined</code></td><td><code>{ roomId, userId }</code></td><td>Spectator joined</td></tr><tr><td><code>spectator_left</code></td><td><code>{ roomId, userId }</code></td><td>Spectator left</td></tr></tbody></table>
+<hr>
+
+<h2>STEP 4: COMPLETE API REFERENCE</h2>
+
+<p>All endpoints use the base URL: <code>https://NEW-URL</code></p>
+
+<p>All protected endpoints require: <code>Authorization: Bearer TOKEN</code></p>
+
+<h3>Health Check (No Auth Required)</h3>
+<pre><code>GET /api/health
+</code></pre>
+<p>Response: <code>{ status: "ok", timestamp, version, database: "connected", services: { auth, websocket, multiplayer } }</code></p>
+
+<p><strong>Use this endpoint to verify connectivity before anything else.</strong></p>
+
+<hr>
+
+<h3>PUBLIC ENDPOINTS (No Auth Required)</h3>
+
+<h4>Cards</h4>
+<table><thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead><tbody><tr><td>GET</td><td><code>/api/cards</code></td><td>List all cards</td></tr><tr><td>GET</td><td><code>/api/cards/:id</code></td><td>Get single card by ID</td></tr><tr><td>GET</td><td><code>/api/cards/element/:element</code></td><td>Get cards by element (fire/water/earth/air/nature)</td></tr></tbody></table>
+<h4>Commanders</h4>
+<table><thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead><tbody><tr><td>GET</td><td><code>/api/commanders</code></td><td>List all commanders</td></tr><tr><td>GET</td><td><code>/api/commanders/:id</code></td><td>Get single commander by ID</td></tr></tbody></table>
+<h4>Achievements</h4>
+<table><thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead><tbody><tr><td>GET</td><td><code>/api/achievements</code></td><td>List all achievements</td></tr></tbody></table>
+<h4>Leaderboard</h4>
+<table><thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead><tbody><tr><td>GET</td><td><code>/api/leaderboard</code></td><td>Top 100 players by ELO rating</td></tr></tbody></table>
+<p>Tier values: Bronze (<800), Silver (<1000), Gold (<1200), Platinum (<1400), Diamond (<1600), Master (1600+)</p>
+
+<h4>Daily Challenges</h4>
+<table><thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead><tbody><tr><td>GET</td><td><code>/api/daily-challenges</code></td><td>Get today's challenges</td></tr></tbody></table>
+<h4>Rooms (Public Listing)</h4>
+<table><thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead><tbody><tr><td>GET</td><td><code>/api/rooms</code></td><td>List public rooms in "waiting" status</td></tr><tr><td>GET</td><td><code>/api/rooms/:id</code></td><td>Get room details with host/guest/spectators</td></tr><tr><td>GET</td><td><code>/api/rooms/:id/messages</code></td><td>Get room chat (last 100 messages)</td></tr></tbody></table>
+<hr>
+
+<h3>PROTECTED ENDPOINTS (Auth Required)</h3>
+
+<h4>User Profile</h4>
+<table><thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead><tbody><tr><td>PATCH</td><td><code>/api/user/profile</code></td><td>Update profile (firstName, lastName, profileImageUrl)</td></tr></tbody></table>
+<h4>Decks</h4>
+<table><thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead><tbody><tr><td>GET</td><td><code>/api/user-decks</code></td><td>List user's saved decks</td></tr><tr><td>GET</td><td><code>/api/user-decks/:id</code></td><td>Get specific deck</td></tr><tr><td>POST</td><td><code>/api/user-decks</code></td><td>Save new deck (name, commanderId, cardIds[40])</td></tr><tr><td>PATCH</td><td><code>/api/user-decks/:id</code></td><td>Update deck</td></tr><tr><td>DELETE</td><td><code>/api/user-decks/:id</code></td><td>Delete deck</td></tr></tbody></table>
+<p><strong>Deck Validation Rules:</strong></p>
+<ul><li>Exactly 40 cards</li>
+<li>4 cards per power rank (1-10)</li>
+<li>Max 3 copies of any single card</li>
+<li>Must have a valid commander ID</li>
+</ul>
+<h4>AI Deck Suggestions</h4>
+<table><thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead><tbody><tr><td>POST</td><td><code>/api/deck-suggestions</code></td><td>AI-generated deck (body: <code>{ commanderId, playstyle: "aggressive"/"defensive"/"balanced" }</code>)</td></tr></tbody></table>
+<h4>Friends</h4>
+<table><thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead><tbody><tr><td>GET</td><td><code>/api/friends</code></td><td>List friends with online status</td></tr><tr><td>GET</td><td><code>/api/friend-requests</code></td><td>List pending requests (incoming + outgoing)</td></tr><tr><td>POST</td><td><code>/api/friend-requests</code></td><td>Send request (body: <code>{ email }</code>)</td></tr><tr><td>POST</td><td><code>/api/friend-requests/:id/accept</code></td><td>Accept request</td></tr><tr><td>POST</td><td><code>/api/friend-requests/:id/decline</code></td><td>Decline request</td></tr><tr><td>DELETE</td><td><code>/api/friends/:friendId</code></td><td>Remove friend</td></tr></tbody></table>
+<h4>Friend Messages (24-hour expiry)</h4>
+<table><thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead><tbody><tr><td>GET</td><td><code>/api/friend-messages/:friendId</code></td><td>Get messages (last 24h, max 100)</td></tr><tr><td>POST</td><td><code>/api/friend-messages/:friendId</code></td><td>Send message (body: <code>{ message }</code>)</td></tr></tbody></table>
+<h4>Rooms (Actions)</h4>
+<table><thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead><tbody><tr><td>POST</td><td><code>/api/rooms</code></td><td>Create room (body: <code>{ name, isPrivate?, password?, gameMode? }</code>)</td></tr><tr><td>POST</td><td><code>/api/rooms/:id/join</code></td><td>Join as player (body: <code>{ password? }</code>)</td></tr><tr><td>POST</td><td><code>/api/rooms/:id/leave</code></td><td>Leave room</td></tr><tr><td>POST</td><td><code>/api/rooms/:id/ready</code></td><td>Set ready (body: <code>{ ready?, deckId }</code>)</td></tr><tr><td>POST</td><td><code>/api/rooms/:id/start</code></td><td>Start game (host only, both must be ready)</td></tr><tr><td>POST</td><td><code>/api/rooms/:id/spectate</code></td><td>Join as spectator</td></tr><tr><td>DELETE</td><td><code>/api/rooms/:id/spectate</code></td><td>Leave spectator mode</td></tr><tr><td>POST</td><td><code>/api/rooms/:id/messages</code></td><td>Send chat message (body: <code>{ message }</code>)</td></tr></tbody></table>
+<h4>Player Stats & Ratings</h4>
+<table><thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead><tbody><tr><td>GET</td><td><code>/api/player-stats</code></td><td>Get user's game stats (auto-creates if new)</td></tr><tr><td>GET</td><td><code>/api/player-rating</code></td><td>Get user's ELO rating (auto-creates at 1000)</td></tr><tr><td>GET</td><td><code>/api/player-achievements</code></td><td>Get user's unlocked achievements</td></tr><tr><td>GET</td><td><code>/api/player-challenges</code></td><td>Get user's challenge progress</td></tr><tr><td>POST</td><td><code>/api/player-challenges/:id/claim</code></td><td>Claim completed challenge reward</td></tr></tbody></table>
+<h4>User Search</h4>
+<table><thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead><tbody><tr><td>GET</td><td><code>/api/users/search?q=QUERY</code></td><td>Search users by email/name (max 10 results)</td></tr></tbody></table>
+<hr>
+
+<h2>STEP 5: DATA MODELS</h2>
+
+<h3>Card</h3>
+<pre><code>{
+<p>  "id": "uuid",</p>
+<p>  "name": "string",</p>
+<p>  "element": "fire | water | earth | air | nature",</p>
+<p>  "power": 1-10,</p>
+<p>  "trait": "string | null",</p>
+<p>  "traitValue": "number | null",</p>
+<p>  "buffModifier": 0,</p>
+<p>  "buffColor": "string | null",</p>
+<p>  "debuffModifier": 0,</p>
+<p>  "debuffColor": "string | null",</p>
+<p>  "description": "string | null",</p>
+<p>  "imageUrl": "string | null",</p>
+<p>  "isCommander": false</p>
+<p>}</p>
+</code></pre>
+
+<h3>Commander</h3>
+<pre><code>{
+<p>  "id": "uuid",</p>
+<p>  "name": "string",</p>
+<p>  "element": "string",</p>
+<p>  "ability": "string",</p>
+<p>  "abilityDescription": "string",</p>
+<p>  "imageUrl": "string | null"</p>
+<p>}</p>
+</code></pre>
+
+<h3>User</h3>
+<pre><code>{
+<p>  "id": "uuid",</p>
+<p>  "email": "string",</p>
+<p>  "firstName": "string | null",</p>
+<p>  "lastName": "string | null",</p>
+<p>  "profileImageUrl": "string | null",</p>
+<p>  "createdAt": "ISO 8601",</p>
+<p>  "updatedAt": "ISO 8601"</p>
+<p>}</p>
+</code></pre>
+
+<h3>UserDeck</h3>
+<pre><code>{
+<p>  "id": "uuid",</p>
+<p>  "userId": "uuid",</p>
+<p>  "name": "string",</p>
+<p>  "commanderId": "uuid",</p>
+<p>  "cardIds": ["uuid", "uuid", "...40 total"],</p>
+<p>  "createdAt": "ISO 8601",</p>
+<p>  "updatedAt": "ISO 8601"</p>
+<p>}</p>
+</code></pre>
+
+<h3>PlayerStats</h3>
+<pre><code>{
+<p>  "id": "uuid",</p>
+<p>  "userId": "uuid",</p>
+<p>  "totalXp": 0,</p>
+<p>  "level": 1,</p>
+<p>  "gamesPlayed": 0,</p>
+<p>  "gamesWon": 0,</p>
+<p>  "gamesLost": 0,</p>
+<p>  "totalDamageDealt": 0,</p>
+<p>  "totalCardsPlayed": 0,</p>
+<p>  "favoriteElement": "string | null",</p>
+<p>  "favoriteCommander": "string | null",</p>
+<p>  "longestWinStreak": 0,</p>
+<p>  "currentWinStreak": 0,</p>
+<p>  "updatedAt": "ISO 8601"</p>
+<p>}</p>
+</code></pre>
+
+<h3>PlayerRating</h3>
+<pre><code>{
+<p>  "id": "uuid",</p>
+<p>  "userId": "uuid",</p>
+<p>  "rating": 1000,</p>
+<p>  "wins": 0,</p>
+<p>  "losses": 0,</p>
+<p>  "streak": 0</p>
+<p>}</p>
+</code></pre>
+
+<hr>
+
+<h2>STEP 6: GAME RULES (for reference)</h2>
+
+<ul><li><strong>Deck size:</strong> 40 cards (4 per power rank 1-10) + 1 commander</li>
+<li><strong>Starting HP:</strong> 20</li>
+<li><strong>Starting hand:</strong> 5 cards</li>
+<li><strong>Cards drawn per turn:</strong> 2</li>
+<li><strong>Cards deployed per turn:</strong> 2</li>
+<li><strong>Elements:</strong> Fire, Water, Earth, Air, Nature</li>
+<li><strong>Turn phases:</strong> Draw, Deployment, Combat, Calculation, End</li>
+<li><strong>Victory:</strong> Reduce opponent HP to 0, or opponent has no cards in deck and hand</li>
+<li><strong>ELO tiers:</strong> Bronze (<800), Silver (<1000), Gold (<1200), Platinum (<1400), Diamond (<1600), Master (1600+)</li>
+</ul>
+<hr>
+
+<h2>STEP 7: QUICK CONNECTIVITY TEST</h2>
+
+<p>Tell the mobile app AI to run these checks in order:</p>
+
+<li><strong>Health check:</strong> <code>GET https://NEW-URL/api/health</code> — should return <code>{ status: "ok" }</code></li>
+<li><strong>Login:</strong> <code>POST https://NEW-URL/api/mobile/auth/login</code> with <code>{ "email": "test@example.com" }</code> — should return a token</li>
+<li><strong>Cards:</strong> <code>GET https://NEW-URL/api/cards</code> — should return the full card list</li>
+<li><strong>WebSocket:</strong> Connect to <code>wss://NEW-URL/ws?token=TOKEN</code> — should receive <code>auth_success</code></li>
+
+<p>If all four pass, the mobile app is fully synced with the server.</p>
+
+<hr>
+
+<h2>STEP 8: TELL THE MOBILE APP AI</h2>
+
+<p>Copy and paste this to the mobile app AI agent:</p>
+
+<blockquote>"Update the server URL from the old domain to <code>NEW-URL.replit.app</code> everywhere in the codebase. This includes:</blockquote>
+<blockquote>1. API base URL for all HTTP requests</blockquote>
+<blockquote>2. WebSocket connection URL (wss://)</blockquote>
+<blockquote>3. Any image URLs that reference the server</blockquote>
+<blockquote>4. Environment/config files</blockquote>
+<p>></p>
+<blockquote>The API endpoints, authentication flow (JWT), and WebSocket protocol have NOT changed. Only the domain has changed. Run the health check at <code>/api/health</code> to verify connectivity after updating."</blockquote>
+
+<hr>
+
+<h2>LIVE API DOCUMENTATION</h2>
+
+<p>The server provides a machine-readable API reference at:</p>
+<pre><code>GET https://NEW-URL/api/docs
+</code></pre>
+<p>This returns the complete API documentation as JSON, which the mobile app can use for auto-discovery.</p>
+
+</body>
+</html>

@@ -18,3 +18,9 @@ id = "5dXSBwcRtJcc8If99SBbv"
 uri = "file://Wisdom_and_Chance_Clone_Instructions.pdf"
 type = "pdf"
 title = "Wisdom & Chance TCG - Clone Setup Instructions (Updated PDF)"
+
+[[outputs]]
+id = "0g4IURAMJAskh9_rNWvJa"
+uri = "file://Mobile_App_Server_Sync_Instructions.md"
+type = "text"
+title = "Mobile App Server Sync Instructions"
