@@ -3537,6 +3537,14 @@ export default function GameBoardPage() {
       winner: p1Power > p2Power ? "player1" as const : p2Power > p1Power ? "player2" as const : "tie" as const,
       turn: game.currentTurn,
       abilityEffects: currentSummary?.abilityEffects || [],
+      player1QuickStrikeDamage: currentSummary?.player1QuickStrikeDamage || 0,
+      player2QuickStrikeDamage: currentSummary?.player2QuickStrikeDamage || 0,
+      player1GuardianBlocked: currentSummary?.player1GuardianBlocked || 0,
+      player2GuardianBlocked: currentSummary?.player2GuardianBlocked || 0,
+      player1Healing: currentSummary?.player1Healing || 0,
+      player2Healing: currentSummary?.player2Healing || 0,
+      player1CardsDrawn: currentSummary?.player1CardsDrawn || 0,
+      player2CardsDrawn: currentSummary?.player2CardsDrawn || 0,
     };
     
     newGameState.lastCombatLog = combatLog;
@@ -4176,85 +4184,195 @@ export default function GameBoardPage() {
                   </div>
                 </div>
 
-                {/* Step 3: Calculate Final Power */}
-                <div className="bg-slate-800/80 border border-slate-600 rounded-lg p-4">
-                  <div className="text-yellow-400 font-bold mb-3 flex items-center gap-2">
-                    <span className="bg-yellow-500 text-black px-2 py-0.5 rounded text-xs">STEP 3</span>
-                    Calculate Final Power
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-green-900/30 border border-green-600/50 rounded-lg p-3">
-                      <div className="text-green-400 text-xs mb-2 font-bold">YOUR POWER CALCULATION:</div>
-                      {(isPlayer1 ? game.gameState.lastCombatLog.player1Cards : game.gameState.lastCombatLog.player2Cards).map((card, i) => (
-                        <div key={i} className="text-xs text-slate-300 mb-1 flex justify-between">
-                          <span>{card.cardName}:</span>
-                          <span className="text-green-400 font-bold">
-                            {card.basePower} {card.buffBonus !== 0 ? `+${card.buffBonus}` : ''} {card.debuffPenalty !== 0 ? `-${card.debuffPenalty}` : ''} = {card.finalPower}
-                          </span>
+                {/* Step 3: Quick Strike Damage */}
+                {(() => {
+                  const log = game.gameState.lastCombatLog;
+                  const yourQS = isPlayer1 ? (log.player1QuickStrikeDamage || 0) : (log.player2QuickStrikeDamage || 0);
+                  const enemyQS = isPlayer1 ? (log.player2QuickStrikeDamage || 0) : (log.player1QuickStrikeDamage || 0);
+                  const yourCards = isPlayer1 ? log.player1Cards : log.player2Cards;
+                  const enemyCards = isPlayer1 ? log.player2Cards : log.player1Cards;
+                  const yourQSCards = yourCards.filter(c => c.traitName === "Quick Strike" && c.traitValue);
+                  const enemyQSCards = enemyCards.filter(c => c.traitName === "Quick Strike" && c.traitValue);
+                  const hasQuickStrike = yourQS > 0 || enemyQS > 0 || yourQSCards.length > 0 || enemyQSCards.length > 0;
+                  if (!hasQuickStrike) return null;
+                  return (
+                    <div className="bg-slate-800/80 border border-yellow-500/50 rounded-lg p-4" data-testid="combat-log-quick-strike-step">
+                      <div className="text-yellow-400 font-bold mb-3 flex items-center gap-2">
+                        <span className="bg-yellow-500 text-black px-2 py-0.5 rounded text-xs">STEP 3</span>
+                        Quick Strike - Direct HP Damage
+                      </div>
+                      <div className="text-xs text-slate-400 mb-3">Quick Strike bypasses combat power — it deals direct HP damage regardless of who wins!</div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-green-900/30 border border-green-600/50 rounded-lg p-3">
+                          <div className="text-green-400 text-xs mb-2 font-bold">YOUR QUICK STRIKE:</div>
+                          {yourQSCards.length > 0 ? yourQSCards.map((card, i) => (
+                            <div key={i} className="text-xs text-slate-300 mb-1 flex justify-between">
+                              <span>{card.cardName}:</span>
+                              <span className="text-yellow-400 font-bold">{card.traitValue} direct dmg to opponent</span>
+                            </div>
+                          )) : (
+                            <div className="text-xs text-slate-500">No Quick Strike cards</div>
+                          )}
+                          {yourQS > 0 && (
+                            <div className="border-t border-green-500/30 mt-2 pt-2 flex justify-between font-bold text-yellow-300">
+                              <span>TOTAL TO OPPONENT:</span>
+                              <span>{yourQS} HP</span>
+                            </div>
+                          )}
                         </div>
-                      ))}
-                      <div className="border-t border-green-500/30 mt-2 pt-2 flex justify-between font-bold text-green-300">
-                        <span>TOTAL:</span>
-                        <span>{isPlayer1 ? game.gameState.lastCombatLog.player1Total : game.gameState.lastCombatLog.player2Total}</span>
+                        <div className="bg-red-900/30 border border-red-600/50 rounded-lg p-3">
+                          <div className="text-red-400 text-xs mb-2 font-bold">OPPONENT QUICK STRIKE:</div>
+                          {enemyQSCards.length > 0 ? enemyQSCards.map((card, i) => (
+                            <div key={i} className="text-xs text-slate-300 mb-1 flex justify-between">
+                              <span>{card.cardName}:</span>
+                              <span className="text-yellow-400 font-bold">{card.traitValue} direct dmg to you</span>
+                            </div>
+                          )) : (
+                            <div className="text-xs text-slate-500">No Quick Strike cards</div>
+                          )}
+                          {enemyQS > 0 && (
+                            <div className="border-t border-red-500/30 mt-2 pt-2 flex justify-between font-bold text-yellow-300">
+                              <span>TOTAL TO YOU:</span>
+                              <span>{enemyQS} HP</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
-                    <div className="bg-red-900/30 border border-red-600/50 rounded-lg p-3">
-                      <div className="text-red-400 text-xs mb-2 font-bold">OPPONENT POWER CALCULATION:</div>
-                      {(isPlayer1 ? game.gameState.lastCombatLog.player2Cards : game.gameState.lastCombatLog.player1Cards).map((card, i) => (
-                        <div key={i} className="text-xs text-slate-300 mb-1 flex justify-between">
-                          <span>{card.cardName}:</span>
-                          <span className="text-red-400 font-bold">
-                            {card.basePower} {card.buffBonus !== 0 ? `+${card.buffBonus}` : ''} {card.debuffPenalty !== 0 ? `-${card.debuffPenalty}` : ''} = {card.finalPower}
-                          </span>
-                        </div>
-                      ))}
-                      <div className="border-t border-red-500/30 mt-2 pt-2 flex justify-between font-bold text-red-300">
-                        <span>TOTAL:</span>
-                        <span>{isPlayer1 ? game.gameState.lastCombatLog.player2Total : game.gameState.lastCombatLog.player1Total}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                  );
+                })()}
 
-                {/* Step 4: Determine Winner */}
-                <div className="bg-slate-800/80 border border-slate-600 rounded-lg p-4">
-                  <div className="text-amber-400 font-bold mb-3 flex items-center gap-2">
-                    <span className="bg-amber-500 text-black px-2 py-0.5 rounded text-xs">STEP 4</span>
-                    Determine Winner & Damage
-                  </div>
-                  <div className="bg-slate-700/50 rounded-lg p-4 text-center">
-                    <div className="text-lg mb-2">
-                      <span className="text-green-400 font-bold">{isPlayer1 ? game.gameState.lastCombatLog.player1Total : game.gameState.lastCombatLog.player2Total}</span>
-                      <span className="text-slate-400 mx-3">vs</span>
-                      <span className="text-red-400 font-bold">{isPlayer1 ? game.gameState.lastCombatLog.player2Total : game.gameState.lastCombatLog.player1Total}</span>
+                {/* Step 4: Calculate Final Power */}
+                {(() => {
+                  const hasQS = (game.gameState.lastCombatLog.player1QuickStrikeDamage || 0) > 0 || (game.gameState.lastCombatLog.player2QuickStrikeDamage || 0) > 0;
+                  const stepNum = hasQS ? 4 : 3;
+                  return (
+                    <div className="bg-slate-800/80 border border-slate-600 rounded-lg p-4">
+                      <div className="text-yellow-400 font-bold mb-3 flex items-center gap-2">
+                        <span className="bg-yellow-500 text-black px-2 py-0.5 rounded text-xs">STEP {stepNum}</span>
+                        Calculate Final Power
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-green-900/30 border border-green-600/50 rounded-lg p-3">
+                          <div className="text-green-400 text-xs mb-2 font-bold">YOUR POWER CALCULATION:</div>
+                          {(isPlayer1 ? game.gameState.lastCombatLog.player1Cards : game.gameState.lastCombatLog.player2Cards).map((card, i) => (
+                            <div key={i} className="text-xs text-slate-300 mb-1 flex justify-between">
+                              <span>{card.cardName}:</span>
+                              <span className="text-green-400 font-bold">
+                                {card.basePower} {card.buffBonus !== 0 ? `+${card.buffBonus}` : ''} {card.debuffPenalty !== 0 ? `-${card.debuffPenalty}` : ''} = {card.finalPower}
+                              </span>
+                            </div>
+                          ))}
+                          <div className="border-t border-green-500/30 mt-2 pt-2 flex justify-between font-bold text-green-300">
+                            <span>TOTAL:</span>
+                            <span>{isPlayer1 ? game.gameState.lastCombatLog.player1Total : game.gameState.lastCombatLog.player2Total}</span>
+                          </div>
+                        </div>
+                        <div className="bg-red-900/30 border border-red-600/50 rounded-lg p-3">
+                          <div className="text-red-400 text-xs mb-2 font-bold">OPPONENT POWER CALCULATION:</div>
+                          {(isPlayer1 ? game.gameState.lastCombatLog.player2Cards : game.gameState.lastCombatLog.player1Cards).map((card, i) => (
+                            <div key={i} className="text-xs text-slate-300 mb-1 flex justify-between">
+                              <span>{card.cardName}:</span>
+                              <span className="text-red-400 font-bold">
+                                {card.basePower} {card.buffBonus !== 0 ? `+${card.buffBonus}` : ''} {card.debuffPenalty !== 0 ? `-${card.debuffPenalty}` : ''} = {card.finalPower}
+                              </span>
+                            </div>
+                          ))}
+                          <div className="border-t border-red-500/30 mt-2 pt-2 flex justify-between font-bold text-red-300">
+                            <span>TOTAL:</span>
+                            <span>{isPlayer1 ? game.gameState.lastCombatLog.player2Total : game.gameState.lastCombatLog.player1Total}</span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    {game.gameState.lastCombatLog.winner === "tie" ? (
-                      <div className="text-yellow-400 text-xl font-bold">DRAW - No damage dealt</div>
-                    ) : (
-                      <>
-                        <div className={`text-2xl font-bold ${
-                          (isPlayer1 && game.gameState.lastCombatLog.winner === "player1") || 
-                          (!isPlayer1 && game.gameState.lastCombatLog.winner === "player2") 
-                            ? "text-green-400" 
-                            : "text-red-400"
-                        }`}>
-                          {(isPlayer1 && game.gameState.lastCombatLog.winner === "player1") || 
-                           (!isPlayer1 && game.gameState.lastCombatLog.winner === "player2") 
-                            ? "YOU WIN THIS ROUND!" 
-                            : "OPPONENT WINS THIS ROUND!"}
+                  );
+                })()}
+
+                {/* Step 5: Determine Winner & Full Damage Breakdown */}
+                {(() => {
+                  const log = game.gameState.lastCombatLog;
+                  const hasQS = (log.player1QuickStrikeDamage || 0) > 0 || (log.player2QuickStrikeDamage || 0) > 0;
+                  const stepNum = hasQS ? 5 : 4;
+                  const yourTotal = isPlayer1 ? log.player1Total : log.player2Total;
+                  const enemyTotal = isPlayer1 ? log.player2Total : log.player1Total;
+                  const baseDamage = Math.abs(yourTotal - enemyTotal);
+                  const yourQS = isPlayer1 ? (log.player1QuickStrikeDamage || 0) : (log.player2QuickStrikeDamage || 0);
+                  const enemyQS = isPlayer1 ? (log.player2QuickStrikeDamage || 0) : (log.player1QuickStrikeDamage || 0);
+                  const yourGuardian = isPlayer1 ? (log.player1GuardianBlocked || 0) : (log.player2GuardianBlocked || 0);
+                  const enemyGuardian = isPlayer1 ? (log.player2GuardianBlocked || 0) : (log.player1GuardianBlocked || 0);
+                  const yourHealing = isPlayer1 ? (log.player1Healing || 0) : (log.player2Healing || 0);
+                  const enemyHealing = isPlayer1 ? (log.player2Healing || 0) : (log.player1Healing || 0);
+                  const youWin = (isPlayer1 && log.winner === "player1") || (!isPlayer1 && log.winner === "player2");
+                  const isTie = log.winner === "tie";
+                  const damageYouTake = (youWin || isTie ? 0 : baseDamage) + enemyQS;
+                  const damageYouDeal = (!youWin || isTie ? 0 : baseDamage) + yourQS;
+                  const finalDmgYouTake = Math.max(0, damageYouTake - yourGuardian);
+                  const finalDmgYouDeal = Math.max(0, damageYouDeal - enemyGuardian);
+                  const hasTraitEffects = yourQS > 0 || enemyQS > 0 || yourGuardian > 0 || enemyGuardian > 0 || yourHealing > 0 || enemyHealing > 0;
+
+                  return (
+                    <div className="bg-slate-800/80 border border-slate-600 rounded-lg p-4">
+                      <div className="text-amber-400 font-bold mb-3 flex items-center gap-2">
+                        <span className="bg-amber-500 text-black px-2 py-0.5 rounded text-xs">STEP {stepNum}</span>
+                        Determine Winner & Damage
+                      </div>
+                      <div className="bg-slate-700/50 rounded-lg p-4 text-center">
+                        <div className="text-lg mb-2">
+                          <span className="text-green-400 font-bold">{yourTotal}</span>
+                          <span className="text-slate-400 mx-3">vs</span>
+                          <span className="text-red-400 font-bold">{enemyTotal}</span>
                         </div>
-                        <div className="text-slate-300 mt-2">
-                          Damage = |{isPlayer1 ? game.gameState.lastCombatLog.player1Total : game.gameState.lastCombatLog.player2Total} - {isPlayer1 ? game.gameState.lastCombatLog.player2Total : game.gameState.lastCombatLog.player1Total}| = <span className="text-amber-400 font-bold text-xl">{game.gameState.lastCombatLog.damage} HP</span>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
+                        {isTie ? (
+                          <div className="text-yellow-400 text-xl font-bold">
+                            {(yourQS > 0 || enemyQS > 0) ? "DRAW - Quick Strike damage still resolves!" : "DRAW - No damage dealt"}
+                          </div>
+                        ) : (
+                          <>
+                            <div className={`text-2xl font-bold ${youWin ? "text-green-400" : "text-red-400"}`}>
+                              {youWin ? "YOU WIN THIS ROUND!" : "OPPONENT WINS THIS ROUND!"}
+                            </div>
+                            <div className="text-slate-300 mt-2">
+                              Combat Damage = |{yourTotal} - {enemyTotal}| = <span className="text-amber-400 font-bold">{baseDamage} HP</span>
+                            </div>
+                          </>
+                        )}
+
+                        {hasTraitEffects && (
+                          <div className="mt-4 border-t border-slate-600 pt-4">
+                            <div className="text-xs text-slate-400 mb-2 font-bold uppercase">Full Damage Breakdown</div>
+                            <div className="grid grid-cols-2 gap-4 text-left text-xs">
+                              <div className="bg-green-900/20 border border-green-700/30 rounded p-2">
+                                <div className="text-green-400 font-bold mb-1">DAMAGE YOU DEAL:</div>
+                                {youWin && !isTie && baseDamage > 0 && <div className="text-slate-300">Combat win: <span className="text-amber-400 font-bold">{baseDamage}</span></div>}
+                                {yourQS > 0 && <div className="text-slate-300">Quick Strike: <span className="text-yellow-400 font-bold">+{yourQS}</span></div>}
+                                {enemyGuardian > 0 && <div className="text-slate-300">Enemy blocks: <span className="text-blue-400 font-bold">-{enemyGuardian}</span></div>}
+                                <div className="border-t border-green-500/30 mt-1 pt-1 text-green-300 font-bold">Total: {finalDmgYouDeal} HP to opponent</div>
+                              </div>
+                              <div className="bg-red-900/20 border border-red-700/30 rounded p-2">
+                                <div className="text-red-400 font-bold mb-1">DAMAGE YOU TAKE:</div>
+                                {!youWin && !isTie && baseDamage > 0 && <div className="text-slate-300">Combat loss: <span className="text-amber-400 font-bold">{baseDamage}</span></div>}
+                                {enemyQS > 0 && <div className="text-slate-300">Enemy Quick Strike: <span className="text-yellow-400 font-bold">+{enemyQS}</span></div>}
+                                {yourGuardian > 0 && <div className="text-slate-300">Your blocks: <span className="text-blue-400 font-bold">-{yourGuardian}</span></div>}
+                                <div className="border-t border-red-500/30 mt-1 pt-1 text-red-300 font-bold">Total: {finalDmgYouTake} HP to you</div>
+                              </div>
+                            </div>
+                            {(yourHealing > 0 || enemyHealing > 0) && (
+                              <div className="mt-2 text-xs">
+                                {yourHealing > 0 && <div className="text-emerald-400">You heal: +{yourHealing} HP</div>}
+                                {enemyHealing > 0 && <div className="text-emerald-400">Opponent heals: +{enemyHealing} HP</div>}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {game.gameState.lastCombatLog?.abilityEffects && game.gameState.lastCombatLog.abilityEffects.length > 0 && (
                   <div className="bg-slate-800/80 border border-amber-500/30 rounded-lg p-4" data-testid="combat-log-ability-effects">
                     <div className="text-amber-400 font-bold mb-3 flex items-center gap-2">
-                      <span className="bg-amber-600 text-black px-2 py-0.5 rounded text-xs">STEP 5</span>
+                      <span className="bg-amber-600 text-black px-2 py-0.5 rounded text-xs">STEP {((game.gameState.lastCombatLog.player1QuickStrikeDamage || 0) > 0 || (game.gameState.lastCombatLog.player2QuickStrikeDamage || 0) > 0) ? 6 : 5}</span>
                       Commander Ability Effects This Round
                     </div>
                     <div className="space-y-2">

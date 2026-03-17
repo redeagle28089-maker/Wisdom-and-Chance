@@ -765,6 +765,14 @@ class ServerGameEngine {
       winner,
       turn: game.currentTurn,
       abilityEffects: combatSummary.abilityEffects,
+      player1QuickStrikeDamage: combatSummary.player1QuickStrikeDamage,
+      player2QuickStrikeDamage: combatSummary.player2QuickStrikeDamage,
+      player1GuardianBlocked: combatSummary.player1GuardianBlocked,
+      player2GuardianBlocked: combatSummary.player2GuardianBlocked,
+      player1Healing: combatSummary.player1Healing,
+      player2Healing: combatSummary.player2Healing,
+      player1CardsDrawn: combatSummary.player1CardsDrawn,
+      player2CardsDrawn: combatSummary.player2CardsDrawn,
     };
 
     game.player1HP = newP1HP;

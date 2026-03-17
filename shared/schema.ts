@@ -138,6 +138,14 @@ export const combatLogSchema = z.object({
   winner: z.enum(["player1", "player2", "tie"]),
   turn: z.number(),
   abilityEffects: z.array(abilityEffectEntrySchema).optional(),
+  player1QuickStrikeDamage: z.number().optional(),
+  player2QuickStrikeDamage: z.number().optional(),
+  player1GuardianBlocked: z.number().optional(),
+  player2GuardianBlocked: z.number().optional(),
+  player1Healing: z.number().optional(),
+  player2Healing: z.number().optional(),
+  player1CardsDrawn: z.number().optional(),
+  player2CardsDrawn: z.number().optional(),
 });
 
 export type CombatLog = z.infer<typeof combatLogSchema>;
