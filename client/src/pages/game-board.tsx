@@ -3527,7 +3527,7 @@ export default function GameBoardPage() {
       traitValue: b.traitInfo?.value,
     }));
     
-    const damage = currentSummary ? (currentSummary.finalDamageToPlayer1 + currentSummary.finalDamageToPlayer2) : Math.abs(p1Power - p2Power);
+    const damage = Math.abs(p1Power - p2Power);
     const combatLog = {
       player1Cards: mapBreakdownToSchema(player1Breakdown),
       player2Cards: mapBreakdownToSchema(player2Breakdown),
@@ -4295,7 +4295,7 @@ export default function GameBoardPage() {
                   const stepNum = hasQS ? 5 : 4;
                   const yourTotal = isPlayer1 ? log.player1Total : log.player2Total;
                   const enemyTotal = isPlayer1 ? log.player2Total : log.player1Total;
-                  const baseDamage = Math.abs(yourTotal - enemyTotal);
+                  const rawPowerDiff = Math.abs(yourTotal - enemyTotal);
                   const yourQS = isPlayer1 ? (log.player1QuickStrikeDamage || 0) : (log.player2QuickStrikeDamage || 0);
                   const enemyQS = isPlayer1 ? (log.player2QuickStrikeDamage || 0) : (log.player1QuickStrikeDamage || 0);
                   const yourGuardian = isPlayer1 ? (log.player1GuardianBlocked || 0) : (log.player2GuardianBlocked || 0);
@@ -4304,11 +4304,20 @@ export default function GameBoardPage() {
                   const enemyHealing = isPlayer1 ? (log.player2Healing || 0) : (log.player1Healing || 0);
                   const youWin = (isPlayer1 && log.winner === "player1") || (!isPlayer1 && log.winner === "player2");
                   const isTie = log.winner === "tie";
-                  const damageYouTake = (youWin || isTie ? 0 : baseDamage) + enemyQS;
-                  const damageYouDeal = (!youWin || isTie ? 0 : baseDamage) + yourQS;
-                  const finalDmgYouTake = Math.max(0, damageYouTake - yourGuardian);
-                  const finalDmgYouDeal = Math.max(0, damageYouDeal - enemyGuardian);
-                  const hasTraitEffects = yourQS > 0 || enemyQS > 0 || yourGuardian > 0 || enemyGuardian > 0 || yourHealing > 0 || enemyHealing > 0;
+                  const winnerQS = youWin ? yourQS : enemyQS;
+                  const loserGuard = youWin ? enemyGuardian : yourGuardian;
+                  const loserQS = youWin ? enemyQS : yourQS;
+                  const winnerGuard = youWin ? yourGuardian : enemyGuardian;
+                  const totalDmgToLoser = isTie ? 0 : Math.max(0, rawPowerDiff - loserGuard + winnerQS);
+                  const totalDmgToWinner = Math.max(0, loserQS - winnerGuard);
+                  const dmgYouTake = isTie ? Math.max(0, enemyQS - yourGuardian) : (youWin ? totalDmgToWinner : totalDmgToLoser);
+                  const dmgYouDeal = isTie ? Math.max(0, yourQS - enemyGuardian) : (youWin ? totalDmgToLoser : totalDmgToWinner);
+                  const hasBreakdown = yourQS > 0 || enemyQS > 0 || yourGuardian > 0 || enemyGuardian > 0;
+                  const breakdownParts: string[] = [];
+                  if (rawPowerDiff > 0 && !isTie) breakdownParts.push(`${rawPowerDiff} power`);
+                  if (loserGuard > 0 && !isTie) breakdownParts.push(`-${loserGuard} blk`);
+                  if (winnerQS > 0 && !isTie) breakdownParts.push(`+${winnerQS} QS`);
+                  const breakdownLine = breakdownParts.length > 1 ? breakdownParts.join(' ') : '';
 
                   return (
                     <div className="bg-slate-800/80 border border-slate-600 rounded-lg p-4">
@@ -4323,37 +4332,49 @@ export default function GameBoardPage() {
                           <span className="text-red-400 font-bold">{enemyTotal}</span>
                         </div>
                         {isTie ? (
-                          <div className="text-yellow-400 text-xl font-bold">
-                            {(yourQS > 0 || enemyQS > 0) ? "DRAW - Quick Strike damage still resolves!" : "DRAW - No damage dealt"}
-                          </div>
+                          <>
+                            <div className="text-yellow-400 text-xl font-bold">
+                              {(yourQS > 0 || enemyQS > 0) ? "DRAW — Quick Strike damage still resolves!" : "DRAW - No damage dealt"}
+                            </div>
+                            {(yourQS > 0 || enemyQS > 0) && (
+                              <div className="text-slate-300 mt-2 text-sm">
+                                You dealt <span className="text-green-400 font-bold">{dmgYouDeal}</span> · Opponent dealt <span className="text-red-400 font-bold">{dmgYouTake}</span>
+                              </div>
+                            )}
+                          </>
                         ) : (
                           <>
                             <div className={`text-2xl font-bold ${youWin ? "text-green-400" : "text-red-400"}`}>
                               {youWin ? "YOU WIN THIS ROUND!" : "OPPONENT WINS THIS ROUND!"}
                             </div>
                             <div className="text-slate-300 mt-2">
-                              Combat Damage = |{yourTotal} - {enemyTotal}| = <span className="text-amber-400 font-bold">{baseDamage} HP</span>
+                              <span className="text-amber-400 font-bold text-xl">{totalDmgToLoser} dmg</span>
                             </div>
+                            {breakdownLine && (
+                              <div className="text-slate-400 text-sm mt-1">
+                                ({breakdownLine})
+                              </div>
+                            )}
                           </>
                         )}
 
-                        {hasTraitEffects && (
+                        {hasBreakdown && (
                           <div className="mt-4 border-t border-slate-600 pt-4">
                             <div className="text-xs text-slate-400 mb-2 font-bold uppercase">Full Damage Breakdown</div>
                             <div className="grid grid-cols-2 gap-4 text-left text-xs">
                               <div className="bg-green-900/20 border border-green-700/30 rounded p-2">
                                 <div className="text-green-400 font-bold mb-1">DAMAGE YOU DEAL:</div>
-                                {youWin && !isTie && baseDamage > 0 && <div className="text-slate-300">Combat win: <span className="text-amber-400 font-bold">{baseDamage}</span></div>}
-                                {yourQS > 0 && <div className="text-slate-300">Quick Strike: <span className="text-yellow-400 font-bold">+{yourQS}</span></div>}
+                                {youWin && !isTie && rawPowerDiff > 0 && <div className="text-slate-300">Power win: <span className="text-amber-400 font-bold">{rawPowerDiff}</span></div>}
+                                {yourQS > 0 && <div className="text-slate-300">Your Quick Strike: <span className="text-yellow-400 font-bold">+{yourQS}</span></div>}
                                 {enemyGuardian > 0 && <div className="text-slate-300">Enemy blocks: <span className="text-blue-400 font-bold">-{enemyGuardian}</span></div>}
-                                <div className="border-t border-green-500/30 mt-1 pt-1 text-green-300 font-bold">Total: {finalDmgYouDeal} HP to opponent</div>
+                                <div className="border-t border-green-500/30 mt-1 pt-1 text-green-300 font-bold">Total: {dmgYouDeal} HP to opponent</div>
                               </div>
                               <div className="bg-red-900/20 border border-red-700/30 rounded p-2">
                                 <div className="text-red-400 font-bold mb-1">DAMAGE YOU TAKE:</div>
-                                {!youWin && !isTie && baseDamage > 0 && <div className="text-slate-300">Combat loss: <span className="text-amber-400 font-bold">{baseDamage}</span></div>}
+                                {!youWin && !isTie && rawPowerDiff > 0 && <div className="text-slate-300">Power loss: <span className="text-amber-400 font-bold">{rawPowerDiff}</span></div>}
                                 {enemyQS > 0 && <div className="text-slate-300">Enemy Quick Strike: <span className="text-yellow-400 font-bold">+{enemyQS}</span></div>}
                                 {yourGuardian > 0 && <div className="text-slate-300">Your blocks: <span className="text-blue-400 font-bold">-{yourGuardian}</span></div>}
-                                <div className="border-t border-red-500/30 mt-1 pt-1 text-red-300 font-bold">Total: {finalDmgYouTake} HP to you</div>
+                                <div className="border-t border-red-500/30 mt-1 pt-1 text-red-300 font-bold">Total: {dmgYouTake} HP to you</div>
                               </div>
                             </div>
                             {(yourHealing > 0 || enemyHealing > 0) && (
@@ -4456,7 +4477,23 @@ export default function GameBoardPage() {
                   const enemyTotal = isPlayer1 ? log.player2Total : log.player1Total;
                   const youWon = (isPlayer1 && log.winner === "player1") || (!isPlayer1 && log.winner === "player2");
                   const isTie = log.winner === "tie";
-                  
+                  const rawPD = Math.abs(yourTotal - enemyTotal);
+                  const yQS = isPlayer1 ? (log.player1QuickStrikeDamage || 0) : (log.player2QuickStrikeDamage || 0);
+                  const eQS = isPlayer1 ? (log.player2QuickStrikeDamage || 0) : (log.player1QuickStrikeDamage || 0);
+                  const yGuard = isPlayer1 ? (log.player1GuardianBlocked || 0) : (log.player2GuardianBlocked || 0);
+                  const eGuard = isPlayer1 ? (log.player2GuardianBlocked || 0) : (log.player1GuardianBlocked || 0);
+                  const yHeal = isPlayer1 ? (log.player1Healing || 0) : (log.player2Healing || 0);
+                  const eHeal = isPlayer1 ? (log.player2Healing || 0) : (log.player1Healing || 0);
+                  const wQS = youWon ? yQS : eQS;
+                  const lGuard = youWon ? eGuard : yGuard;
+                  const totalDmg = isTie ? 0 : Math.max(0, rawPD - lGuard + wQS);
+                  const brkParts: string[] = [];
+                  if (!isTie && rawPD > 0) brkParts.push(`${rawPD} power`);
+                  if (!isTie && lGuard > 0) brkParts.push(`-${lGuard} blk`);
+                  if (!isTie && wQS > 0) brkParts.push(`+${wQS} QS`);
+                  const brkLine = brkParts.length > 1 ? `(${brkParts.join(' ')})` : '';
+                  const hasTraits = yQS > 0 || eQS > 0 || yGuard > 0 || eGuard > 0 || yHeal > 0 || eHeal > 0;
+
                   return (
                     <div key={index}>
                       <button
@@ -4476,7 +4513,7 @@ export default function GameBoardPage() {
                             <span className={`font-medium ${
                               isTie ? 'text-yellow-300' : youWon ? 'text-green-400' : 'text-red-400'
                             }`}>
-                              {isTie ? 'Draw' : youWon ? 'Won' : 'Lost'}
+                              {isTie ? (yQS > 0 || eQS > 0 ? 'Draw (QS)' : 'Draw') : youWon ? 'Won' : 'Lost'}
                             </span>
                           </div>
                           <div className="flex items-center gap-4 text-sm">
@@ -4485,11 +4522,21 @@ export default function GameBoardPage() {
                             <span className="text-red-400">Enemy: {enemyTotal}</span>
                             {!isTie && (
                               <Badge className={youWon ? 'bg-green-600/50' : 'bg-red-600/50'}>
-                                {log.damage} dmg
+                                {totalDmg} dmg {brkLine}
                               </Badge>
                             )}
                           </div>
                         </div>
+                        {hasTraits && (
+                          <div className="flex items-center gap-2 mt-2 flex-wrap">
+                            {yQS > 0 && <span className="text-xs px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">QS You: {yQS}</span>}
+                            {eQS > 0 && <span className="text-xs px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">QS Opp: {eQS}</span>}
+                            {yGuard > 0 && <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">Guard You: {yGuard}</span>}
+                            {eGuard > 0 && <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">Guard Opp: {eGuard}</span>}
+                            {yHeal > 0 && <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Heal You: {yHeal}</span>}
+                            {eHeal > 0 && <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Heal Opp: {eHeal}</span>}
+                          </div>
+                        )}
                       </button>
                       
                       {selectedHistoryRound === index && (
