@@ -700,8 +700,10 @@ class ServerGameEngine {
       gs.abilityLog || [], game.currentTurn
     );
 
-    let newP1HP = game.player1HP - combatSummary.finalDamageToPlayer1 + combatSummary.player1Healing;
-    let newP2HP = game.player2HP - combatSummary.finalDamageToPlayer2 + combatSummary.player2Healing;
+    let newP1HP = Math.min(GAME_CONSTANTS.STARTING_HP, game.player1HP + combatSummary.player1Healing);
+    newP1HP -= combatSummary.finalDamageToPlayer1;
+    let newP2HP = Math.min(GAME_CONSTANTS.STARTING_HP, game.player2HP + combatSummary.player2Healing);
+    newP2HP -= combatSummary.finalDamageToPlayer2;
     let newP1VP = game.player1VictoryPoints;
     let newP2VP = game.player2VictoryPoints;
     let newP1WP = game.player1WithdrawalPoints;
@@ -738,6 +740,12 @@ class ServerGameEngine {
     const p1Yard = [...gs.player1Yard, ...gs.player1Battlefield.map(bf => bf.cardId)];
     const p2Yard = [...gs.player2Yard, ...gs.player2Battlefield.map(bf => bf.cardId)];
 
+    const loserNetDmg = winner === "player1"
+      ? combatSummary.finalDamageToPlayer2
+      : winner === "player2"
+        ? combatSummary.finalDamageToPlayer1
+        : 0;
+
     const combatLog: CombatLog = {
       player1Cards: p1Breakdown.map(b => ({
         cardId: b.card.id,
@@ -761,7 +769,7 @@ class ServerGameEngine {
       })),
       player1Total: p1Total,
       player2Total: p2Total,
-      damage,
+      damage: loserNetDmg,
       winner,
       turn: game.currentTurn,
       abilityEffects: combatSummary.abilityEffects,
@@ -773,6 +781,8 @@ class ServerGameEngine {
       player2Healing: combatSummary.player2Healing,
       player1CardsDrawn: combatSummary.player1CardsDrawn,
       player2CardsDrawn: combatSummary.player2CardsDrawn,
+      player1NetDmg: combatSummary.finalDamageToPlayer1,
+      player2NetDmg: combatSummary.finalDamageToPlayer2,
     };
 
     game.player1HP = newP1HP;

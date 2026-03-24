@@ -146,6 +146,8 @@ export const combatLogSchema = z.object({
   player2Healing: z.number().optional(),
   player1CardsDrawn: z.number().optional(),
   player2CardsDrawn: z.number().optional(),
+  player1NetDmg: z.number().optional(),
+  player2NetDmg: z.number().optional(),
 });
 
 export type CombatLog = z.infer<typeof combatLogSchema>;

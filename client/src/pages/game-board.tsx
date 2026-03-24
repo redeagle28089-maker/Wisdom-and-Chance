@@ -3434,10 +3434,10 @@ export default function GameBoardPage() {
     let newP2WP = game.player2WithdrawalPoints;
 
     if (currentSummary) {
+      newP1HP = Math.min(GAME_CONSTANTS.STARTING_HP, newP1HP + currentSummary.player1Healing);
+      newP2HP = Math.min(GAME_CONSTANTS.STARTING_HP, newP2HP + currentSummary.player2Healing);
       newP1HP -= currentSummary.finalDamageToPlayer1;
       newP2HP -= currentSummary.finalDamageToPlayer2;
-      newP1HP += currentSummary.player1Healing;
-      newP2HP += currentSummary.player2Healing;
 
       const p1WonRound = currentSummary.finalDamageToPlayer2 > 0 && currentSummary.finalDamageToPlayer1 === 0;
       const p2WonRound = currentSummary.finalDamageToPlayer1 > 0 && currentSummary.finalDamageToPlayer2 === 0;
@@ -3527,14 +3527,17 @@ export default function GameBoardPage() {
       traitValue: b.traitInfo?.value,
     }));
     
-    const damage = Math.abs(p1Power - p2Power);
+    const roundWinner = p1Power > p2Power ? "player1" as const : p2Power > p1Power ? "player2" as const : "tie" as const;
+    const p1NetDmg = currentSummary?.finalDamageToPlayer1 || 0;
+    const p2NetDmg = currentSummary?.finalDamageToPlayer2 || 0;
+    const loserNetDmg = roundWinner === "player1" ? p2NetDmg : roundWinner === "player2" ? p1NetDmg : 0;
     const combatLog = {
       player1Cards: mapBreakdownToSchema(player1Breakdown),
       player2Cards: mapBreakdownToSchema(player2Breakdown),
       player1Total: p1Power,
       player2Total: p2Power,
-      damage,
-      winner: p1Power > p2Power ? "player1" as const : p2Power > p1Power ? "player2" as const : "tie" as const,
+      damage: loserNetDmg,
+      winner: roundWinner,
       turn: game.currentTurn,
       abilityEffects: currentSummary?.abilityEffects || [],
       player1QuickStrikeDamage: currentSummary?.player1QuickStrikeDamage || 0,
@@ -3545,6 +3548,8 @@ export default function GameBoardPage() {
       player2Healing: currentSummary?.player2Healing || 0,
       player1CardsDrawn: currentSummary?.player1CardsDrawn || 0,
       player2CardsDrawn: currentSummary?.player2CardsDrawn || 0,
+      player1NetDmg: p1NetDmg,
+      player2NetDmg: p2NetDmg,
     };
     
     newGameState.lastCombatLog = combatLog;
@@ -4302,21 +4307,19 @@ export default function GameBoardPage() {
                   const enemyGuardian = isPlayer1 ? (log.player2GuardianBlocked || 0) : (log.player1GuardianBlocked || 0);
                   const yourHealing = isPlayer1 ? (log.player1Healing || 0) : (log.player2Healing || 0);
                   const enemyHealing = isPlayer1 ? (log.player2Healing || 0) : (log.player1Healing || 0);
+                  const yourNetDmg = isPlayer1 ? (log.player1NetDmg || 0) : (log.player2NetDmg || 0);
+                  const enemyNetDmg = isPlayer1 ? (log.player2NetDmg || 0) : (log.player1NetDmg || 0);
                   const youWin = (isPlayer1 && log.winner === "player1") || (!isPlayer1 && log.winner === "player2");
                   const isTie = log.winner === "tie";
                   const winnerQS = youWin ? yourQS : enemyQS;
                   const loserGuard = youWin ? enemyGuardian : yourGuardian;
-                  const loserQS = youWin ? enemyQS : yourQS;
-                  const winnerGuard = youWin ? yourGuardian : enemyGuardian;
-                  const totalDmgToLoser = isTie ? 0 : Math.max(0, rawPowerDiff - loserGuard + winnerQS);
-                  const totalDmgToWinner = Math.max(0, loserQS - winnerGuard);
-                  const dmgYouTake = isTie ? Math.max(0, enemyQS - yourGuardian) : (youWin ? totalDmgToWinner : totalDmgToLoser);
-                  const dmgYouDeal = isTie ? Math.max(0, yourQS - enemyGuardian) : (youWin ? totalDmgToLoser : totalDmgToWinner);
+                  const loserNetDmg = youWin ? enemyNetDmg : yourNetDmg;
+                  const winnerNetDmg = youWin ? yourNetDmg : enemyNetDmg;
                   const hasBreakdown = yourQS > 0 || enemyQS > 0 || yourGuardian > 0 || enemyGuardian > 0;
                   const breakdownParts: string[] = [];
                   if (rawPowerDiff > 0 && !isTie) breakdownParts.push(`${rawPowerDiff} power`);
-                  if (loserGuard > 0 && !isTie) breakdownParts.push(`-${loserGuard} blk`);
                   if (winnerQS > 0 && !isTie) breakdownParts.push(`+${winnerQS} QS`);
+                  if (loserGuard > 0 && !isTie) breakdownParts.push(`-${loserGuard} blk`);
                   const breakdownLine = breakdownParts.length > 1 ? breakdownParts.join(' ') : '';
 
                   return (
@@ -4338,7 +4341,7 @@ export default function GameBoardPage() {
                             </div>
                             {(yourQS > 0 || enemyQS > 0) && (
                               <div className="text-slate-300 mt-2 text-sm">
-                                You dealt <span className="text-green-400 font-bold">{dmgYouDeal}</span> · Opponent dealt <span className="text-red-400 font-bold">{dmgYouTake}</span>
+                                You dealt <span className="text-green-400 font-bold">{yourNetDmg > 0 ? yourNetDmg : Math.max(0, yourQS - enemyGuardian)}</span> · Opponent dealt <span className="text-red-400 font-bold">{enemyNetDmg > 0 ? enemyNetDmg : Math.max(0, enemyQS - yourGuardian)}</span>
                               </div>
                             )}
                           </>
@@ -4348,11 +4351,16 @@ export default function GameBoardPage() {
                               {youWin ? "YOU WIN THIS ROUND!" : "OPPONENT WINS THIS ROUND!"}
                             </div>
                             <div className="text-slate-300 mt-2">
-                              <span className="text-amber-400 font-bold text-xl">{totalDmgToLoser} dmg</span>
+                              <span className="text-amber-400 font-bold text-xl">{loserNetDmg} dmg</span>
                             </div>
                             {breakdownLine && (
                               <div className="text-slate-400 text-sm mt-1">
                                 ({breakdownLine})
+                              </div>
+                            )}
+                            {winnerNetDmg > 0 && (
+                              <div className="text-yellow-400 text-sm mt-1">
+                                +{winnerNetDmg} QS back
                               </div>
                             )}
                           </>
@@ -4367,14 +4375,14 @@ export default function GameBoardPage() {
                                 {youWin && !isTie && rawPowerDiff > 0 && <div className="text-slate-300">Power win: <span className="text-amber-400 font-bold">{rawPowerDiff}</span></div>}
                                 {yourQS > 0 && <div className="text-slate-300">Your Quick Strike: <span className="text-yellow-400 font-bold">+{yourQS}</span></div>}
                                 {enemyGuardian > 0 && <div className="text-slate-300">Enemy blocks: <span className="text-blue-400 font-bold">-{enemyGuardian}</span></div>}
-                                <div className="border-t border-green-500/30 mt-1 pt-1 text-green-300 font-bold">Total: {dmgYouDeal} HP to opponent</div>
+                                <div className="border-t border-green-500/30 mt-1 pt-1 text-green-300 font-bold">Total: {enemyNetDmg} HP to opponent</div>
                               </div>
                               <div className="bg-red-900/20 border border-red-700/30 rounded p-2">
                                 <div className="text-red-400 font-bold mb-1">DAMAGE YOU TAKE:</div>
                                 {!youWin && !isTie && rawPowerDiff > 0 && <div className="text-slate-300">Power loss: <span className="text-amber-400 font-bold">{rawPowerDiff}</span></div>}
                                 {enemyQS > 0 && <div className="text-slate-300">Enemy Quick Strike: <span className="text-yellow-400 font-bold">+{enemyQS}</span></div>}
                                 {yourGuardian > 0 && <div className="text-slate-300">Your blocks: <span className="text-blue-400 font-bold">-{yourGuardian}</span></div>}
-                                <div className="border-t border-red-500/30 mt-1 pt-1 text-red-300 font-bold">Total: {dmgYouTake} HP to you</div>
+                                <div className="border-t border-red-500/30 mt-1 pt-1 text-red-300 font-bold">Total: {yourNetDmg} HP to you</div>
                               </div>
                             </div>
                             {(yourHealing > 0 || enemyHealing > 0) && (
@@ -4484,13 +4492,16 @@ export default function GameBoardPage() {
                   const eGuard = isPlayer1 ? (log.player2GuardianBlocked || 0) : (log.player1GuardianBlocked || 0);
                   const yHeal = isPlayer1 ? (log.player1Healing || 0) : (log.player2Healing || 0);
                   const eHeal = isPlayer1 ? (log.player2Healing || 0) : (log.player1Healing || 0);
+                  const yNetDmg = isPlayer1 ? (log.player1NetDmg || 0) : (log.player2NetDmg || 0);
+                  const eNetDmg = isPlayer1 ? (log.player2NetDmg || 0) : (log.player1NetDmg || 0);
                   const wQS = youWon ? yQS : eQS;
                   const lGuard = youWon ? eGuard : yGuard;
-                  const totalDmg = isTie ? 0 : Math.max(0, rawPD - lGuard + wQS);
+                  const loserNetDmg = youWon ? eNetDmg : yNetDmg;
+                  const winnerNetDmg = youWon ? yNetDmg : eNetDmg;
                   const brkParts: string[] = [];
                   if (!isTie && rawPD > 0) brkParts.push(`${rawPD} power`);
-                  if (!isTie && lGuard > 0) brkParts.push(`-${lGuard} blk`);
                   if (!isTie && wQS > 0) brkParts.push(`+${wQS} QS`);
+                  if (!isTie && lGuard > 0) brkParts.push(`-${lGuard} blk`);
                   const brkLine = brkParts.length > 1 ? `(${brkParts.join(' ')})` : '';
                   const hasTraits = yQS > 0 || eQS > 0 || yGuard > 0 || eGuard > 0 || yHeal > 0 || eHeal > 0;
 
@@ -4522,7 +4533,12 @@ export default function GameBoardPage() {
                             <span className="text-red-400">Enemy: {enemyTotal}</span>
                             {!isTie && (
                               <Badge className={youWon ? 'bg-green-600/50' : 'bg-red-600/50'}>
-                                {totalDmg} dmg {brkLine}
+                                {loserNetDmg} dmg {brkLine}
+                              </Badge>
+                            )}
+                            {!isTie && winnerNetDmg > 0 && (
+                              <Badge className="bg-yellow-600/50">
+                                +{winnerNetDmg} QS back
                               </Badge>
                             )}
                           </div>
