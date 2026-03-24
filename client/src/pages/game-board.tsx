@@ -3455,8 +3455,11 @@ export default function GameBoardPage() {
         p2Cards, p1Cards, getCardById,
         gs3.player2AbilityBuffs, gs3.player2BlockedEffects, gs3.player1NegateAndHalve, gs3.player2ProtectedElement
       );
+    }
+    if (!currentSummary) {
       const p1T = player1Breakdown.reduce((sum, b) => sum + b.finalPower, 0);
       const p2T = player2Breakdown.reduce((sum, b) => sum + b.finalPower, 0);
+      const gs3 = game.gameState;
       currentSummary = generateCombatLog(
         player1Breakdown, player2Breakdown, p1T, p2T,
         gs3.player1AbilityBuffs || [], gs3.player2AbilityBuffs || [],
@@ -3474,48 +3477,27 @@ export default function GameBoardPage() {
     let newP1WP = game.player1WithdrawalPoints;
     let newP2WP = game.player2WithdrawalPoints;
 
-    if (currentSummary) {
-      newP1HP = Math.min(GAME_CONSTANTS.STARTING_HP, newP1HP + currentSummary.player1Healing);
-      newP2HP = Math.min(GAME_CONSTANTS.STARTING_HP, newP2HP + currentSummary.player2Healing);
-      newP1HP -= currentSummary.finalDamageToPlayer1;
-      newP2HP -= currentSummary.finalDamageToPlayer2;
+    newP1HP = Math.min(GAME_CONSTANTS.STARTING_HP, newP1HP + currentSummary.player1Healing);
+    newP2HP = Math.min(GAME_CONSTANTS.STARTING_HP, newP2HP + currentSummary.player2Healing);
+    newP1HP -= currentSummary.finalDamageToPlayer1;
+    newP2HP -= currentSummary.finalDamageToPlayer2;
 
-      const powerWinner = p1Power > p2Power ? "player1" : p2Power > p1Power ? "player2" : "tie";
+    const powerWinner = p1Power > p2Power ? "player1" : p2Power > p1Power ? "player2" : "tie";
 
-      if (powerWinner === "player1") {
-        newP1VP += 1;
-        newP2WP += 1;
-        toast({ title: `Player 1 wins! ${currentSummary.finalDamageToPlayer2} damage dealt.` });
-      } else if (powerWinner === "player2") {
-        newP2VP += 1;
-        newP1WP += 1;
-        toast({ title: `Player 2 wins! ${currentSummary.finalDamageToPlayer1} damage dealt.` });
-      } else {
-        newP1VP += 1;
-        newP2VP += 1;
-        newP1WP += 1;
-        newP2WP += 1;
-        toast({ title: "Draw! Both players get +1 Advance and +1 Withdraw." });
-      }
+    if (powerWinner === "player1") {
+      newP1VP += 1;
+      newP2WP += 1;
+      toast({ title: `Player 1 wins! ${currentSummary.finalDamageToPlayer2} damage dealt.` });
+    } else if (powerWinner === "player2") {
+      newP2VP += 1;
+      newP1WP += 1;
+      toast({ title: `Player 2 wins! ${currentSummary.finalDamageToPlayer1} damage dealt.` });
     } else {
-      const damage = Math.abs(p1Power - p2Power);
-      if (p1Power > p2Power) {
-        newP2HP -= damage;
-        newP1VP += 1;
-        newP2WP += 1;
-        toast({ title: `Player 1 wins! ${damage} damage dealt.` });
-      } else if (p2Power > p1Power) {
-        newP1HP -= damage;
-        newP2VP += 1;
-        newP1WP += 1;
-        toast({ title: `Player 2 wins! ${damage} damage dealt.` });
-      } else {
-        newP1VP += 1;
-        newP2VP += 1;
-        newP1WP += 1;
-        newP2WP += 1;
-        toast({ title: "Draw! Both players get +1 Advance and +1 Withdraw." });
-      }
+      newP1VP += 1;
+      newP2VP += 1;
+      newP1WP += 1;
+      newP2WP += 1;
+      toast({ title: "Draw! Both players get +1 Advance and +1 Withdraw." });
     }
 
     const p1Yard = [...game.gameState.player1Yard, ...game.gameState.player1Battlefield.map((bf) => bf.cardId)];
@@ -3564,8 +3546,8 @@ export default function GameBoardPage() {
     }));
     
     const roundWinner = p1Power > p2Power ? "player1" as const : p2Power > p1Power ? "player2" as const : "tie" as const;
-    const p1NetDmg = currentSummary?.finalDamageToPlayer1 || 0;
-    const p2NetDmg = currentSummary?.finalDamageToPlayer2 || 0;
+    const p1NetDmg = currentSummary.finalDamageToPlayer1;
+    const p2NetDmg = currentSummary.finalDamageToPlayer2;
     const loserNetDmg = roundWinner === "player1" ? p2NetDmg : roundWinner === "player2" ? p1NetDmg : 0;
     const combatLog = {
       player1Cards: mapBreakdownToSchema(player1Breakdown),
@@ -3575,15 +3557,15 @@ export default function GameBoardPage() {
       damage: loserNetDmg,
       winner: roundWinner,
       turn: game.currentTurn,
-      abilityEffects: currentSummary?.abilityEffects || [],
-      player1QuickStrikeDamage: currentSummary?.player1QuickStrikeDamage || 0,
-      player2QuickStrikeDamage: currentSummary?.player2QuickStrikeDamage || 0,
-      player1GuardianBlocked: currentSummary?.player1GuardianBlocked || 0,
-      player2GuardianBlocked: currentSummary?.player2GuardianBlocked || 0,
-      player1Healing: currentSummary?.player1Healing || 0,
-      player2Healing: currentSummary?.player2Healing || 0,
-      player1CardsDrawn: currentSummary?.player1CardsDrawn || 0,
-      player2CardsDrawn: currentSummary?.player2CardsDrawn || 0,
+      abilityEffects: currentSummary.abilityEffects,
+      player1QuickStrikeDamage: currentSummary.player1QuickStrikeDamage,
+      player2QuickStrikeDamage: currentSummary.player2QuickStrikeDamage,
+      player1GuardianBlocked: currentSummary.player1GuardianBlocked,
+      player2GuardianBlocked: currentSummary.player2GuardianBlocked,
+      player1Healing: currentSummary.player1Healing,
+      player2Healing: currentSummary.player2Healing,
+      player1CardsDrawn: currentSummary.player1CardsDrawn,
+      player2CardsDrawn: currentSummary.player2CardsDrawn,
       player1NetDmg: p1NetDmg,
       player2NetDmg: p2NetDmg,
     };
