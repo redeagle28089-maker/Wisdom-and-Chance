@@ -2575,28 +2575,55 @@ export default function GameBoardPage() {
         const p1Power = player1Breakdown.reduce((sum, b) => sum + b.finalPower, 0);
         const p2Power = player2Breakdown.reduce((sum, b) => sum + b.finalPower, 0);
         
-        const damage = Math.abs(p1Power - p2Power);
-        let newP1HP = game.player1HP;
-        let newP2HP = game.player2HP;
+        const aiSummary = generateCombatLog(
+          player1Breakdown, player2Breakdown, p1Power, p2Power,
+          gs.player1AbilityBuffs || [], gs.player2AbilityBuffs || [],
+          (gs as any).abilityLog || [], game.currentTurn
+        );
+
+        let newP1HP = Math.min(GAME_CONSTANTS.STARTING_HP, game.player1HP + aiSummary.player1Healing);
+        newP1HP -= aiSummary.finalDamageToPlayer1;
+        let newP2HP = Math.min(GAME_CONSTANTS.STARTING_HP, game.player2HP + aiSummary.player2Healing);
+        newP2HP -= aiSummary.finalDamageToPlayer2;
         let newP1VP = game.player1VictoryPoints;
         let newP2VP = game.player2VictoryPoints;
         let newP1WP = game.player1WithdrawalPoints;
         let newP2WP = game.player2WithdrawalPoints;
         
-        if (p1Power > p2Power) {
-          newP2HP -= damage;
+        const aiWinner = p1Power > p2Power ? "player1" : p2Power > p1Power ? "player2" : "tie";
+        if (aiWinner === "player1") {
           newP1VP += 1;
           newP2WP += 1;
-          toast({ title: `You win the round! ${damage} damage dealt.` });
-        } else if (p2Power > p1Power) {
-          newP1HP -= damage;
+          toast({ title: `You win the round! ${aiSummary.finalDamageToPlayer2} damage dealt.` });
+        } else if (aiWinner === "player2") {
           newP2VP += 1;
           newP1WP += 1;
-          toast({ title: `AI wins the round! ${damage} damage dealt.`, variant: "destructive" });
+          toast({ title: `AI wins the round! ${aiSummary.finalDamageToPlayer1} damage dealt.`, variant: "destructive" });
         } else {
-          toast({ title: "Draw! No damage dealt." });
+          newP1VP += 1;
+          newP2VP += 1;
+          newP1WP += 1;
+          newP2WP += 1;
+          toast({ title: "Draw! Both players get +1 Advance and +1 Withdraw." });
         }
         
+        if (aiSummary.player1CardsDrawn > 0) {
+          const deck = [...gs.player1Deck];
+          const hand = [...gs.player1Hand];
+          const toDraw = Math.min(aiSummary.player1CardsDrawn, deck.length);
+          for (let i = 0; i < toDraw; i++) hand.push(deck.shift()!);
+          gs.player1Deck = deck;
+          gs.player1Hand = hand;
+        }
+        if (aiSummary.player2CardsDrawn > 0) {
+          const deck = [...gs.player2Deck];
+          const hand = [...gs.player2Hand];
+          const toDraw = Math.min(aiSummary.player2CardsDrawn, deck.length);
+          for (let i = 0; i < toDraw; i++) hand.push(deck.shift()!);
+          gs.player2Deck = deck;
+          gs.player2Hand = hand;
+        }
+
         const p1Yard = [...game.gameState.player1Yard, ...game.gameState.player1Battlefield.map(bf => bf.cardId)];
         const p2Yard = [...game.gameState.player2Yard, ...game.gameState.player2Battlefield.map(bf => bf.cardId)];
         
@@ -2611,14 +2638,28 @@ export default function GameBoardPage() {
           traitValue: b.traitInfo?.value,
         }));
         
+        const aiP1NetDmg = aiSummary.finalDamageToPlayer1;
+        const aiP2NetDmg = aiSummary.finalDamageToPlayer2;
+        const aiLoserNetDmg = aiWinner === "player1" ? aiP2NetDmg : aiWinner === "player2" ? aiP1NetDmg : 0;
         const combatLog = {
           player1Cards: mapBreakdownToSchema(player1Breakdown),
           player2Cards: mapBreakdownToSchema(player2Breakdown),
           player1Total: p1Power,
           player2Total: p2Power,
-          damage,
-          winner: p1Power > p2Power ? "player1" as const : p2Power > p1Power ? "player2" as const : "tie" as const,
+          damage: aiLoserNetDmg,
+          winner: aiWinner as "player1" | "player2" | "tie",
           turn: game.currentTurn,
+          abilityEffects: aiSummary.abilityEffects,
+          player1QuickStrikeDamage: aiSummary.player1QuickStrikeDamage,
+          player2QuickStrikeDamage: aiSummary.player2QuickStrikeDamage,
+          player1GuardianBlocked: aiSummary.player1GuardianBlocked,
+          player2GuardianBlocked: aiSummary.player2GuardianBlocked,
+          player1Healing: aiSummary.player1Healing,
+          player2Healing: aiSummary.player2Healing,
+          player1CardsDrawn: aiSummary.player1CardsDrawn,
+          player2CardsDrawn: aiSummary.player2CardsDrawn,
+          player1NetDmg: aiP1NetDmg,
+          player2NetDmg: aiP2NetDmg,
         };
         
         const newGameState = {
