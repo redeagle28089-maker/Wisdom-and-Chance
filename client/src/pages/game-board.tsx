@@ -2578,7 +2578,7 @@ export default function GameBoardPage() {
         const aiSummary = generateCombatLog(
           player1Breakdown, player2Breakdown, p1Power, p2Power,
           gs.player1AbilityBuffs || [], gs.player2AbilityBuffs || [],
-          (gs as any).abilityLog || [], game.currentTurn
+          gs.abilityLog || [], game.currentTurn
         );
 
         let newP1HP = Math.min(GAME_CONSTANTS.STARTING_HP, game.player1HP + aiSummary.player1Healing);
@@ -3378,7 +3378,7 @@ export default function GameBoardPage() {
     const summary = generateCombatLog(
       player1Breakdown, player2Breakdown, player1Total, player2Total,
       gs2.player1AbilityBuffs || [], gs2.player2AbilityBuffs || [],
-      (game.gameState as any).abilityLog || [], game.currentTurn
+      game.gameState.abilityLog || [], game.currentTurn
     );
     
     setCombatBreakdown({ player1: player1Breakdown, player2: player2Breakdown });
@@ -3460,7 +3460,7 @@ export default function GameBoardPage() {
       currentSummary = generateCombatLog(
         player1Breakdown, player2Breakdown, p1T, p2T,
         gs3.player1AbilityBuffs || [], gs3.player2AbilityBuffs || [],
-        (gs3 as any).abilityLog || [], game.currentTurn
+        gs3.abilityLog || [], game.currentTurn
       );
     }
     
