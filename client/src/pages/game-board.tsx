@@ -3439,21 +3439,16 @@ export default function GameBoardPage() {
       newP1HP -= currentSummary.finalDamageToPlayer1;
       newP2HP -= currentSummary.finalDamageToPlayer2;
 
-      const p1WonRound = currentSummary.finalDamageToPlayer2 > 0 && currentSummary.finalDamageToPlayer1 === 0;
-      const p2WonRound = currentSummary.finalDamageToPlayer1 > 0 && currentSummary.finalDamageToPlayer2 === 0;
-      const tiedRound = (currentSummary.finalDamageToPlayer1 === 0 && currentSummary.finalDamageToPlayer2 === 0) || 
-                         (currentSummary.finalDamageToPlayer1 > 0 && currentSummary.finalDamageToPlayer2 > 0);
+      const powerWinner = p1Power > p2Power ? "player1" : p2Power > p1Power ? "player2" : "tie";
 
-      if (p1WonRound) {
+      if (powerWinner === "player1") {
         newP1VP += 1;
         newP2WP += 1;
-        const totalDmg = currentSummary.finalDamageToPlayer2;
-        toast({ title: `Player 1 wins! ${totalDmg} damage dealt.` });
-      } else if (p2WonRound) {
+        toast({ title: `Player 1 wins! ${currentSummary.finalDamageToPlayer2} damage dealt.` });
+      } else if (powerWinner === "player2") {
         newP2VP += 1;
         newP1WP += 1;
-        const totalDmg = currentSummary.finalDamageToPlayer1;
-        toast({ title: `Player 2 wins! ${totalDmg} damage dealt.` });
+        toast({ title: `Player 2 wins! ${currentSummary.finalDamageToPlayer1} damage dealt.` });
       } else {
         newP1VP += 1;
         newP2VP += 1;
