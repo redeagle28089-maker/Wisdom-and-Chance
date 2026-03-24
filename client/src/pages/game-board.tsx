@@ -4336,7 +4336,7 @@ export default function GameBoardPage() {
                             </div>
                             {(yourQS > 0 || enemyQS > 0) && (
                               <div className="text-slate-300 mt-2 text-sm">
-                                You dealt <span className="text-green-400 font-bold">{yourNetDmg > 0 ? yourNetDmg : Math.max(0, yourQS - enemyGuardian)}</span> · Opponent dealt <span className="text-red-400 font-bold">{enemyNetDmg > 0 ? enemyNetDmg : Math.max(0, enemyQS - yourGuardian)}</span>
+                                You dealt <span className="text-green-400 font-bold">{enemyNetDmg > 0 ? enemyNetDmg : Math.max(0, yourQS - enemyGuardian)}</span> · Opponent dealt <span className="text-red-400 font-bold">{yourNetDmg > 0 ? yourNetDmg : Math.max(0, enemyQS - yourGuardian)}</span>
                               </div>
                             )}
                           </>
