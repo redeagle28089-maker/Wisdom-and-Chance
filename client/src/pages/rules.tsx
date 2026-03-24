@@ -6,7 +6,7 @@ const phases = [
   { name: "Draw Phase", description: "Draw 2 cards from your deck", icon: ArrowRight },
   { name: "Deployment", description: "Play up to 2 cards face-down on your battlefield, use deployment phase commander abilities", icon: Shield },
   { name: "Combat Phase", description: "Reveal and flip all deployed cards, use combat phase commander abilities", icon: Flame },
-  { name: "Calculation", description: "Resolve combat via 8-step flow: Quick Strike, power comparison, Guardian blocking, healing, determine winner, apply net damage, Care Package draws", icon: Trophy },
+  { name: "Calculation", description: "Resolve combat via 8-step flow: deploy & reveal, calculate power, Quick Strike, Guardian blocking, healing, determine winner, apply net damage, Care Package", icon: Trophy },
   { name: "End Phase", description: "Check win conditions and prepare for next turn", icon: Flag },
 ];
 
@@ -189,8 +189,8 @@ export default function RulesPage() {
             <div className="space-y-3">
               {[
                 { step: 1, name: "Deploy & Reveal", desc: "Both players' face-down cards are revealed on the battlefield." },
-                { step: 2, name: "Quick Strike", desc: "Cards with Quick Strike deal direct HP damage to the opponent, bypassing power comparison. Commander first_strike abilities also apply." },
-                { step: 3, name: "Calculate Power", desc: "Each card's final power = base power + buffs - debuffs (min 0). Both sides' totals are summed." },
+                { step: 2, name: "Calculate Power", desc: "Each card's final power = base power + buffs - debuffs (min 0). Both sides' totals are summed." },
+                { step: 3, name: "Quick Strike", desc: "Cards with Quick Strike deal direct HP damage to the opponent, bypassing power comparison. Commander first_strike abilities also apply." },
                 { step: 4, name: "Guardian Block", desc: "Guardian trait and commander shield abilities reduce total incoming damage (combat + Quick Strike). Cannot over-block past actual incoming." },
                 { step: 5, name: "Healing", desc: "Restoration trait and commander heal abilities restore HP before damage is applied. Capped at max 40 HP." },
                 { step: 6, name: "Determine Winner", desc: "Higher total power wins. Equal power = draw. Winner: +1 VP. Loser: +1 WP. Draw: both get +1 VP and +1 WP." },
