@@ -691,7 +691,6 @@ class ServerGameEngine {
 
     const p1Total = p1Breakdown.reduce((sum, b) => sum + b.finalPower, 0);
     const p2Total = p2Breakdown.reduce((sum, b) => sum + b.finalPower, 0);
-    const damage = Math.abs(p1Total - p2Total);
     const winner: "player1" | "player2" | "tie" = p1Total > p2Total ? "player1" : p2Total > p1Total ? "player2" : "tie";
 
     const combatSummary = this.generateCombatSummary(
@@ -861,7 +860,7 @@ class ServerGameEngine {
       })),
       player1Total: p1Total,
       player2Total: p2Total,
-      damage,
+      damage: loserNetDmg,
       winner,
       combatSummary,
       combatLog,
