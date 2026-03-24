@@ -6,7 +6,7 @@ const phases = [
   { name: "Draw Phase", description: "Draw 2 cards from your deck", icon: ArrowRight },
   { name: "Deployment", description: "Play up to 2 cards face-down on your battlefield, use deployment phase commander abilities", icon: Shield },
   { name: "Combat Phase", description: "Reveal and flip all deployed cards, use combat phase commander abilities", icon: Flame },
-  { name: "Calculation", description: "Compare total power, loser takes damage, use calculation phase commander abilities", icon: Trophy },
+  { name: "Calculation", description: "Resolve combat via 8-step flow: Quick Strike, power comparison, Guardian blocking, healing, determine winner, apply net damage, Care Package draws", icon: Trophy },
   { name: "End Phase", description: "Check win conditions and prepare for next turn", icon: Flag },
 ];
 
@@ -19,10 +19,10 @@ const elements = [
 ];
 
 const traits = [
-  { name: "Quick Strike", emoji: "⚡", description: "Deal immediate damage to opponent during deployment", icon: Zap },
-  { name: "Care Package", emoji: "➕", description: "Draw additional cards when deployed", icon: Plus },
-  { name: "Restoration", emoji: "💚", description: "Heal HP when deployed", icon: Heart },
-  { name: "Guardian", emoji: "🛡️", description: "Provides shield that reduces incoming damage during calculation", icon: Shield },
+  { name: "Quick Strike", emoji: "⚡", description: "Deals direct HP damage to the opponent, bypassing power comparison. Resolves even on draws. Guardian can block it.", icon: Zap },
+  { name: "Care Package", emoji: "➕", description: "Draw additional cards from your deck after combat resolves", icon: Plus },
+  { name: "Restoration", emoji: "💚", description: "Heals your HP before damage is applied (capped at max 40 HP)", icon: Heart },
+  { name: "Guardian", emoji: "🛡️", description: "Blocks incoming damage from both combat power loss AND Quick Strike (capped at actual incoming damage)", icon: Shield },
 ];
 
 export default function RulesPage() {
@@ -180,6 +180,38 @@ export default function RulesPage() {
         <Card className="bg-slate-800/50 border-purple-500/20 mb-6 md:mb-8">
           <CardHeader>
             <CardTitle className="text-white text-xl md:text-2xl flex items-center gap-3 flex-wrap">
+              <Swords className="w-6 h-6 text-red-400" />
+              Combat Resolution Order
+            </CardTitle>
+            <p className="text-purple-300 text-sm mt-1">Each round resolves in this fixed order after both players end their turn</p>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {[
+                { step: 1, name: "Deploy & Reveal", desc: "Both players' face-down cards are revealed on the battlefield." },
+                { step: 2, name: "Quick Strike", desc: "Cards with Quick Strike deal direct HP damage to the opponent, bypassing power comparison. Commander first_strike abilities also apply." },
+                { step: 3, name: "Calculate Power", desc: "Each card's final power = base power + buffs - debuffs (min 0). Both sides' totals are summed." },
+                { step: 4, name: "Guardian Block", desc: "Guardian trait and commander shield abilities reduce total incoming damage (combat + Quick Strike). Cannot over-block past actual incoming." },
+                { step: 5, name: "Healing", desc: "Restoration trait and commander heal abilities restore HP before damage is applied. Capped at max 40 HP." },
+                { step: 6, name: "Determine Winner", desc: "Higher total power wins. Equal power = draw. Winner: +1 VP. Loser: +1 WP. Draw: both get +1 VP and +1 WP." },
+                { step: 7, name: "Apply Net Damage", desc: "Loser takes (power diff + winner's QS - loser's Guardian). Winner takes (loser's QS - winner's Guardian). Both min 0." },
+                { step: 8, name: "Care Package", desc: "Cards with Care Package let their owner draw extra cards from their deck." },
+              ].map((item) => (
+                <div key={item.step} className="flex items-start gap-3 p-3 bg-slate-900/50 rounded-lg">
+                  <span className="flex items-center justify-center w-7 h-7 rounded-full bg-purple-600 text-white text-sm font-bold shrink-0">{item.step}</span>
+                  <div>
+                    <h4 className="text-white font-semibold">{item.name}</h4>
+                    <p className="text-purple-300 text-sm">{item.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-slate-800/50 border-purple-500/20 mb-6 md:mb-8">
+          <CardHeader>
+            <CardTitle className="text-white text-xl md:text-2xl flex items-center gap-3 flex-wrap">
               <Crown className="w-6 h-6 text-yellow-500" />
               Commander Ability Categories
             </CardTitle>
@@ -226,9 +258,9 @@ export default function RulesPage() {
                   Abilities that grant trait-like effects to your units, mimicking card traits with a specific power value. These only work during combat.
                 </p>
                 <ul className="list-disc list-inside space-y-1 text-sm text-purple-300">
-                  <li><strong className="text-white">Quick Strike:</strong> Deal pre-combat damage to the opponent before power is compared</li>
-                  <li><strong className="text-white">Guardian/Shield:</strong> Block incoming damage, reducing how much HP you lose</li>
-                  <li><strong className="text-white">Restoration:</strong> Heal your HP after combat resolves</li>
+                  <li><strong className="text-white">Quick Strike:</strong> Deal direct HP damage to the opponent, bypassing power comparison</li>
+                  <li><strong className="text-white">Guardian/Shield:</strong> Block incoming damage from both combat and Quick Strike</li>
+                  <li><strong className="text-white">Restoration:</strong> Heal your HP before damage is applied (capped at max 40 HP)</li>
                 </ul>
               </div>
 
