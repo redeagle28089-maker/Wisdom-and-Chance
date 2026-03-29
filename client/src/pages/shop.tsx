@@ -53,7 +53,8 @@ interface Currencies {
 interface ConfirmPurchase {
   packTypeId: string;
   packName: string;
-  cost: number;
+  costGold: number;
+  costGems: number;
   useDailyDeal?: boolean;
   isBundle?: boolean;
 }
@@ -156,12 +157,21 @@ function PurchaseConfirmDialog({
   purchase: ConfirmPurchase;
   currencies: Currencies;
   isPending: boolean;
-  onConfirm: () => void;
+  onConfirm: (currency: "gold" | "gems") => void;
   onCancel: () => void;
 }) {
   const overlayRef = useRef<HTMLDivElement>(null);
-  const balanceAfter = currencies.gold - purchase.cost;
+  const defaultCurrency = purchase.costGold > 0 && currencies.gold >= purchase.costGold ? "gold"
+    : purchase.costGems > 0 && currencies.gems >= purchase.costGems ? "gems" : "gold";
+  const [selectedCurrency, setSelectedCurrency] = useState<"gold" | "gems">(defaultCurrency);
+  const cost = selectedCurrency === "gems" ? purchase.costGems : purchase.costGold;
+  const balance = selectedCurrency === "gems" ? currencies.gems : currencies.gold;
+  const balanceAfter = balance - cost;
   const canAfford = balanceAfter >= 0;
+  const CurrencyIcon = selectedCurrency === "gems" ? Gem : Coins;
+  const currencyColor = selectedCurrency === "gems" ? "text-blue-300" : "text-amber-300";
+  const currencyIconColor = selectedCurrency === "gems" ? "text-blue-400" : "text-amber-400";
+  const btnColor = selectedCurrency === "gems" ? "bg-blue-600 hover:bg-blue-700" : "bg-amber-600 hover:bg-amber-700";
 
   return (
     <div
@@ -183,19 +193,44 @@ function PurchaseConfirmDialog({
             <p className="text-white font-semibold" data-testid="text-confirm-pack-name">{purchase.packName}</p>
           </div>
 
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant={selectedCurrency === "gold" ? "default" : "outline"}
+              onClick={() => setSelectedCurrency("gold")}
+              className={selectedCurrency === "gold" ? "bg-amber-600 hover:bg-amber-700 text-white flex-1" : "border-slate-600 text-slate-300 flex-1"}
+              data-testid="button-currency-gold"
+            >
+              <Coins className="w-4 h-4 mr-1" />
+              Gold ({purchase.costGold})
+            </Button>
+            {purchase.costGems > 0 && (
+              <Button
+                size="sm"
+                variant={selectedCurrency === "gems" ? "default" : "outline"}
+                onClick={() => setSelectedCurrency("gems")}
+                className={selectedCurrency === "gems" ? "bg-blue-600 hover:bg-blue-700 text-white flex-1" : "border-slate-600 text-slate-300 flex-1"}
+                data-testid="button-currency-gems"
+              >
+                <Gem className="w-4 h-4 mr-1" />
+                Gems ({purchase.costGems})
+              </Button>
+            )}
+          </div>
+
           <div className="flex items-center justify-between text-sm">
             <span className="text-slate-400">Cost</span>
             <div className="flex items-center gap-1">
-              <Coins className="w-4 h-4 text-amber-400" />
-              <span className="text-amber-300 font-bold" data-testid="text-confirm-cost">{purchase.cost}</span>
+              <CurrencyIcon className={`w-4 h-4 ${currencyIconColor}`} />
+              <span className={`${currencyColor} font-bold`} data-testid="text-confirm-cost">{cost}</span>
             </div>
           </div>
 
           <div className="flex items-center justify-between text-sm">
             <span className="text-slate-400">Current Balance</span>
             <div className="flex items-center gap-1">
-              <Coins className="w-4 h-4 text-amber-400" />
-              <span className="text-amber-300" data-testid="text-confirm-current-balance">{currencies.gold.toLocaleString()}</span>
+              <CurrencyIcon className={`w-4 h-4 ${currencyIconColor}`} />
+              <span className={currencyColor} data-testid="text-confirm-current-balance">{balance.toLocaleString()}</span>
             </div>
           </div>
 
@@ -204,7 +239,7 @@ function PurchaseConfirmDialog({
           <div className="flex items-center justify-between text-sm">
             <span className="text-slate-400">Balance After</span>
             <div className="flex items-center gap-1">
-              <Coins className="w-4 h-4 text-amber-400" />
+              <CurrencyIcon className={`w-4 h-4 ${currencyIconColor}`} />
               <span className={`font-bold ${canAfford ? "text-green-400" : "text-red-400"}`} data-testid="text-confirm-balance-after">
                 {balanceAfter.toLocaleString()}
               </span>
@@ -214,7 +249,7 @@ function PurchaseConfirmDialog({
           {!canAfford && (
             <div className="flex items-center gap-2 text-red-400 text-sm bg-red-500/10 rounded-lg p-2">
               <AlertTriangle className="w-4 h-4 shrink-0" />
-              <span>Not enough gold for this purchase.</span>
+              <span>Not enough {selectedCurrency} for this purchase.</span>
             </div>
           )}
 
@@ -233,15 +268,15 @@ function PurchaseConfirmDialog({
             Cancel
           </Button>
           <Button
-            onClick={onConfirm}
+            onClick={() => onConfirm(selectedCurrency)}
             disabled={!canAfford || isPending}
-            className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-semibold"
+            className={`flex-1 ${btnColor} text-white font-semibold`}
             data-testid="button-confirm-buy"
           >
             {isPending ? "Purchasing..." : (
               <>
                 <Check className="w-4 h-4 mr-1" />
-                Buy Now
+                Buy with {selectedCurrency === "gems" ? "Gems" : "Gold"}
               </>
             )}
           </Button>
@@ -464,8 +499,8 @@ export default function ShopPage() {
   }, [location]);
 
   const purchaseMutation = useMutation({
-    mutationFn: async ({ packTypeId, useDailyDeal }: { packTypeId: string; useDailyDeal?: boolean }) => {
-      const res = await apiRequest("POST", "/api/shop/purchase", { packTypeId, useDailyDeal });
+    mutationFn: async ({ packTypeId, useDailyDeal, currency }: { packTypeId: string; useDailyDeal?: boolean; currency?: "gold" | "gems" }) => {
+      const res = await apiRequest("POST", "/api/shop/purchase", { packTypeId, useDailyDeal, currency });
       return res.json();
     },
     onSuccess: (data) => {
@@ -479,8 +514,8 @@ export default function ShopPage() {
       setConfirmPurchase(null);
       toast({
         title: "Purchase Failed",
-        description: error.message.includes("Not enough gold")
-          ? "You don't have enough gold. Win matches or complete challenges to earn more!"
+        description: error.message.includes("Not enough")
+          ? "You don't have enough currency. Win matches or complete challenges to earn more!"
           : error.message,
         variant: "destructive",
       });
@@ -488,8 +523,8 @@ export default function ShopPage() {
   });
 
   const bundlePurchaseMutation = useMutation({
-    mutationFn: async ({ bundleId }: { bundleId: string }) => {
-      const res = await apiRequest("POST", "/api/shop/purchase-bundle", { bundleId });
+    mutationFn: async ({ bundleId, currency }: { bundleId: string; currency?: "gold" | "gems" }) => {
+      const res = await apiRequest("POST", "/api/shop/purchase-bundle", { bundleId, currency });
       return res.json();
     },
     onSuccess: (data) => {
@@ -502,8 +537,8 @@ export default function ShopPage() {
       setConfirmPurchase(null);
       toast({
         title: "Bundle Purchase Failed",
-        description: error.message.includes("Not enough gold")
-          ? "You don't have enough gold to complete the bundle purchase."
+        description: error.message.includes("Not enough")
+          ? "You don't have enough currency to complete the bundle purchase."
           : error.message,
         variant: "destructive",
       });
@@ -588,8 +623,8 @@ export default function ShopPage() {
         if (data.url) {
           window.location.href = data.url;
         }
-      } catch (error: any) {
-        toast({ title: "Stripe Error", description: error.message || "Failed to create checkout session", variant: "destructive" });
+      } catch (error) {
+        toast({ title: "Stripe Error", description: error instanceof Error ? error.message : "Failed to create checkout session", variant: "destructive" });
       }
       setPremiumConfirm(null);
       return;
@@ -631,21 +666,24 @@ export default function ShopPage() {
     );
   }
 
-  const canAfford = (cost: number) => (currencies?.gold ?? 0) >= cost;
+  const canAffordGold = (cost: number) => cost > 0 && (currencies?.gold ?? 0) >= cost;
+  const canAffordGems = (cost: number) => cost > 0 && (currencies?.gems ?? 0) >= cost;
+  const canAffordAny = (costGold: number, costGems: number) => canAffordGold(costGold) || canAffordGems(costGems);
 
-  const handleBuyClick = (packTypeId: string, packName: string, cost: number, useDailyDeal?: boolean, isBundle?: boolean) => {
-    setConfirmPurchase({ packTypeId, packName, cost, useDailyDeal, isBundle });
+  const handleBuyClick = (packTypeId: string, packName: string, costGold: number, costGems: number, useDailyDeal?: boolean, isBundle?: boolean) => {
+    setConfirmPurchase({ packTypeId, packName, costGold, costGems, useDailyDeal, isBundle });
   };
 
-  const handleConfirmPurchase = () => {
+  const handleConfirmPurchase = (currency: "gold" | "gems") => {
     if (!confirmPurchase) return;
 
     if (confirmPurchase.isBundle) {
-      bundlePurchaseMutation.mutate({ bundleId: confirmPurchase.packTypeId });
+      bundlePurchaseMutation.mutate({ bundleId: confirmPurchase.packTypeId, currency });
     } else {
       purchaseMutation.mutate({
         packTypeId: confirmPurchase.packTypeId,
         useDailyDeal: confirmPurchase.useDailyDeal,
+        currency,
       });
     }
   };
@@ -662,7 +700,7 @@ export default function ShopPage() {
           purchase={confirmPurchase}
           currencies={currencies}
           isPending={isPurchasing}
-          onConfirm={handleConfirmPurchase}
+          onConfirm={(currency) => handleConfirmPurchase(currency)}
           onCancel={() => setConfirmPurchase(null)}
         />
       )}
@@ -897,7 +935,7 @@ export default function ShopPage() {
           {catalog.map((pack) => {
             const elementColor = pack.elementFilter ? ELEMENT_COLORS[pack.elementFilter] : "from-purple-600/20 to-indigo-600/20 border-purple-500/30";
             const ElementIcon = pack.elementFilter ? ELEMENT_ICONS[pack.elementFilter] : Star;
-            const affordable = canAfford(pack.costGold);
+            const affordable = canAffordAny(pack.costGold, pack.costGems);
 
             return (
               <Card
@@ -926,21 +964,32 @@ export default function ShopPage() {
                   </div>
 
                   <div className="flex items-center justify-between mt-4">
-                    <div className="flex items-center gap-1">
-                      <Coins className="w-4 h-4 text-amber-400" />
-                      <span className="text-amber-300 font-bold">{pack.costGold}</span>
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1">
+                        <Coins className="w-4 h-4 text-amber-400" />
+                        <span className="text-amber-300 font-bold">{pack.costGold}</span>
+                      </div>
+                      {pack.costGems > 0 && (
+                        <>
+                          <span className="text-slate-600 text-xs">/</span>
+                          <div className="flex items-center gap-1">
+                            <Gem className="w-3.5 h-3.5 text-blue-400" />
+                            <span className="text-blue-300 font-bold text-sm">{pack.costGems}</span>
+                          </div>
+                        </>
+                      )}
                     </div>
                     <Button
                       size="sm"
                       disabled={!affordable || isPurchasing}
-                      onClick={() => handleBuyClick(pack.id, pack.name, pack.costGold)}
+                      onClick={() => handleBuyClick(pack.id, pack.name, pack.costGold, pack.costGems)}
                       className={affordable
                         ? "bg-amber-600 hover:bg-amber-700 text-white"
                         : "bg-slate-700 text-slate-500 cursor-not-allowed"
                       }
                       data-testid={`button-buy-${pack.id}`}
                     >
-                      {isPurchasing ? "..." : affordable ? "Buy" : "Not enough gold"}
+                      {isPurchasing ? "..." : affordable ? "Buy" : "Not enough"}
                     </Button>
                   </div>
                 </CardContent>
@@ -992,17 +1041,17 @@ export default function ShopPage() {
                 </div>
 
                 <Button
-                  className={canAfford(dailyDeal.discountedCostGold)
+                  className={canAffordGold(dailyDeal.discountedCostGold)
                     ? "w-full bg-amber-600 hover:bg-amber-700 text-white font-semibold"
                     : "w-full bg-slate-700 text-slate-500 cursor-not-allowed"
                   }
-                  disabled={!canAfford(dailyDeal.discountedCostGold) || isPurchasing}
-                  onClick={() => handleBuyClick(dailyDeal.packTypeId, dailyDeal.packName, dailyDeal.discountedCostGold, true)}
+                  disabled={!canAffordGold(dailyDeal.discountedCostGold) || isPurchasing}
+                  onClick={() => handleBuyClick(dailyDeal.packTypeId, dailyDeal.packName, dailyDeal.discountedCostGold, 0, true)}
                   data-testid="button-buy-daily-deal"
                 >
                   {isPurchasing
                     ? "Purchasing..."
-                    : canAfford(dailyDeal.discountedCostGold)
+                    : canAffordGold(dailyDeal.discountedCostGold)
                       ? `Buy for ${dailyDeal.discountedCostGold} Gold`
                       : "Not enough gold"
                   }
@@ -1023,7 +1072,7 @@ export default function ShopPage() {
       {activeTab === "offers" && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto" data-testid="special-offers-grid">
           {bundles.map((offer) => {
-            const affordable = canAfford(offer.costGold);
+            const affordable = canAffordAny(offer.costGold, offer.costGold);
             const savingsPercent = Math.round((1 - offer.costGold / offer.originalCostGold) * 100);
 
             return (
@@ -1068,14 +1117,14 @@ export default function ShopPage() {
                     <Button
                       size="sm"
                       disabled={!affordable || isPurchasing}
-                      onClick={() => handleBuyClick(offer.id, offer.name, offer.costGold, false, true)}
+                      onClick={() => handleBuyClick(offer.id, offer.name, offer.costGold, offer.costGold, false, true)}
                       className={affordable
                         ? "bg-emerald-600 hover:bg-emerald-700 text-white"
                         : "bg-slate-700 text-slate-500 cursor-not-allowed"
                       }
                       data-testid={`button-buy-${offer.id}`}
                     >
-                      {isPurchasing ? "..." : affordable ? "Buy Bundle" : "Not enough gold"}
+                      {isPurchasing ? "..." : affordable ? "Buy Bundle" : "Not enough"}
                     </Button>
                   </div>
                 </CardContent>

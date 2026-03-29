@@ -85,7 +85,9 @@ Key features include:
 - **Security:** Server-side payment verification, idempotent fulfillment (paymentId uniqueness), atomic DB transactions.
 - **Env Vars Required:** PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET, STRIPE_SECRET_KEY, STRIPE_PUBLISHABLE_KEY (or VITE_STRIPE_PUBLISHABLE_KEY), optional STRIPE_WEBHOOK_SECRET, PAYPAL_API_URL.
 - **Endpoints:** GET /api/payments/products, GET /api/payments/config, POST /api/payments/purchase-currency, POST /api/payments/paypal/create-order, POST /api/payments/paypal/capture-order, POST /api/payments/stripe/create-checkout, GET /api/payments/stripe/verify-session, POST /api/payments/stripe/webhook, GET /api/payments/history, POST /api/payments/check-purchased.
-- **Key Files:** server/paymentService.ts, server/paymentRoutes.ts, shared/models/economy.ts (schema + product seed), client/src/pages/shop.tsx (Premium Store tab).
+- **Purchase History Page:** `/purchase-history` route shows all past transactions with payment method, status, and cost.
+- **Currency Toggle:** Pack purchases support gold/gems toggle in the confirmation dialog, defaulting to whichever currency the player can afford.
+- **Key Files:** server/paymentService.ts, server/paymentRoutes.ts, shared/models/economy.ts (schema + product seed), client/src/pages/shop.tsx (Premium Store tab), client/src/pages/purchase-history.tsx.
 
 ### Database Backup
 - **Admin Export Endpoint:** GET /api/admin/database-export — Admin-only endpoint that exports all database tables as JSON. Add `?save=true` to also save a backup file to `backups/` directory. Image data is included in file backups.
