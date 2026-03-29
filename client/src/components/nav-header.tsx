@@ -15,7 +15,7 @@ import { useQuery } from "@tanstack/react-query";
 import { 
   Home, BookOpen, Database, Layers, Swords, Trophy, User, GraduationCap, 
   LogIn, LogOut, Users, Gamepad2, Medal, Calendar, BarChart3, Eye, 
-  BookMarked, Palette, ImageIcon, ChevronDown, X, UserCircle, Package
+  BookMarked, Palette, ImageIcon, ChevronDown, X, UserCircle, Package, ShoppingBag
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -32,6 +32,7 @@ const menuItems: NavItem[] = [
   { title: "Card Database", url: "/cards", icon: Database },
   { title: "Deck Builder", url: "/deck-builder", icon: Layers },
   { title: "My Collection", url: "/collection", icon: Package, featureFlag: "economy_enabled" },
+  { title: "Shop", url: "/shop", icon: ShoppingBag, featureFlag: "economy_enabled" },
 ];
 
 const playItems: NavItem[] = [
@@ -65,6 +66,7 @@ export function NavHeader() {
   const [location] = useLocation();
   const { user, isAuthenticated, isLoading } = useAuth();
   const menuRef = useRef<HTMLDivElement>(null);
+  const filteredMenuItems = useFilteredItems(menuItems);
   const filteredPlayItems = useFilteredItems(playItems);
   const filteredProgressItems = useFilteredItems(progressItems);
 
@@ -154,7 +156,7 @@ export function NavHeader() {
               <X className="w-5 h-5" />
             </button>
 
-            <NavGroup label="Navigation" items={menuItems} />
+            <NavGroup label="Navigation" items={filteredMenuItems} />
             {filteredPlayItems.length > 0 && <NavGroup label="Play" items={filteredPlayItems} />}
             {filteredProgressItems.length > 0 && <NavGroup label="Progress" items={filteredProgressItems} />}
             <NavGroup label="Lore" items={loreItems} />

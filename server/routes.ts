@@ -4,7 +4,7 @@ import { z } from "zod";
 import { eq, or, and, lt, desc, sql } from "drizzle-orm";
 import { storage } from "./storage";
 import { db } from "./db";
-import { insertCardSchema, insertDeckSchema, insertPlayerSchema, insertGameSchema, ELEMENTS, userDecks, insertUserDeckSchema, GAME_CONSTANTS, cardImages, insertCardImageSchema, TRAITS, BUFF_DEBUFF_COLORS, users, friendships, friendMessages, cardImageMappings, commanderImageMappings, GAME_PHASES, GAME_MODE_CONFIG, AI_DIFFICULTY, GAME_STATUS, featureFlags, serverConfig, DEFAULT_FEATURE_FLAGS, playerCurrencies, playerCollection, ECONOMY_CONSTANTS, getCardRarity, type CardRarity, playerChallenges, playerAchievements } from "@shared/schema";
+import { insertCardSchema, insertDeckSchema, insertPlayerSchema, insertGameSchema, ELEMENTS, userDecks, insertUserDeckSchema, GAME_CONSTANTS, cardImages, insertCardImageSchema, TRAITS, BUFF_DEBUFF_COLORS, users, friendships, friendMessages, cardImageMappings, commanderImageMappings, GAME_PHASES, GAME_MODE_CONFIG, AI_DIFFICULTY, GAME_STATUS, featureFlags, serverConfig, DEFAULT_FEATURE_FLAGS, playerCurrencies, playerCollection, ECONOMY_CONSTANTS, getCardRarity, type CardRarity, playerChallenges, playerAchievements, PACK_TYPES, dailyDeals } from "@shared/schema";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import { registerMultiplayerRoutes } from "./multiplayerRoutes";
 import { registerMobileAuthRoutes } from "./mobileAuth";
@@ -781,6 +781,185 @@ IMPORTANT:
     } catch (error) {
       console.error("[economy] Error fetching collection:", error);
       res.status(500).json({ message: "Failed to fetch collection" });
+    }
+  });
+
+  app.get("/api/shop/catalog", requireEconomy, async (_req: any, res) => {
+    try {
+      const catalog = Object.values(PACK_TYPES).map(p => ({
+        id: p.id,
+        name: p.name,
+        description: p.description,
+        costGold: p.costGold,
+        costGems: p.costGems,
+        cardsPerPack: p.cardsPerPack,
+        elementFilter: p.elementFilter,
+        guaranteedMinRarity: p.guaranteedMinRarity,
+      }));
+      res.json(catalog);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch catalog" });
+    }
+  });
+
+  app.get("/api/shop/daily-deal", requireEconomy, async (_req: any, res) => {
+    try {
+      const today = new Date().toISOString().split("T")[0];
+      let [deal] = await db.select().from(dailyDeals).where(eq(dailyDeals.dealDate, today)).limit(1);
+
+      if (!deal) {
+        const packIds = Object.keys(PACK_TYPES) as (keyof typeof PACK_TYPES)[];
+        const randomPackId = packIds[Math.floor(Math.random() * packIds.length)];
+        const discount = [15, 20, 25, 30][Math.floor(Math.random() * 4)];
+        const allCards = await storage.getCards();
+        const featuredCard = allCards[Math.floor(Math.random() * allCards.length)];
+
+        [deal] = await db.insert(dailyDeals).values({
+          dealDate: today,
+          packTypeId: randomPackId,
+          discountPercent: discount,
+          featuredCardId: featuredCard?.id ?? null,
+        }).returning();
+      }
+
+      const packType = PACK_TYPES[deal.packTypeId as keyof typeof PACK_TYPES] ?? PACK_TYPES.standard;
+      const discountedCost = Math.floor(packType.costGold * (1 - deal.discountPercent / 100));
+
+      const tomorrow = new Date();
+      tomorrow.setUTCHours(24, 0, 0, 0);
+
+      res.json({
+        packTypeId: deal.packTypeId,
+        packName: packType.name,
+        originalCostGold: packType.costGold,
+        discountedCostGold: discountedCost,
+        discountPercent: deal.discountPercent,
+        featuredCardId: deal.featuredCardId,
+        expiresAt: tomorrow.toISOString(),
+      });
+    } catch (error) {
+      console.error("[shop] Error fetching daily deal:", error);
+      res.status(500).json({ message: "Failed to fetch daily deal" });
+    }
+  });
+
+  app.post("/api/shop/purchase", isAuthenticated, requireEconomy, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+      const { packTypeId, useDailyDeal } = req.body || {};
+      const packDef = PACK_TYPES[packTypeId as keyof typeof PACK_TYPES];
+      if (!packDef) return res.status(400).json({ message: "Invalid pack type" });
+
+      let cost = packDef.costGold;
+
+      if (useDailyDeal) {
+        const today = new Date().toISOString().split("T")[0];
+        const [deal] = await db.select().from(dailyDeals).where(eq(dailyDeals.dealDate, today)).limit(1);
+        if (deal && deal.packTypeId === packTypeId) {
+          cost = Math.floor(packDef.costGold * (1 - deal.discountPercent / 100));
+        }
+      }
+
+      await ensureCurrencies(userId);
+
+      const result = await db.transaction(async (tx) => {
+        const deducted = await tx.update(playerCurrencies)
+          .set({ gold: sql`gold - ${cost}`, updatedAt: new Date() })
+          .where(and(eq(playerCurrencies.userId, userId), sql`gold >= ${cost}`))
+          .returning({ gold: playerCurrencies.gold });
+
+        if (deducted.length === 0) {
+          const cur = await tx.select().from(playerCurrencies).where(eq(playerCurrencies.userId, userId)).limit(1);
+          return { error: true, message: "Not enough gold", required: cost, current: cur[0]?.gold ?? 0 };
+        }
+
+        const allCards = await storage.getCards();
+        let pool = allCards;
+        if (packDef.elementFilter) {
+          pool = allCards.filter(c => c.element === packDef.elementFilter);
+        }
+
+        const cardsByRarity: Record<CardRarity, typeof allCards> = {
+          Common: pool.filter(c => getCardRarity(c.power) === "Common"),
+          Rare: pool.filter(c => getCardRarity(c.power) === "Rare"),
+          Epic: pool.filter(c => getCardRarity(c.power) === "Epic"),
+          Legendary: pool.filter(c => getCardRarity(c.power) === "Legendary"),
+        };
+
+        const weights = packDef.rarityWeights as Record<CardRarity, number>;
+        const totalWeight = Object.values(weights).reduce((a, b) => a + b, 0);
+        const pulledCards: { cardId: string; rarity: CardRarity; isNew: boolean; cardName: string; element: string; power: number }[] = [];
+
+        const existingCollection = await tx.select().from(playerCollection).where(eq(playerCollection.userId, userId));
+        const ownedMap = new Map(existingCollection.map(e => [e.cardId, e.quantity]));
+
+        for (let i = 0; i < packDef.cardsPerPack; i++) {
+          let roll = Math.random() * totalWeight;
+          let selectedRarity: CardRarity = "Common";
+          for (const [rarity, weight] of Object.entries(weights) as [CardRarity, number][]) {
+            roll -= weight;
+            if (roll <= 0) {
+              selectedRarity = rarity;
+              break;
+            }
+          }
+
+          let rarityPool = cardsByRarity[selectedRarity];
+          if (rarityPool.length === 0) {
+            for (const fallback of ["Common", "Rare", "Epic", "Legendary"] as CardRarity[]) {
+              if (cardsByRarity[fallback].length > 0) {
+                rarityPool = cardsByRarity[fallback];
+                selectedRarity = fallback;
+                break;
+              }
+            }
+          }
+          if (rarityPool.length === 0) continue;
+
+          const card = rarityPool[Math.floor(Math.random() * rarityPool.length)];
+          const isNew = !ownedMap.has(card.id);
+          ownedMap.set(card.id, (ownedMap.get(card.id) || 0) + 1);
+
+          await tx.insert(playerCollection)
+            .values({ userId, cardId: card.id, quantity: 1 })
+            .onConflictDoUpdate({
+              target: [playerCollection.userId, playerCollection.cardId],
+              set: { quantity: sql`${playerCollection.quantity} + 1` },
+            });
+
+          pulledCards.push({
+            cardId: card.id,
+            rarity: selectedRarity,
+            isNew,
+            cardName: card.name,
+            element: card.element,
+            power: card.power,
+          });
+        }
+
+        const updated = await tx.select().from(playerCurrencies).where(eq(playerCurrencies.userId, userId)).limit(1);
+        return {
+          error: false,
+          data: {
+            packTypeId,
+            packName: packDef.name,
+            cards: pulledCards,
+            costGold: cost,
+            remainingGold: updated[0]?.gold ?? 0,
+            remainingGems: updated[0]?.gems ?? 0,
+          },
+        };
+      });
+
+      if (result.error) {
+        return res.status(400).json({ message: result.message, required: result.required, current: result.current });
+      }
+      res.json(result.data);
+    } catch (error) {
+      console.error("[shop] Error purchasing pack:", error);
+      res.status(500).json({ message: "Failed to purchase pack" });
     }
   });
 

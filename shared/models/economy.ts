@@ -1,4 +1,4 @@
-import { pgTable, varchar, integer, timestamp, uniqueIndex, boolean } from "drizzle-orm/pg-core";
+import { pgTable, varchar, integer, timestamp, uniqueIndex, boolean, jsonb, date } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { z } from "zod";
 
@@ -104,3 +104,118 @@ export const packResultSchema = z.object({
 });
 
 export type PackResult = z.infer<typeof packResultSchema>;
+
+export const dailyDeals = pgTable("daily_deals", {
+  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
+  dealDate: date("deal_date").notNull(),
+  packTypeId: varchar("pack_type_id", { length: 50 }).notNull(),
+  discountPercent: integer("discount_percent").notNull().default(20),
+  featuredCardId: varchar("featured_card_id", { length: 255 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const PACK_TYPES = {
+  standard: {
+    id: "standard",
+    name: "Standard Pack",
+    description: "5 random cards from any element with standard rarity odds.",
+    costGold: 100,
+    costGems: 0,
+    cardsPerPack: 5,
+    rarityWeights: { Common: 60, Rare: 25, Epic: 10, Legendary: 5 } as Record<CardRarity, number>,
+    elementFilter: null as string | null,
+    guaranteedMinRarity: null as CardRarity | null,
+  },
+  premium: {
+    id: "premium",
+    name: "Premium Pack",
+    description: "5 cards with guaranteed Rare or better. Higher Legendary odds.",
+    costGold: 250,
+    costGems: 0,
+    cardsPerPack: 5,
+    rarityWeights: { Common: 0, Rare: 55, Epic: 30, Legendary: 15 } as Record<CardRarity, number>,
+    elementFilter: null as string | null,
+    guaranteedMinRarity: "Rare" as CardRarity | null,
+  },
+  fire: {
+    id: "fire",
+    name: "Fire Pack",
+    description: "5 Fire element cards. Great for building Fire decks.",
+    costGold: 150,
+    costGems: 0,
+    cardsPerPack: 5,
+    rarityWeights: { Common: 55, Rare: 28, Epic: 12, Legendary: 5 } as Record<CardRarity, number>,
+    elementFilter: "Fire" as string | null,
+    guaranteedMinRarity: null as CardRarity | null,
+  },
+  water: {
+    id: "water",
+    name: "Water Pack",
+    description: "5 Water element cards. Great for building Water decks.",
+    costGold: 150,
+    costGems: 0,
+    cardsPerPack: 5,
+    rarityWeights: { Common: 55, Rare: 28, Epic: 12, Legendary: 5 } as Record<CardRarity, number>,
+    elementFilter: "Water" as string | null,
+    guaranteedMinRarity: null as CardRarity | null,
+  },
+  earth: {
+    id: "earth",
+    name: "Earth Pack",
+    description: "5 Earth element cards. Great for building Earth decks.",
+    costGold: 150,
+    costGems: 0,
+    cardsPerPack: 5,
+    rarityWeights: { Common: 55, Rare: 28, Epic: 12, Legendary: 5 } as Record<CardRarity, number>,
+    elementFilter: "Earth" as string | null,
+    guaranteedMinRarity: null as CardRarity | null,
+  },
+  air: {
+    id: "air",
+    name: "Air Pack",
+    description: "5 Air element cards. Great for building Air decks.",
+    costGold: 150,
+    costGems: 0,
+    cardsPerPack: 5,
+    rarityWeights: { Common: 55, Rare: 28, Epic: 12, Legendary: 5 } as Record<CardRarity, number>,
+    elementFilter: "Air" as string | null,
+    guaranteedMinRarity: null as CardRarity | null,
+  },
+  nature: {
+    id: "nature",
+    name: "Nature Pack",
+    description: "5 Nature element cards. Great for building Nature decks.",
+    costGold: 150,
+    costGems: 0,
+    cardsPerPack: 5,
+    rarityWeights: { Common: 55, Rare: 28, Epic: 12, Legendary: 5 } as Record<CardRarity, number>,
+    elementFilter: "Nature" as string | null,
+    guaranteedMinRarity: null as CardRarity | null,
+  },
+} as const;
+
+export type PackTypeId = keyof typeof PACK_TYPES;
+export type PackType = typeof PACK_TYPES[PackTypeId];
+
+export const packTypeSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string(),
+  costGold: z.number(),
+  costGems: z.number(),
+  cardsPerPack: z.number(),
+  elementFilter: z.string().nullable(),
+  guaranteedMinRarity: z.string().nullable(),
+});
+
+export const dailyDealSchema = z.object({
+  packTypeId: z.string(),
+  packName: z.string(),
+  originalCostGold: z.number(),
+  discountedCostGold: z.number(),
+  discountPercent: z.number(),
+  featuredCardId: z.string().nullable(),
+  expiresAt: z.string(),
+});
+
+export type DailyDeal = z.infer<typeof dailyDealSchema>;

@@ -52,8 +52,11 @@ Key features include:
 - **Crafting/Disenchanting:** Craft any card with dust (40/100/400/1600 by rarity). Disenchant owned copies for dust (5/20/100/400 by rarity).
 - **Match Rewards:** Win=30 gold, Loss=10, Draw=15, Forfeit win=15. Auto-granted after multiplayer matches.
 - **Feature Flag:** Gated by `economy_enabled` feature flag. Deck builder shows ownership badges and limits when enabled.
-- **Endpoints:** GET /api/currencies, GET /api/collection, POST /api/packs/open, POST /api/cards/craft, POST /api/cards/disenchant, POST /api/collection/starter.
-- **Key Files:** shared/models/economy.ts (DB schema + constants), server/economyService.ts (shared helpers), server/routes.ts (endpoints), server/websocket.ts (reward hooks).
+- **Shop System:** 7 pack types (Standard 100g, Premium 250g, Fire/Water/Earth/Air/Nature 150g each). Element packs filter by element. Premium guarantees Rare+. Daily deal auto-generates with 15-30% discount, rotates daily at UTC midnight.
+- **Pack Opening Animation:** 3D card flip reveal with rarity glow effects (gray/blue/purple/gold). NEW badge for first-time pulls. Click to reveal individual cards or reveal all at once.
+- **Daily Deals:** Stored in `daily_deals` table. Auto-generated on first request each day. Random pack + random 15-30% discount + random featured card.
+- **Endpoints:** GET /api/currencies, GET /api/collection, POST /api/packs/open, POST /api/cards/craft, POST /api/cards/disenchant, POST /api/collection/starter, GET /api/shop/catalog, GET /api/shop/daily-deal, POST /api/shop/purchase.
+- **Key Files:** shared/models/economy.ts (DB schema + constants + pack types), server/economyService.ts (shared helpers), server/routes.ts (endpoints), server/websocket.ts (reward hooks), client/src/pages/shop.tsx, client/src/pages/pack-opening.tsx.
 
 ### Database Backup
 - **Admin Export Endpoint:** GET /api/admin/database-export — Admin-only endpoint that exports all database tables as JSON. Add `?save=true` to also save a backup file to `backups/` directory. Image data is included in file backups.

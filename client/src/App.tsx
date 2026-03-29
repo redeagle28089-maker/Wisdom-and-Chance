@@ -39,6 +39,8 @@ import AdminImageDatabasePage from "@/pages/admin-image-database";
 import AdminUserDatabasePage from "@/pages/admin-user-database";
 import AboutCreatorPage from "@/pages/about-creator";
 import CollectionPage from "@/pages/collection";
+import ShopPage from "@/pages/shop";
+import PackOpeningPage from "@/pages/pack-opening";
 import NotFound from "@/pages/not-found";
 
 /**
@@ -60,6 +62,8 @@ function AppContent() {
           <Route path="/cards" component={CardDatabasePage} />
           <Route path="/deck-builder" component={DeckBuilderPage} />
           <Route path="/collection" component={CollectionPage} />
+          <Route path="/shop" component={ShopPage} />
+          <Route path="/pack-opening" component={PackOpeningPage} />
           <Route path="/practice" component={PracticePage} />
           <Route path="/game/:id" component={GameBoardPage} />
           <Route path="/profile" component={ProfilePage} />
