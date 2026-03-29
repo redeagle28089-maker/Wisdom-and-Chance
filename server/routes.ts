@@ -2551,10 +2551,21 @@ IMPORTANT:
           .limit(1);
         if (!bpLevel) throw new Error("INVALID_LEVEL");
 
-        await ensureCurrencies(userId);
+        const [existingCur] = await tx.select().from(playerCurrencies).where(eq(playerCurrencies.userId, userId)).limit(1);
+        if (!existingCur) {
+          await tx.insert(playerCurrencies).values({
+            userId,
+            gold: ECONOMY_CONSTANTS.STARTER_GOLD,
+            gems: ECONOMY_CONSTANTS.STARTER_GEMS,
+            dust: ECONOMY_CONSTANTS.STARTER_DUST,
+            updatedAt: new Date(),
+          });
+        }
 
         if (bpLevel.rewardType === "gold") {
-          await grantGold(userId, bpLevel.rewardAmount, "battle_pass_reward");
+          await tx.update(playerCurrencies)
+            .set({ gold: sql`gold + ${bpLevel.rewardAmount}`, updatedAt: new Date() })
+            .where(eq(playerCurrencies.userId, userId));
         } else if (bpLevel.rewardType === "gems") {
           await tx.update(playerCurrencies)
             .set({ gems: sql`gems + ${bpLevel.rewardAmount}`, updatedAt: new Date() })
@@ -2697,14 +2708,46 @@ IMPORTANT:
           .set({ claimedAt: new Date() })
           .where(eq(playerWeeklyChallenges.id, progress.id));
 
-        await ensureCurrencies(userId);
+        const [existingCur] = await tx.select().from(playerCurrencies).where(eq(playerCurrencies.userId, userId)).limit(1);
+        if (!existingCur) {
+          await tx.insert(playerCurrencies).values({
+            userId,
+            gold: ECONOMY_CONSTANTS.STARTER_GOLD,
+            gems: ECONOMY_CONSTANTS.STARTER_GEMS,
+            dust: ECONOMY_CONSTANTS.STARTER_DUST,
+            updatedAt: new Date(),
+          });
+        }
 
         if (challenge.goldReward > 0) {
-          await grantGold(userId, challenge.goldReward, "weekly_challenge_reward");
+          await tx.update(playerCurrencies)
+            .set({ gold: sql`gold + ${challenge.goldReward}`, updatedAt: new Date() })
+            .where(eq(playerCurrencies.userId, userId));
         }
 
         if (challenge.xpReward > 0) {
-          await grantBattlePassXP(userId, BATTLE_PASS_XP.WEEKLY_CHALLENGE, "weekly_challenge");
+          const [activeSeason] = await tx.select().from(seasons).where(eq(seasons.isActive, true)).limit(1);
+          if (activeSeason) {
+            let [bp] = await tx.select().from(playerBattlePass)
+              .where(and(eq(playerBattlePass.userId, userId), eq(playerBattlePass.seasonId, activeSeason.id)))
+              .limit(1);
+            if (bp) {
+              const newXp = bp.currentXp + challenge.xpReward;
+              const allLevels = await tx.select().from(battlePassLevels)
+                .where(eq(battlePassLevels.seasonId, activeSeason.id));
+              const sorted = allLevels.sort((a, b) => a.level - b.level);
+              let newLevel = 0;
+              let xpAccum = 0;
+              for (const l of sorted) {
+                xpAccum += l.xpRequired;
+                if (newXp >= xpAccum) newLevel = l.level;
+                else break;
+              }
+              await tx.update(playerBattlePass)
+                .set({ currentXp: newXp, currentLevel: newLevel, updatedAt: new Date() })
+                .where(eq(playerBattlePass.id, bp.id));
+            }
+          }
         }
 
         const [currencies] = await tx.select().from(playerCurrencies).where(eq(playerCurrencies.userId, userId));

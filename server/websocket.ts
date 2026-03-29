@@ -11,7 +11,7 @@ import cookieSignature from "cookie-signature";
 import { filterObscenity } from "./obscenity-filter";
 import jwt from "jsonwebtoken";
 import { gameEngine } from "./gameEngine";
-import { handleGameEndRewards } from "./economyService";
+import { handleGameEndRewards, updateWeeklyChallengeProgress } from "./economyService";
 
 interface ConnectedUser {
   id: string;
@@ -553,6 +553,22 @@ class GameWebSocketServer {
         type: "combat_result",
         payload: { gameId, ...result.combatResult },
       });
+
+      const p1Id = currentGame.game.player1Id;
+      const p2Id = currentGame.game.player2Id;
+      const damage = result.combatResult.damage || 0;
+      const p1Cards = result.combatResult.player1Breakdown?.length || 0;
+      const p2Cards = result.combatResult.player2Breakdown?.length || 0;
+
+      if (result.combatResult.winner === "player1" && damage > 0 && p1Id) {
+        updateWeeklyChallengeProgress(p1Id, "deal_damage", damage).catch(() => {});
+      } else if (result.combatResult.winner === "player2" && damage > 0 && p2Id) {
+        updateWeeklyChallengeProgress(p2Id, "deal_damage", damage).catch(() => {});
+      }
+
+      if (p1Id && p1Cards > 0) updateWeeklyChallengeProgress(p1Id, "play_element", p1Cards).catch(() => {});
+      if (p2Id && p2Cards > 0) updateWeeklyChallengeProgress(p2Id, "play_element", p2Cards).catch(() => {});
+
       if (result.combatResult.gameOver) {
         this.broadcastToGame(gameId, {
           type: "game_over",

@@ -208,8 +208,6 @@ export async function handleGameEndRewards(winnerId: string | null, player1Id: s
       await grantBattlePassXP(player2Id, BATTLE_PASS_XP.MATCH_LOSS, "match_draw");
     }
 
-    await updateWeeklyChallengeProgress(player1Id, "play_element", 1);
-    if (player2Id) await updateWeeklyChallengeProgress(player2Id, "play_element", 1);
   } catch (error) {
     console.error("[economy] Error granting game-end rewards:", error);
   }
