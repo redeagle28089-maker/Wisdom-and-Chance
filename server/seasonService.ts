@@ -140,7 +140,7 @@ export async function checkAndTransitionSeason() {
         await db.insert(battlePassLevels).values({
           seasonId: newSeason.id,
           level: i + 1,
-          xpRequired: 100 + i * 20,
+          xpRequired: (i + 1) * 200,
           rewardType: r.type,
           rewardAmount: r.amount,
           rewardDescription: `${r.amount} ${r.type}`,

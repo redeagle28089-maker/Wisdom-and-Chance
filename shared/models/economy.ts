@@ -342,13 +342,13 @@ export const RANKED_TIERS = [
   { name: "Master", minRating: 2000, icon: "star" },
 ] as const;
 
-export const SEASON_REWARDS: Record<string, { gold: number; packs: number; dust: number }> = {
-  Bronze: { gold: 100, packs: 1, dust: 50 },
-  Silver: { gold: 200, packs: 2, dust: 100 },
-  Gold: { gold: 400, packs: 3, dust: 200 },
-  Platinum: { gold: 600, packs: 5, dust: 400 },
-  Diamond: { gold: 1000, packs: 8, dust: 600 },
-  Master: { gold: 1500, packs: 12, dust: 1000 },
+export const SEASON_REWARDS: Record<string, { gold: number; packs: number; dust: number; cosmetic: string | null }> = {
+  Bronze: { gold: 100, packs: 1, dust: 50, cosmetic: null },
+  Silver: { gold: 200, packs: 2, dust: 100, cosmetic: "silver_card_back" },
+  Gold: { gold: 400, packs: 3, dust: 200, cosmetic: "gold_card_back" },
+  Platinum: { gold: 600, packs: 5, dust: 400, cosmetic: "platinum_card_back" },
+  Diamond: { gold: 1000, packs: 8, dust: 600, cosmetic: "diamond_card_back" },
+  Master: { gold: 1500, packs: 12, dust: 1000, cosmetic: "master_card_back" },
 };
 
 export const BATTLE_PASS_XP = {

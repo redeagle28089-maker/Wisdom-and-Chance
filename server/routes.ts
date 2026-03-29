@@ -2731,6 +2731,20 @@ IMPORTANT:
             let [bp] = await tx.select().from(playerBattlePass)
               .where(and(eq(playerBattlePass.userId, userId), eq(playerBattlePass.seasonId, activeSeason.id)))
               .limit(1);
+            if (!bp) {
+              [bp] = await tx.insert(playerBattlePass).values({
+                userId,
+                seasonId: activeSeason.id,
+                currentXp: 0,
+                currentLevel: 0,
+                claimedLevels: "[]",
+              }).onConflictDoNothing().returning();
+              if (!bp) {
+                [bp] = await tx.select().from(playerBattlePass)
+                  .where(and(eq(playerBattlePass.userId, userId), eq(playerBattlePass.seasonId, activeSeason.id)))
+                  .limit(1);
+              }
+            }
             if (bp) {
               const newXp = bp.currentXp + challenge.xpReward;
               const allLevels = await tx.select().from(battlePassLevels)
