@@ -285,6 +285,7 @@ export const battlePassLevels = pgTable("battle_pass_levels", {
   rewardAmount: integer("reward_amount").notNull().default(1),
   rewardDescription: varchar("reward_description", { length: 255 }).notNull(),
   rewardCardId: varchar("reward_card_id", { length: 255 }),
+  isPremium: boolean("is_premium").notNull().default(false),
 }, (table) => [
   uniqueIndex("uq_battle_pass_levels_season_level").on(table.seasonId, table.level),
 ]);

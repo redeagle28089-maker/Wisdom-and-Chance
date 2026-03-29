@@ -2323,9 +2323,20 @@ IMPORTANT:
     return tier;
   }
 
+  async function backfillPremiumLevels() {
+    await db.execute(sql`
+      UPDATE battle_pass_levels 
+      SET is_premium = true 
+      WHERE is_premium = false AND (level % 10 = 0 OR (level >= 25 AND level % 5 = 0))
+    `);
+  }
+
   async function seedCurrentSeason() {
     const [existing] = await db.select().from(seasons).where(eq(seasons.isActive, true)).limit(1);
-    if (existing) return;
+    if (existing) {
+      await backfillPremiumLevels();
+      return;
+    }
 
     const now = new Date();
     let seasonDurationDays = 30;
@@ -2370,6 +2381,8 @@ IMPORTANT:
           rewardDescription = `${rewardAmount} Gold`;
         }
 
+        const isPremiumLevel = i % 10 === 0 || (i >= 25 && i % 5 === 0);
+
         bpLevels.push({
           seasonId: season.id,
           level: i,
@@ -2377,6 +2390,7 @@ IMPORTANT:
           rewardType,
           rewardAmount,
           rewardDescription,
+          isPremium: isPremiumLevel,
         });
       }
       await db.insert(battlePassLevels).values(bpLevels).onConflictDoNothing();
@@ -2522,6 +2536,7 @@ IMPORTANT:
           rewardType: l.rewardType,
           rewardAmount: l.rewardAmount,
           rewardDescription: l.rewardDescription,
+          isPremium: l.isPremium,
           claimed: claimed.includes(l.level),
           unlocked: l.level <= progress.currentLevel,
         })),
@@ -2559,6 +2574,10 @@ IMPORTANT:
           .where(and(eq(battlePassLevels.seasonId, season.id), eq(battlePassLevels.level, level)))
           .limit(1);
         if (!bpLevel) throw new Error("INVALID_LEVEL");
+
+        if (bpLevel.isPremium && !progress.premiumUnlocked) {
+          throw new Error("PREMIUM_REQUIRED");
+        }
 
         const [existingCur] = await tx.select().from(playerCurrencies).where(eq(playerCurrencies.userId, userId)).limit(1);
         if (!existingCur) {
@@ -2653,6 +2672,7 @@ IMPORTANT:
       if (msg === "NO_PROGRESS") return res.status(400).json({ error: "No battle pass progress found" });
       if (msg === "LEVEL_NOT_UNLOCKED") return res.status(400).json({ error: "Level not unlocked yet" });
       if (msg === "ALREADY_CLAIMED") return res.status(400).json({ error: "Reward already claimed" });
+      if (msg === "PREMIUM_REQUIRED") return res.status(403).json({ error: "Premium battle pass required to claim this reward" });
       if (msg === "INVALID_LEVEL") return res.status(400).json({ error: "Invalid level" });
       console.error("Error claiming battle pass reward:", error);
       res.status(500).json({ error: "Failed to claim reward" });

@@ -452,6 +452,44 @@ export async function registerPaymentRoutes(app: Express) {
     }
   });
 
+  app.get("/api/payments/stripe/success", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+      const sessionId = req.query.session_id as string;
+      if (!sessionId) return res.status(400).json({ message: "session_id required" });
+
+      let stripe;
+      try { stripe = await getUncachableStripeClient(); } catch { return res.status(503).json({ message: "Stripe is not configured" }); }
+
+      const session = await stripe.checkout.sessions.retrieve(sessionId);
+      if (session.payment_status !== "paid") return res.status(400).json({ message: "Payment not completed" });
+      if (session.metadata?.userId !== userId) return res.status(403).json({ message: "Payment does not belong to this user" });
+
+      const productId = session.metadata?.productId;
+      if (!productId) return res.status(400).json({ message: "Invalid session metadata" });
+
+      const product = await getProduct(productId);
+      if (!product) return res.status(400).json({ message: "Product not found" });
+
+      const amountPaidCents = session.amount_total || 0;
+      if (amountPaidCents < product.priceUsd * 100) {
+        return res.status(400).json({ message: "Payment amount mismatch" });
+      }
+
+      const result = await fulfillPurchase(userId, product, "stripe", sessionId, product.priceUsd, 0);
+      if (!result.success) {
+        if (result.error === "Payment already fulfilled") return res.json({ message: "Purchase already completed", alreadyFulfilled: true });
+        return res.status(400).json({ message: result.error });
+      }
+      res.json({ message: "Purchase successful", transaction: result.transaction, cards: result.cards });
+    } catch (error) {
+      console.error("[payments] Stripe success error:", error);
+      res.status(500).json({ message: "Failed to verify Stripe session" });
+    }
+  });
+
   app.post("/api/payments/stripe/webhook", async (req: any, res) => {
     try {
       const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;

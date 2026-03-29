@@ -9,7 +9,7 @@ import { useFeatureFlag } from "@/lib/config";
 import { useToast } from "@/hooks/use-toast";
 import {
   Star, Coins, Gem, Sparkles, Package, Gift, Lock, Check,
-  Calendar, Clock, LogIn, ChevronRight, Zap, Trophy, Swords
+  Calendar, Clock, LogIn, ChevronRight, Zap, Trophy, Swords, Crown
 } from "lucide-react";
 
 interface BattlePassData {
@@ -25,6 +25,7 @@ interface BattlePassData {
     xpIntoCurrentLevel: number;
     xpForNextLevel: number;
     claimedLevels: number[];
+    premiumUnlocked: boolean;
   } | null;
   levels: {
     level: number;
@@ -32,6 +33,7 @@ interface BattlePassData {
     rewardType: string;
     rewardAmount: number;
     rewardDescription: string;
+    isPremium: boolean;
     claimed: boolean;
     unlocked: boolean;
   }[];
@@ -325,23 +327,29 @@ export default function BattlePassPage() {
           const rewardColor = REWARD_COLORS[level.rewardType] || "text-slate-300";
           const bgClass = REWARD_BG[level.rewardType] || "from-slate-600/20 to-slate-800/20 border-slate-500/30";
           const isMilestone = level.level % 10 === 0;
+          const premiumLocked = level.isPremium && !progress?.premiumUnlocked;
 
           return (
             <Card
               key={level.level}
-              className={`bg-gradient-to-r ${bgClass} border ${isMilestone ? "ring-1 ring-amber-400/30" : ""} ${!level.unlocked ? "opacity-60" : ""}`}
+              className={`bg-gradient-to-r ${level.isPremium ? "from-amber-600/10 to-yellow-600/10 border-amber-500/30" : bgClass} border ${isMilestone ? "ring-1 ring-amber-400/30" : ""} ${!level.unlocked || premiumLocked ? "opacity-60" : ""}`}
               data-testid={`card-bp-level-${level.level}`}
             >
               <CardContent className="py-3 flex items-center gap-4">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${level.unlocked ? "bg-purple-600 text-white" : "bg-slate-700 text-slate-400"}`}>
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${level.unlocked && !premiumLocked ? "bg-purple-600 text-white" : "bg-slate-700 text-slate-400"}`}>
                   {level.level}
                 </div>
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <RewardIcon className={`w-4 h-4 ${rewardColor} shrink-0`} />
-                    <span className={`text-sm font-medium ${rewardColor}`}>{level.rewardDescription}</span>
+                    <span className={`text-sm font-medium ${premiumLocked ? "text-slate-500" : rewardColor}`}>{level.rewardDescription}</span>
                     {isMilestone && <Badge className="bg-amber-600/60 text-amber-200 text-xs border-0">MILESTONE</Badge>}
+                    {level.isPremium && (
+                      <Badge className={progress?.premiumUnlocked ? "bg-amber-600/40 text-amber-200 text-xs border-0" : "bg-slate-700 text-slate-400 text-xs border-0"}>
+                        <Crown className="w-3 h-3 mr-1" />Premium
+                      </Badge>
+                    )}
                   </div>
                   <p className="text-xs text-slate-500">{level.xpRequired} XP required</p>
                 </div>
@@ -349,6 +357,10 @@ export default function BattlePassPage() {
                 <div className="shrink-0">
                   {level.claimed ? (
                     <Badge variant="secondary" className="text-xs"><Check className="w-3 h-3 mr-1" />Claimed</Badge>
+                  ) : premiumLocked ? (
+                    <Badge className="bg-amber-700/40 text-amber-400 text-xs border-0">
+                      <Lock className="w-3 h-3 mr-1" />Premium
+                    </Badge>
                   ) : level.unlocked ? (
                     <Button
                       size="sm"
