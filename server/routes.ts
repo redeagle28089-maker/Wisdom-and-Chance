@@ -9,6 +9,7 @@ import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integra
 import { registerMultiplayerRoutes } from "./multiplayerRoutes";
 import { registerMobileAuthRoutes } from "./mobileAuth";
 import { registerApiDocsRoutes } from "./apiDocs";
+import { registerPaymentRoutes } from "./paymentRoutes";
 import { isUnifiedAuth } from "./unifiedAuth";
 import jwt from "jsonwebtoken";
 import { generateImage, generateText } from "./replit_integrations/image/client";
@@ -105,6 +106,7 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
   registerMultiplayerRoutes(app);
   registerMobileAuthRoutes(app);
   registerApiDocsRoutes(app);
+  await registerPaymentRoutes(app);
 
   app.get("/api/health", async (_req, res) => {
     try {

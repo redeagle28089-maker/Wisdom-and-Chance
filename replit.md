@@ -71,6 +71,22 @@ Key features include:
 - **Endpoints:** GET /api/season/current, GET /api/season/rewards, GET /api/season/player-rank, GET /api/season/history, GET /api/battlepass, POST /api/battlepass/claim, GET /api/weekly-challenges, POST /api/weekly-challenges/:id/claim.
 - **Key Files:** shared/models/economy.ts (schema + constants), server/routes.ts (endpoints + seeding), client/src/pages/season.tsx, client/src/pages/battle-pass.tsx.
 
+### Payment System (v2.5.0)
+- **Payment Providers:** Stripe (Card + Google Pay via Stripe Checkout) and PayPal (PayPal REST API).
+- **PayPal Receiving Account:** reagle2808@aol.com
+- **Pricing Rule:** All USD prices are whole dollars only (no cents). Currency conversion: 100 gold or gems = $1.
+- **Product Catalog:** Seeded from PURCHASE_PRODUCTS_SEED in shared/models/economy.ts. Stored in `purchase_products` table.
+  - Gem Packs: $1 (100), $4 (550), $8 (1,400), $18 (3,600), $35 (8,000) — real money only.
+  - Premium Pack Bundles, Element Mega Pack, Legendary Hunt Pack — USD or gold/gems.
+  - Premium Battle Pass ($5 / 500 gold / 500 gems), Starter Bundle ($10, one-time), Season Pass Bundle ($15).
+- **Purchase Flow:** Player selects product → chooses payment method (Stripe/PayPal/Gold/Gems) → payment processed → items fulfilled atomically.
+- **Premium Battle Pass:** `premiumUnlocked` boolean on `player_battle_pass` table. Set to true when Premium BP or Season Pass Bundle purchased.
+- **Transaction History:** All purchases (real money + currency) tracked in `purchase_transactions` table.
+- **Security:** Server-side payment verification, idempotent fulfillment (paymentId uniqueness), atomic DB transactions.
+- **Env Vars Required:** PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET, STRIPE_SECRET_KEY, STRIPE_PUBLISHABLE_KEY (or VITE_STRIPE_PUBLISHABLE_KEY), optional STRIPE_WEBHOOK_SECRET, PAYPAL_API_URL.
+- **Endpoints:** GET /api/payments/products, GET /api/payments/config, POST /api/payments/purchase-currency, POST /api/payments/paypal/create-order, POST /api/payments/paypal/capture-order, POST /api/payments/stripe/create-checkout, GET /api/payments/stripe/verify-session, POST /api/payments/stripe/webhook, GET /api/payments/history, POST /api/payments/check-purchased.
+- **Key Files:** server/paymentService.ts, server/paymentRoutes.ts, shared/models/economy.ts (schema + product seed), client/src/pages/shop.tsx (Premium Store tab).
+
 ### Database Backup
 - **Admin Export Endpoint:** GET /api/admin/database-export — Admin-only endpoint that exports all database tables as JSON. Add `?save=true` to also save a backup file to `backups/` directory. Image data is included in file backups.
 - **SQL Backups:** Full SQL dumps can be created via `pg_dump` and are stored in the `backups/` directory. These include all data including card images.
@@ -88,4 +104,6 @@ Key features include:
 - **TanStack Query:** For data fetching and state management.
 - **Express.js:** Backend web framework.
 - **TypeScript:** Programming language for both frontend and backend.
+- **Stripe:** Payment processing for credit/debit cards and Google Pay via Stripe Checkout.
+- **PayPal:** Payment processing via PayPal REST API. Payments route to reagle2808@aol.com.
 - **MemStorage:** In-memory storage solution used for active game state during a session.

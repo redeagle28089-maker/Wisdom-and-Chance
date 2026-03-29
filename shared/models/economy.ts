@@ -298,6 +298,7 @@ export const playerBattlePass = pgTable("player_battle_pass", {
   currentXp: integer("current_xp").notNull().default(0),
   currentLevel: integer("current_level").notNull().default(0),
   claimedLevels: varchar("claimed_levels", { length: 2000 }).notNull().default("[]"),
+  premiumUnlocked: boolean("premium_unlocked").notNull().default(false),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => [
   uniqueIndex("uq_player_battle_pass_user_season").on(table.userId, table.seasonId),
@@ -360,3 +361,56 @@ export const BATTLE_PASS_XP = {
   WEEKLY_CHALLENGE: 300,
   ACHIEVEMENT: 200,
 } as const;
+
+export const purchaseProducts = pgTable("purchase_products", {
+  id: varchar("id", { length: 50 }).primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: varchar("description", { length: 1000 }).notNull(),
+  productType: varchar("product_type", { length: 50 }).notNull(),
+  priceUsd: integer("price_usd").notNull(),
+  priceGold: integer("price_gold").notNull().default(0),
+  priceGems: integer("price_gems").notNull().default(0),
+  gemsAmount: integer("gems_amount").notNull().default(0),
+  packsJson: varchar("packs_json", { length: 2000 }).notNull().default("[]"),
+  dustAmount: integer("dust_amount").notNull().default(0),
+  isOneTimePurchase: boolean("is_one_time_purchase").notNull().default(false),
+  isCurrencyPurchasable: boolean("is_currency_purchasable").notNull().default(true),
+  isActive: boolean("is_active").notNull().default(true),
+  badgeText: varchar("badge_text", { length: 50 }),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type PurchaseProduct = typeof purchaseProducts.$inferSelect;
+
+export const purchaseTransactions = pgTable("purchase_transactions", {
+  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id", { length: 255 }).notNull(),
+  productId: varchar("product_id", { length: 50 }).notNull(),
+  paymentMethod: varchar("payment_method", { length: 20 }).notNull(),
+  paymentId: varchar("payment_id", { length: 255 }),
+  amountUsd: integer("amount_usd").notNull().default(0),
+  currencySpent: integer("currency_spent").notNull().default(0),
+  status: varchar("status", { length: 20 }).notNull().default("pending"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("uq_purchase_transactions_payment_id").on(table.paymentId),
+]);
+
+export type PurchaseTransaction = typeof purchaseTransactions.$inferSelect;
+
+export const CURRENCY_PER_DOLLAR = 100;
+
+export const PURCHASE_PRODUCTS_SEED = [
+  { id: "gems_100", name: "Starter Gems", description: "100 gems to get started.", productType: "gems", priceUsd: 1, priceGold: 0, priceGems: 0, gemsAmount: 100, isCurrencyPurchasable: false, badgeText: null, sortOrder: 1 },
+  { id: "gems_550", name: "Popular Gems", description: "550 gems — includes 50 bonus gems!", productType: "gems", priceUsd: 4, priceGold: 0, priceGems: 0, gemsAmount: 550, isCurrencyPurchasable: false, badgeText: "Most Popular", sortOrder: 2 },
+  { id: "gems_1400", name: "Value Gems", description: "1,400 gems — 200 bonus gems included!", productType: "gems", priceUsd: 8, priceGold: 0, priceGems: 0, gemsAmount: 1400, isCurrencyPurchasable: false, badgeText: "Great Value", sortOrder: 3 },
+  { id: "gems_3600", name: "Mega Gems", description: "3,600 gems — massive 600 bonus!", productType: "gems", priceUsd: 18, priceGold: 0, priceGems: 0, gemsAmount: 3600, isCurrencyPurchasable: false, badgeText: null, sortOrder: 4 },
+  { id: "gems_8000", name: "Ultimate Gems", description: "8,000 gems — biggest value with 1,500 bonus!", productType: "gems", priceUsd: 35, priceGold: 0, priceGems: 0, gemsAmount: 8000, isCurrencyPurchasable: false, badgeText: "Best Value", sortOrder: 5 },
+  { id: "premium_pack_bundle", name: "Premium Pack Bundle", description: "3 Premium packs with guaranteed Rare or better cards.", productType: "pack_bundle", priceUsd: 3, priceGold: 300, priceGems: 300, gemsAmount: 0, packsJson: JSON.stringify([{ type: "premium", count: 3 }]), isCurrencyPurchasable: true, badgeText: null, sortOrder: 10 },
+  { id: "element_mega_pack", name: "Element Mega Pack", description: "5 element packs — one of each element!", productType: "pack_bundle", priceUsd: 6, priceGold: 600, priceGems: 600, gemsAmount: 0, packsJson: JSON.stringify([{ type: "fire", count: 1 }, { type: "water", count: 1 }, { type: "earth", count: 1 }, { type: "air", count: 1 }, { type: "nature", count: 1 }]), isCurrencyPurchasable: true, badgeText: null, sortOrder: 11 },
+  { id: "legendary_hunt", name: "Legendary Hunt Pack", description: "5 packs with boosted Legendary card rates!", productType: "pack_bundle", priceUsd: 8, priceGold: 800, priceGems: 800, gemsAmount: 0, packsJson: JSON.stringify([{ type: "premium", count: 5 }]), isCurrencyPurchasable: true, badgeText: "Hot", sortOrder: 12 },
+  { id: "premium_battle_pass", name: "Premium Battle Pass", description: "Unlock the premium reward track for this season!", productType: "battle_pass", priceUsd: 5, priceGold: 500, priceGems: 500, gemsAmount: 0, isCurrencyPurchasable: true, badgeText: null, sortOrder: 20 },
+  { id: "starter_bundle", name: "Starter Bundle", description: "1,500 gems + 5 premium packs + 500 dust. One-time offer!", productType: "bundle", priceUsd: 10, priceGold: 1000, priceGems: 1000, gemsAmount: 1500, dustAmount: 500, packsJson: JSON.stringify([{ type: "premium", count: 5 }]), isOneTimePurchase: true, isCurrencyPurchasable: true, badgeText: "One-Time", sortOrder: 30 },
+  { id: "season_pass_bundle", name: "Season Pass Bundle", description: "Premium Battle Pass + 2,000 gems + 10 premium packs.", productType: "bundle", priceUsd: 15, priceGold: 1500, priceGems: 1500, gemsAmount: 2000, packsJson: JSON.stringify([{ type: "premium", count: 10 }]), isCurrencyPurchasable: true, badgeText: "Best Deal", sortOrder: 31 },
+] as const;
