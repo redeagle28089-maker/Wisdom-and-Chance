@@ -742,7 +742,7 @@ const API_DOCS = {
             leaderboard: true,
           },
         },
-        season: "object | null — { id, name, startDate, endDate, daysRemaining } when a ranked season is active",
+        season: "object | null — { id, name, start, end, daysRemaining } when a ranked season is active",
         maintenance: "{ active: boolean, message?: string } — if active is true, show maintenance screen and block gameplay",
         minClientVersion: "string (semver) — mobile should compare against their app version and prompt update if too old",
         serverTime: "string (ISO 8601) — use for clock sync on daily/weekly challenge timers",
@@ -773,7 +773,7 @@ const API_DOCS = {
         description: "Update server config. Allowed keys: maintenance, current_season, min_client_version",
         examples: {
           maintenance: { value: { active: true, message: "Server maintenance in progress" } },
-          current_season: { value: { id: "season-1", name: "Season 1: Dawn", startDate: "2026-04-01", endDate: "2026-04-30" } },
+          current_season: { value: { id: "season-1", name: "Season 1: Dawn", start: "2026-04-01", end: "2026-04-30" } },
           min_client_version: { value: { version: "1.2.0" } },
         },
       },

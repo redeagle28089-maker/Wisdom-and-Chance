@@ -145,11 +145,11 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
       const maintenanceVal = maintenanceRow[0]?.value as { active: boolean; message?: string } | undefined;
 
       const seasonRow = await db.select().from(serverConfig).where(eq(serverConfig.key, "current_season")).limit(1);
-      const seasonVal = seasonRow[0]?.value as { id: string; name: string; startDate: string; endDate: string } | null;
+      const seasonVal = seasonRow[0]?.value as { id: string; name: string; start: string; end: string } | null;
 
       let season = null;
-      if (seasonVal && seasonVal.endDate) {
-        const daysRemaining = Math.max(0, Math.ceil((new Date(seasonVal.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+      if (seasonVal && seasonVal.end) {
+        const daysRemaining = Math.max(0, Math.ceil((new Date(seasonVal.end).getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
         season = { ...seasonVal, daysRemaining };
       }
 
@@ -804,7 +804,7 @@ IMPORTANT:
 
   const serverConfigSchemas: Record<string, z.ZodType> = {
     maintenance: z.object({ active: z.boolean(), message: z.string().optional() }),
-    current_season: z.object({ id: z.string(), name: z.string(), startDate: z.string(), endDate: z.string() }),
+    current_season: z.object({ id: z.string(), name: z.string(), start: z.string(), end: z.string() }),
     min_client_version: z.object({ version: z.string() }),
   };
 
@@ -821,7 +821,7 @@ IMPORTANT:
       }
       const parsed = schema.safeParse(value);
       if (!parsed.success) {
-        return res.status(400).json({ message: "Invalid value shape", errors: (parsed as any).error?.flatten() });
+        return res.status(400).json({ message: "Invalid value shape", errors: parsed.error.flatten() });
       }
       await db.insert(serverConfig)
         .values({ key, value: parsed.data, updatedAt: new Date() })

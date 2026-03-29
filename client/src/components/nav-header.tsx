@@ -21,8 +21,11 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuth } from "@/hooks/use-auth";
+import { useAppConfig } from "@/lib/config";
 
-const menuItems = [
+type NavItem = { title: string; url: string; icon: typeof Home; featureFlag?: string };
+
+const menuItems: NavItem[] = [
   { title: "Home", url: "/", icon: Home },
   { title: "Rules", url: "/rules", icon: BookOpen },
   { title: "Tutorial", url: "/tutorial", icon: GraduationCap },
@@ -30,31 +33,39 @@ const menuItems = [
   { title: "Deck Builder", url: "/deck-builder", icon: Layers },
 ];
 
-const playItems = [
-  { title: "Practice", url: "/practice", icon: Swords },
-  { title: "Multiplayer", url: "/lobby", icon: Gamepad2 },
-  { title: "Live Matches", url: "/live-matches", icon: Eye },
-  { title: "Friends", url: "/friends", icon: Users },
+const playItems: NavItem[] = [
+  { title: "Practice", url: "/practice", icon: Swords, featureFlag: "practice_mode" },
+  { title: "Multiplayer", url: "/lobby", icon: Gamepad2, featureFlag: "multiplayer" },
+  { title: "Live Matches", url: "/live-matches", icon: Eye, featureFlag: "spectator_mode" },
+  { title: "Friends", url: "/friends", icon: Users, featureFlag: "friends_system" },
 ];
 
-const progressItems = [
-  { title: "Achievements", url: "/achievements", icon: Trophy },
-  { title: "Leaderboard", url: "/leaderboard", icon: Medal },
-  { title: "Daily Challenges", url: "/challenges", icon: Calendar },
+const progressItems: NavItem[] = [
+  { title: "Achievements", url: "/achievements", icon: Trophy, featureFlag: "achievements" },
+  { title: "Leaderboard", url: "/leaderboard", icon: Medal, featureFlag: "leaderboard" },
+  { title: "Daily Challenges", url: "/challenges", icon: Calendar, featureFlag: "daily_challenges" },
   { title: "Analytics", url: "/analytics", icon: BarChart3 },
   { title: "Profile", url: "/profile", icon: User },
 ];
 
-const loreItems = [
+const loreItems: NavItem[] = [
   { title: "Lore Archives", url: "/lore", icon: BookMarked },
   { title: "About the Creator", url: "/about", icon: UserCircle },
 ];
+
+function useFilteredItems(items: NavItem[]): NavItem[] {
+  const config = useAppConfig();
+  if (!config) return items;
+  return items.filter(item => !item.featureFlag || config.features[item.featureFlag] !== false);
+}
 
 export function NavHeader() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [location] = useLocation();
   const { user, isAuthenticated, isLoading } = useAuth();
   const menuRef = useRef<HTMLDivElement>(null);
+  const filteredPlayItems = useFilteredItems(playItems);
+  const filteredProgressItems = useFilteredItems(progressItems);
 
   const { data: adminCheck } = useQuery<{ isAdmin: boolean }>({
     queryKey: ["/api/admin/check"],
@@ -143,8 +154,8 @@ export function NavHeader() {
             </button>
 
             <NavGroup label="Navigation" items={menuItems} />
-            <NavGroup label="Play" items={playItems} />
-            <NavGroup label="Progress" items={progressItems} />
+            {filteredPlayItems.length > 0 && <NavGroup label="Play" items={filteredPlayItems} />}
+            {filteredProgressItems.length > 0 && <NavGroup label="Progress" items={filteredProgressItems} />}
             <NavGroup label="Lore" items={loreItems} />
 
             {adminCheck?.isAdmin && (

@@ -48,8 +48,8 @@ export const appConfigSchema = z.object({
   season: z.object({
     id: z.string(),
     name: z.string(),
-    startDate: z.string(),
-    endDate: z.string(),
+    start: z.string(),
+    end: z.string(),
     daysRemaining: z.number(),
   }).nullable(),
   maintenance: z.object({
