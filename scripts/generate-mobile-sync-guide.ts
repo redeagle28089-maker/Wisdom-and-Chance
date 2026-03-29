@@ -238,39 +238,39 @@ body("Comparison against Hearthstone, MTG Arena, and Master Duel. Features are c
 
 h2("2.1 Tier 1 — Critical (Core Progression Loop)");
 table(
-  ["Feature", "Hearthstone", "MTG Arena", "W&C Status", "Priority"],
+  ["Feature", "Hearthstone", "MTG Arena", "Master Duel", "W&C Status"],
   [
-    ["Card Rarity", "Yes", "Yes", "DONE", "—"],
-    ["Card Collection", "Yes", "Yes", "DONE (flagged)", "—"],
-    ["In-game Currency", "Gold/Dust", "Gold/Gems", "DONE (flagged)", "—"],
-    ["Pack Opening", "Yes (animated)", "Yes", "Basic (no animation)", "Next"],
-    ["Crafting/Disenchant", "Yes", "Wildcards", "DONE (flagged)", "—"],
-    ["Shop / Store", "Yes", "Yes", "Not built", "Next"],
-    ["Starter Decks", "Yes", "Yes", "Starter collection done", "—"],
+    ["Card Rarity", "Yes (6 tiers)", "Yes (4 tiers)", "Yes (4 tiers)", "DONE (4 tiers)"],
+    ["Card Collection", "Yes", "Yes", "Yes", "DONE (flagged)"],
+    ["In-game Currency", "Gold/Dust", "Gold/Gems", "Gems/CP", "DONE (flagged)"],
+    ["Pack Opening", "Animated", "Animated", "Animated", "Basic (next)"],
+    ["Crafting/Disenchant", "Dust system", "Wildcards", "CP crafting", "DONE (flagged)"],
+    ["Shop / Store", "Yes", "Yes", "Yes", "Not built (next)"],
+    ["Starter Decks", "Free decks", "Color decks", "Starter + Solo", "Starter done"],
   ]
 );
 
 h2("2.2 Tier 2 — High (Daily Engagement)");
 table(
-  ["Feature", "Hearthstone", "MTG Arena", "W&C Status", "Priority"],
+  ["Feature", "Hearthstone", "MTG Arena", "Master Duel", "W&C Status"],
   [
-    ["Seasons / Ranked", "Monthly", "Monthly", "Schema planned", "Soon"],
-    ["Battle Pass", "Yes (Tavern)", "Mastery Pass", "Schema planned", "Soon"],
-    ["Daily Login", "Quests", "Daily rewards", "Not built", "Medium"],
-    ["Match History", "Recent games", "Yes", "Not built", "Medium"],
-    ["Tutorials", "Interactive", "Color challenge", "Basic tutorial", "Low"],
+    ["Seasons", "Monthly", "Monthly", "Monthly", "Planned"],
+    ["Battle Pass", "Tavern Pass", "Mastery Pass", "Duel Pass", "Planned"],
+    ["Daily Login", "Quest-based", "Daily rewards", "Daily login", "Not built"],
+    ["Match History", "Recent games", "Yes", "Duel Log", "Not built"],
+    ["Tutorials", "Interactive", "Color challenge", "Solo Mode", "Basic"],
   ]
 );
 
 h2("2.3 Tier 3 — Medium (Collectibility & Monetization)");
 table(
-  ["Feature", "Hearthstone", "MTG Arena", "W&C Status", "Priority"],
+  ["Feature", "Hearthstone", "MTG Arena", "Master Duel", "W&C Status"],
   [
-    ["Card Variants", "Golden/Diamond", "Styles/Alt art", "Not built", "Medium"],
-    ["Cosmetics", "Hero skins", "Pets/Sleeves", "Not built", "Medium"],
-    ["Premium Currency", "Runestones", "Gems", "Gems reserved", "Medium"],
-    ["Tournaments", "Battlegrounds", "Events", "Not built", "Low"],
-    ["Draft/Arena", "Arena mode", "Draft/Sealed", "Not built", "Low"],
+    ["Card Variants", "Golden/Diamond", "Styles/Alt art", "Royal/Prismatic", "Not built"],
+    ["Cosmetics", "Hero skins", "Pets/Sleeves", "Mates/Fields", "Not built"],
+    ["Premium Currency", "Runestones", "Gems", "Gems", "Gems reserved"],
+    ["Tournaments", "Battlegrounds", "Events", "Duelist Cup", "Not built"],
+    ["Draft/Arena", "Arena mode", "Draft/Sealed", "N/A", "Not built"],
   ]
 );
 
@@ -386,7 +386,7 @@ table(
     ["GET", "/api/config", "Feature flags, version, maintenance"],
     ["GET", "/api/cards", "All 200 cards with rarity"],
     ["GET", "/api/cards/:id", "Single card by ID"],
-    ["GET", "/api/cards/element/:el", "Cards by element"],
+    ["GET", "/api/cards/element/:element", "Cards by element"],
     ["GET", "/api/commanders", "All 10 commanders"],
     ["GET", "/api/commanders/:id", "Single commander"],
     ["GET", "/api/achievements", "All achievements"],
@@ -578,25 +578,28 @@ const ws = new WebSocket(
 // Mobile MUST pass JWT via query parameter`
 );
 
-h2("7.2 Client → Server Events");
+h2("7.2 Client → Server Events (from /api/docs)");
 table(
   ["Event", "Payload", "Description"],
   [
     ["join_room", "{ roomId }", "Subscribe to room updates"],
     ["leave_room", "{ roomId }", "Unsubscribe from room"],
-    ["join_game", "{ gameId }", "Subscribe to game state"],
-    ["leave_game", "{ gameId }", "Unsubscribe from game"],
-    ["room_message", "{ roomId, message }", "Send chat in room"],
-    ["game_message", "{ gameId, message }", "Send chat in game"],
-    ["game_action", "{ gameId, action }", "Send game action"],
-    ["player_ready", "{ roomId, ready, deckId? }", "Toggle ready + select deck"],
-    ["game_start", "{ roomId }", "Request game start (host)"],
-    ["room_update", "{ roomId }", "Request room state refresh"],
-    ["ping", "{}", "Heartbeat keepalive"],
+    ["join_game", "{ gameId }", "Subscribe to game state updates"],
+    ["leave_game", "{ gameId }", "Unsubscribe from game updates"],
+    ["room_message", "{ roomId, message }", "Send chat message in room"],
+    ["game_message", "{ gameId, message }", "Send chat message in game"],
+    ["game_action", "{ gameId, action }", "Broadcast game state changes"],
   ]
 );
 
-h2("7.3 Server → Client Events");
+body("Additional events supported by the server (not in /api/docs but functional):");
+bullet("player_ready — { roomId, ready, deckId? } — toggle ready + select deck");
+bullet("game_start — { roomId } — request game start (host)");
+bullet("room_update — { roomId } — request room state refresh");
+bullet("ping — {} — heartbeat keepalive");
+bullet("auth — { token } — authenticate (alternative to query param)");
+
+h2("7.3 Server → Client Events (from /api/docs)");
 table(
   ["Event", "Payload", "Description"],
   [
@@ -607,19 +610,22 @@ table(
     ["player_left", "{ roomId, userId }", "Player left room"],
     ["player_ready_update", "{ roomId, userId, ready, deckId }", "Ready status changed"],
     ["game_start", "{ roomId, gameId }", "Game started — navigate to game"],
-    ["game_state", "{ ...sanitized state }", "Game state (per-player view)"],
-    ["game_action", "Game action object", "Game update from opponent"],
-    ["game_over", "{ winner, reason, goldReward? }", "Game ended + rewards"],
-    ["chat_message", "{ roomId, senderId, message }", "Room chat message"],
-    ["game_message", "{ userId, displayName, message }", "In-game chat message"],
+    ["game_action", "Game action object", "Game state update from other player"],
+    ["chat_message", "{ roomId, senderId, message, createdAt }", "Chat message in room"],
+    ["game_message", "{ userId, displayName, message, timestamp }", "Chat message in game"],
+    ["friend_message", "{ id, senderId, receiverId, message }", "Friend direct message"],
     ["friend_request", "{ requestId, senderId }", "Incoming friend request"],
     ["friend_request_accepted", "{ requestId, friendId }", "Request accepted"],
     ["presence_update", "{ userId, status }", "Friend online/offline"],
     ["spectator_joined", "{ roomId, userId }", "Spectator joined"],
     ["spectator_left", "{ roomId, userId }", "Spectator left"],
-    ["error", "{ message }", "Server error"],
   ]
 );
+
+body("Additional server events (not in /api/docs but emitted by the engine):");
+bullet("game_state — full sanitized game state (per-player view)");
+bullet("game_over — { winner, reason, goldReward? } — game ended + rewards");
+bullet("error — { message } — server error notification");
 
 h2("7.4 Game Action Types");
 code(
