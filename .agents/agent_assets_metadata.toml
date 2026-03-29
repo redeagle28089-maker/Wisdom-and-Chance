@@ -54,3 +54,9 @@ id = "jnXSBCOxj23xIi9no_OW2"
 uri = "file://attached_assets/mobile_payment_sync_guide.md"
 type = "text"
 title = "Mobile Payment Integration Sync Guide (Markdown Source)"
+
+[[outputs]]
+id = "MMs9fG_ef5DmF9dmBDvUc"
+uri = "file://attached_assets/Wisdom_Chance_TCG_Complete_Mobile_Guide_v2.5.pdf"
+type = "pdf"
+title = "Wisdom & Chance TCG - Complete Mobile Agent Sync Guide v2.5.0"
