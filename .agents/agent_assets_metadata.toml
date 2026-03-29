@@ -36,3 +36,9 @@ id = "oBC0tqS2PaCY0QYRCuaEI"
 uri = "file://WC_Mobile_Sync_Guide.pdf"
 type = "pdf"
 title = "Mobile Sync Guide & Feature Roadmap PDF"
+
+[[outputs]]
+id = "180xIlgT98BQCHjiTYlSl"
+uri = "file://WC_TCG_Mobile_AI_Agent_Guide.pdf"
+type = "pdf"
+title = "Wisdom & Chance TCG - Mobile AI Agent Sync Guide"
