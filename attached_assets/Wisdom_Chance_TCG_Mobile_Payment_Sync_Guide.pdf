@@ -1,0 +1,6241 @@
+%PDF-1.3
+%∫ﬂ¨‡
+3 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/MediaBox [0 0 612. 792.]
+/Contents 4 0 R
+>>
+endobj
+4 0 obj
+<<
+/Length 5298
+>>
+stream
+0.200025 w
+0 G
+BT
+/F2 18 Tf
+20.6999999999999993 TL
+0.118 0.227 0.373 rg
+50. 734. Td
+(Wisdom & Chance TCG ó Mobile Payment Integration Sync) Tj
+ET
+BT
+/F2 18 Tf
+20.6999999999999993 TL
+0.118 0.227 0.373 rg
+50. 712. Td
+(Guide) Tj
+ET
+0.15 0.39 0.92 RG
+1.5 w
+50. 690. m
+562. 690. l
+S
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 674. Td
+(Date: March 29, 2026 | Server Version: 2.5.0 \(Post-Task #8\)) Tj
+ET
+0.9 0.91 0.92 RG
+0.5 w
+50. 655. m
+562. 655. l
+S
+BT
+/F2 14 Tf
+16.0999999999999979 TL
+0.145 0.388 0.922 rg
+50. 629. Td
+(Document Purpose) Tj
+ET
+0.82 0.84 0.86 RG
+0.5 w
+50. 611. m
+562. 611. l
+S
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 599. Td
+(This document provides complete instructions for an AI agent building the Wisdom & Chance TCG mobile app to integrate the) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 586. Td
+(payment system \(PayPal, Stripe/Google Pay, and in-game currency purchases\) that was added in server Task #8. The mobile) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 573. Td
+(app should consume the existing backend payment endpoints as-is; no server changes are needed. This guide supplements the) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 560. Td
+(original Mobile App AI Agent Sync Guide \(v2.4.0\) with all new payment endpoints, data models, product catalog, and) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 547. Td
+(implementation flows.) Tj
+ET
+0.9 0.91 0.92 RG
+0.5 w
+50. 528. m
+562. 528. l
+S
+BT
+/F2 14 Tf
+16.0999999999999979 TL
+0.145 0.388 0.922 rg
+50. 502. Td
+(Table of Contents) Tj
+ET
+0.82 0.84 0.86 RG
+0.5 w
+50. 484. m
+562. 484. l
+S
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 472. Td
+(  1. Payment System Overview) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 459. Td
+(  2. Payment Configuration Endpoint) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 446. Td
+(  3. Product Catalog & Data Model) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 433. Td
+(  4. Complete Payment API Reference \(12 endpoints\)) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 420. Td
+(  5. Purchase Flows \(Step-by-Step\)) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 407. Td
+(  6. Battle Pass Premium Track) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 394. Td
+(  7. Economy Constants & Pricing) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 381. Td
+(  8. Error Handling Reference) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 368. Td
+(  9. Mobile Implementation Checklist) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 355. Td
+(  10. Critical Implementation Notes) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 342. Td
+(  11. Updated Server File Reference) Tj
+ET
+0.9 0.91 0.92 RG
+0.5 w
+50. 323. m
+562. 323. l
+S
+BT
+/F2 14 Tf
+16.0999999999999979 TL
+0.145 0.388 0.922 rg
+50. 297. Td
+(1. Payment System Overview) Tj
+ET
+0.82 0.84 0.86 RG
+0.5 w
+50. 279. m
+562. 279. l
+S
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 267. Td
+(The server now supports four payment methods:) Tj
+ET
+0.94 0.96 1. rg
+50. 250. 512. -14. re
+f
+BT
+/F2 7.5 Tf
+8.625 TL
+0. g
+53. 240. Td
+(Method) Tj
+ET
+BT
+/F2 7.5 Tf
+8.625 TL
+0. g
+223.6666666666666572 240. Td
+(Description) Tj
+ET
+BT
+/F2 7.5 Tf
+8.625 TL
+0. g
+394.3333333333333144 240. Td
+(Use Case) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 236. m
+562. 236. l
+S
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+53. 226. Td
+(Gold) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+223.6666666666666572 226. Td
+(In-game currency earned from matches) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+394.3333333333333144 226. Td
+(Packs, bundles, battle pass) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 222. m
+562. 222. l
+S
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+53. 212. Td
+(Gems) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+223.6666666666666572 212. Td
+(In-game currency purchased with real mon) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+394.3333333333333144 212. Td
+(Packs, bundles, battle pass) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 208. m
+562. 208. l
+S
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+53. 198. Td
+(Stripe) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+223.6666666666666572 198. Td
+(Credit/debit card + Google Pay + Apple P) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+394.3333333333333144 198. Td
+(Real-money purchases \(gem packs, bundles) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 194. m
+562. 194. l
+S
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+53. 184. Td
+(PayPal) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+223.6666666666666572 184. Td
+(PayPal checkout) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+394.3333333333333144 184. Td
+(Real-money purchases \(gem packs, bundles) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 180. m
+562. 180. l
+S
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 172. Td
+(Key Rules:) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 159. Td
+(  ï All USD prices are whole dollars \(no cents\)) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 146. Td
+(  ï 100 gold = $1 USD; 100 gems = $1 USD) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 133. Td
+(  ï Gem packs \(gems_100, gems_550, etc.\) are real-money ONLY ó isCurrencyPurchasable: false) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 120. Td
+(  ï All shop packs support BOTH gold AND gems as payment) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 107. Td
+(  ï Payments route to PayPal account: reagle2808@aol.com) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 94. Td
+(  ï One-time purchases are enforced server-side with transactional locking) Tj
+ET
+0.9 0.91 0.92 RG
+0.5 w
+50. 75. m
+562. 75. l
+S
+endstream
+endobj
+5 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/MediaBox [0 0 612. 792.]
+/Contents 6 0 R
+>>
+endobj
+6 0 obj
+<<
+/Length 6646
+>>
+stream
+0.5 w
+0.9 0.91 0.92 RG
+BT
+/F2 14 Tf
+16.0999999999999979 TL
+0.145 0.388 0.922 rg
+50. 742. Td
+(2. Payment Configuration Endpoint) Tj
+ET
+0.82 0.84 0.86 RG
+0.5 w
+50. 724. m
+562. 724. l
+S
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 712. Td
+(Before showing any payment UI, fetch the payment configuration to know which providers are available.) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 693. Td
+(Endpoint: GET /api/payments/config) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 674. Td
+(Authentication: None required) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 655. Td
+(Response:) Tj
+ET
+0.94 0.94 0.96 rg
+48. 644. 516. -76. re
+f
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 634. Td
+({) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 623. Td
+(  "paypalClientId": "AaBbCc123...",) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 612. Td
+(  "stripePublishableKey": "pk_live_...",) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 601. Td
+(  "paypalEnabled": true,) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 590. Td
+(  "stripeEnabled": true) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 579. Td
+(}) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 564. Td
+(Mobile Implementation:) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 551. Td
+(  ï Fetch on app startup alongside feature flags \(GET /api/config\)) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 538. Td
+(  ï Only show Stripe button if stripeEnabled === true) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 525. Td
+(  ï Only show PayPal button if paypalEnabled === true) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 512. Td
+(  ï Cache result; re-fetch on app foreground resume) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 499. Td
+(  ï If both are disabled, only show gold/gems purchase options) Tj
+ET
+0.9 0.91 0.92 RG
+0.5 w
+50. 480. m
+562. 480. l
+S
+BT
+/F2 14 Tf
+16.0999999999999979 TL
+0.145 0.388 0.922 rg
+50. 454. Td
+(3. Product Catalog & Data Model) Tj
+ET
+0.82 0.84 0.86 RG
+0.5 w
+50. 436. m
+562. 436. l
+S
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0.216 0.255 0.318 rg
+50. 418. Td
+(3.1 PurchaseProduct Schema) Tj
+ET
+0.94 0.94 0.96 rg
+48. 398. 516. -208. re
+f
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 388. Td
+(interface PurchaseProduct {) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 377. Td
+(  id: string;              // e.g. "gems_100", "premium_battle_pass") Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 366. Td
+(  name: string;            // Display name) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 355. Td
+(  description: string;     // Display description) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 344. Td
+(  productType: string;     // "gems" | "pack_bundle" | "battle_pass" | "bundle") Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 333. Td
+(  priceUsd: number;        // USD price \(whole dollars\)) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 322. Td
+(  priceGold: number;       // Gold price \(0 = not purchasable with gold\)) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 311. Td
+(  priceGems: number;       // Gems price \(0 = not purchasable with gems\)) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 300. Td
+(  gemsAmount: number;      // Gems granted on purchase \(for gem packs\)) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 289. Td
+(  packsJson: string;       // JSON array of {type, count} for pack bundles) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 278. Td
+(  dustAmount: number;      // Dust granted on purchase) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 267. Td
+(  isOneTimePurchase: boolean;  // Can only buy once per account) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 256. Td
+(  isCurrencyPurchasable: boolean;  // Can buy with gold/gems \(false = real money only\)) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 245. Td
+(  isActive: boolean;       // Currently available) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 234. Td
+(  badgeText: string | null;  // UI badge \("Most Popular", "Best Value", etc.\)) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 223. Td
+(  sortOrder: number;       // Display order) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 212. Td
+(  createdAt: string;       // ISO timestamp) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 201. Td
+(}) Tj
+ET
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0.216 0.255 0.318 rg
+50. 180. Td
+(3.2 Complete Product Catalog \(Seeded on Server\)) Tj
+ET
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0.294 0.333 0.388 rg
+50. 154. Td
+(Gem Packs \(Real Money Only\)) Tj
+ET
+0.94 0.96 1. rg
+50. 135. 512. -14. re
+f
+BT
+/F2 7.5 Tf
+8.625 TL
+0. g
+53. 125. Td
+(ID) Tj
+ET
+BT
+/F2 7.5 Tf
+8.625 TL
+0. g
+155.4000000000000057 125. Td
+(Name) Tj
+ET
+BT
+/F2 7.5 Tf
+8.625 TL
+0. g
+257.8000000000000114 125. Td
+(USD) Tj
+ET
+BT
+/F2 7.5 Tf
+8.625 TL
+0. g
+360.2000000000000455 125. Td
+(Gems Granted) Tj
+ET
+BT
+/F2 7.5 Tf
+8.625 TL
+0. g
+462.6000000000000227 125. Td
+(Badge) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 121. m
+562. 121. l
+S
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+53. 111. Td
+(gems_100) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+155.4000000000000057 111. Td
+(Starter Gems) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+257.8000000000000114 111. Td
+($1) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+360.2000000000000455 111. Td
+(100) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+462.6000000000000227 111. Td
+(ó) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 107. m
+562. 107. l
+S
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+53. 97. Td
+(gems_550) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+155.4000000000000057 97. Td
+(Popular Gems) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+257.8000000000000114 97. Td
+($4) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+360.2000000000000455 97. Td
+(550 \(50 bonus\)) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+462.6000000000000227 97. Td
+(Most Popular) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 93. m
+562. 93. l
+S
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+53. 83. Td
+(gems_1400) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+155.4000000000000057 83. Td
+(Value Gems) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+257.8000000000000114 83. Td
+($8) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+360.2000000000000455 83. Td
+(1,400 \(200 bonus\)) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+462.6000000000000227 83. Td
+(Great Value) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 79. m
+562. 79. l
+S
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+53. 69. Td
+(gems_3600) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+155.4000000000000057 69. Td
+(Mega Gems) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+257.8000000000000114 69. Td
+($18) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+360.2000000000000455 69. Td
+(3,600 \(600 bonus\)) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+462.6000000000000227 69. Td
+(ó) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 65. m
+562. 65. l
+S
+endstream
+endobj
+7 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/MediaBox [0 0 612. 792.]
+/Contents 8 0 R
+>>
+endobj
+8 0 obj
+<<
+/Length 8261
+>>
+stream
+0.3 w
+0.82 0.84 0.86 RG
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+53. 734. Td
+(gems_8000) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+155.4000000000000057 734. Td
+(Ultimate Gems) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+257.8000000000000114 734. Td
+($35) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+360.2000000000000455 734. Td
+(8,000 \(1,500 bonus\)) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+462.6000000000000227 734. Td
+(Best Value) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 730. m
+562. 730. l
+S
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 722. Td
+(All gem packs: isCurrencyPurchasable: false ó cannot buy gems with gold/gems.) Tj
+ET
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0.294 0.333 0.388 rg
+50. 699. Td
+(Pack Bundles \(Gold, Gems, or Real Money\)) Tj
+ET
+0.94 0.96 1. rg
+50. 680. 512. -14. re
+f
+BT
+/F2 7.5 Tf
+8.625 TL
+0. g
+53. 670. Td
+(ID) Tj
+ET
+BT
+/F2 7.5 Tf
+8.625 TL
+0. g
+138.3333333333333144 670. Td
+(Name) Tj
+ET
+BT
+/F2 7.5 Tf
+8.625 TL
+0. g
+223.6666666666666572 670. Td
+(USD) Tj
+ET
+BT
+/F2 7.5 Tf
+8.625 TL
+0. g
+309. 670. Td
+(Gold) Tj
+ET
+BT
+/F2 7.5 Tf
+8.625 TL
+0. g
+394.3333333333333144 670. Td
+(Gems) Tj
+ET
+BT
+/F2 7.5 Tf
+8.625 TL
+0. g
+479.6666666666666288 670. Td
+(Contents) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 666. m
+562. 666. l
+S
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+53. 656. Td
+(premium_pack_bundle) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+138.3333333333333144 656. Td
+(Premium Pack Bundle) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+223.6666666666666572 656. Td
+($3) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+309. 656. Td
+(300) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+394.3333333333333144 656. Td
+(300) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+479.6666666666666288 656. Td
+(3x Premium packs) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 652. m
+562. 652. l
+S
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+53. 642. Td
+(element_mega_pack) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+138.3333333333333144 642. Td
+(Element Mega Pack) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+223.6666666666666572 642. Td
+($6) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+309. 642. Td
+(600) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+394.3333333333333144 642. Td
+(600) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+479.6666666666666288 642. Td
+(5x Element packs \(1 each\)) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 638. m
+562. 638. l
+S
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+53. 628. Td
+(legendary_hunt) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+138.3333333333333144 628. Td
+(Legendary Hunt Pack) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+223.6666666666666572 628. Td
+($8) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+309. 628. Td
+(800) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+394.3333333333333144 628. Td
+(800) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+479.6666666666666288 628. Td
+(5x Premium packs \(boosted Legendary\)) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 624. m
+562. 624. l
+S
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0.294 0.333 0.388 rg
+50. 612. Td
+(Battle Pass) Tj
+ET
+0.94 0.96 1. rg
+50. 593. 512. -14. re
+f
+BT
+/F2 7.5 Tf
+8.625 TL
+0. g
+53. 583. Td
+(ID) Tj
+ET
+BT
+/F2 7.5 Tf
+8.625 TL
+0. g
+138.3333333333333144 583. Td
+(Name) Tj
+ET
+BT
+/F2 7.5 Tf
+8.625 TL
+0. g
+223.6666666666666572 583. Td
+(USD) Tj
+ET
+BT
+/F2 7.5 Tf
+8.625 TL
+0. g
+309. 583. Td
+(Gold) Tj
+ET
+BT
+/F2 7.5 Tf
+8.625 TL
+0. g
+394.3333333333333144 583. Td
+(Gems) Tj
+ET
+BT
+/F2 7.5 Tf
+8.625 TL
+0. g
+479.6666666666666288 583. Td
+(Effect) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 579. m
+562. 579. l
+S
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+53. 569. Td
+(premium_battle_pass) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+138.3333333333333144 569. Td
+(Premium Battle Pass) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+223.6666666666666572 569. Td
+($5) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+309. 569. Td
+(500) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+394.3333333333333144 569. Td
+(500) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+479.6666666666666288 569. Td
+(Unlocks premium reward track) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 565. m
+562. 565. l
+S
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0.294 0.333 0.388 rg
+50. 553. Td
+(Bundles) Tj
+ET
+0.94 0.96 1. rg
+50. 534. 512. -14. re
+f
+BT
+/F2 7.5 Tf
+8.625 TL
+0. g
+53. 524. Td
+(ID) Tj
+ET
+BT
+/F2 7.5 Tf
+8.625 TL
+0. g
+126.1428571428571388 524. Td
+(Name) Tj
+ET
+BT
+/F2 7.5 Tf
+8.625 TL
+0. g
+199.2857142857142776 524. Td
+(USD) Tj
+ET
+BT
+/F2 7.5 Tf
+8.625 TL
+0. g
+272.4285714285714448 524. Td
+(Gold) Tj
+ET
+BT
+/F2 7.5 Tf
+8.625 TL
+0. g
+345.5714285714285552 524. Td
+(Gems) Tj
+ET
+BT
+/F2 7.5 Tf
+8.625 TL
+0. g
+418.7142857142856656 524. Td
+(Contents) Tj
+ET
+BT
+/F2 7.5 Tf
+8.625 TL
+0. g
+491.8571428571428328 524. Td
+(One-Time?) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 520. m
+562. 520. l
+S
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+53. 510. Td
+(starter_bundle) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+126.1428571428571388 510. Td
+(Starter Bundle) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+199.2857142857142776 510. Td
+($10) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+272.4285714285714448 510. Td
+(1,000) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+345.5714285714285552 510. Td
+(1,000) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+418.7142857142856656 510. Td
+(1,500 gems + 5 premium packs + 500 dust) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+491.8571428571428328 510. Td
+(Yes) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 506. m
+562. 506. l
+S
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+53. 496. Td
+(season_pass_bundle) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+126.1428571428571388 496. Td
+(Season Pass Bundle) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+199.2857142857142776 496. Td
+($15) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+272.4285714285714448 496. Td
+(1,500) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+345.5714285714285552 496. Td
+(1,500) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+418.7142857142856656 496. Td
+(Premium Battle Pass + 2,000 gems + 10 pr) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+491.8571428571428328 496. Td
+(No) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 492. m
+562. 492. l
+S
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0.216 0.255 0.318 rg
+50. 478. Td
+(3.3 PurchaseTransaction Schema) Tj
+ET
+0.94 0.94 0.96 rg
+48. 458. 516. -131. re
+f
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 448. Td
+(interface PurchaseTransaction {) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 437. Td
+(  id: string;              // UUID) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 426. Td
+(  userId: string;) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 415. Td
+(  productId: string;       // References PurchaseProduct.id) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 404. Td
+(  paymentMethod: string;   // "gold" | "gems" | "stripe" | "paypal") Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 393. Td
+(  paymentId: string | null;  // Stripe session ID or PayPal order ID) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 382. Td
+(  amountUsd: number;       // USD amount charged \(0 for currency purchases\)) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 371. Td
+(  currencySpent: number;   // Gold/gems spent \(0 for real-money purchases\)) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 360. Td
+(  status: string;          // "pending" | "completed" | "failed") Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 349. Td
+(  createdAt: string;       // ISO timestamp) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 338. Td
+(}) Tj
+ET
+0.9 0.91 0.92 RG
+0.5 w
+50. 323. m
+562. 323. l
+S
+BT
+/F2 14 Tf
+16.0999999999999979 TL
+0.145 0.388 0.922 rg
+50. 297. Td
+(4. Complete Payment API Reference) Tj
+ET
+0.82 0.84 0.86 RG
+0.5 w
+50. 279. m
+562. 279. l
+S
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 267. Td
+(All payment endpoints use Bearer token authentication: Authorization: Bearer <jwt_token>) Tj
+ET
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0.216 0.255 0.318 rg
+50. 242. Td
+(4.1 Product & Config Endpoints) Tj
+ET
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0.294 0.333 0.388 rg
+50. 216. Td
+(GET /api/payments/products) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 201. Td
+(List all active products in the catalog.) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 182. Td
+(Response: Array of PurchaseProduct objects, sorted by sortOrder.) Tj
+ET
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0.294 0.333 0.388 rg
+50. 159. Td
+(GET /api/payments/config) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 144. Td
+(Get payment provider availability \(see Section 2\).) Tj
+ET
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0.294 0.333 0.388 rg
+50. 121. Td
+(GET /api/payments/history) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 106. Td
+(Get the authenticated user's purchase transaction history.) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 87. Td
+(Response: Array of PurchaseTransaction objects, sorted by createdAt descending.) Tj
+ET
+endstream
+endobj
+9 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/MediaBox [0 0 612. 792.]
+/Contents 10 0 R
+>>
+endobj
+10 0 obj
+<<
+/Length 4432
+>>
+stream
+0.5 w
+0.82 0.84 0.86 RG
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0.216 0.255 0.318 rg
+50. 742. Td
+(4.2 Purchase Status Checks) Tj
+ET
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0.294 0.333 0.388 rg
+50. 716. Td
+(POST /api/payments/check-purchased) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 701. Td
+(Check if a user has already purchased specific one-time products.) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 682. Td
+(Single product check:) Tj
+ET
+0.94 0.94 0.96 rg
+48. 671. 516. -65. re
+f
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 661. Td
+(// Request) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 650. Td
+({ "productId": "starter_bundle" }) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 628. Td
+(// Response) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 617. Td
+({ "purchased": true }) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 602. Td
+(Batch check \(multiple products\):) Tj
+ET
+0.94 0.94 0.96 rg
+48. 591. 516. -65. re
+f
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 581. Td
+(// Request) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 570. Td
+({ "productIds": ["starter_bundle", "season_pass_bundle"] }) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 548. Td
+(// Response) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 537. Td
+({ "starter_bundle": true, "season_pass_bundle": false }) Tj
+ET
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0.216 0.255 0.318 rg
+50. 516. Td
+(4.3 Unified Purchase Endpoint) Tj
+ET
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0.294 0.333 0.388 rg
+50. 490. Td
+(POST /api/payments/purchase) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 475. Td
+(Routes to the correct payment handler based on paymentMethod.) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 456. Td
+(Request:) Tj
+ET
+0.94 0.94 0.96 rg
+48. 445. 516. -54. re
+f
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 435. Td
+({) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 424. Td
+(  "productId": "gems_550",) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 413. Td
+(  "paymentMethod": "stripe"    // "gold" | "gems" | "stripe" | "paypal") Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 402. Td
+(}) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 387. Td
+(Response varies by payment method:) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 368. Td
+(For gold/gems ó immediate fulfillment:) Tj
+ET
+0.94 0.94 0.96 rg
+48. 357. 516. -76. re
+f
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 347. Td
+({) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 336. Td
+(  "message": "Purchase successful",) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 325. Td
+(  "transaction": { ... },) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 314. Td
+(  "cards": [ ... ],        // Array of pulled cards \(for pack products\)) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 303. Td
+(  "currencies": { "gold": 450, "gems": 100, "dust": 0 }) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 292. Td
+(}) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 277. Td
+(For stripe ó redirect to checkout:) Tj
+ET
+0.94 0.94 0.96 rg
+48. 266. 516. -65. re
+f
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 256. Td
+({) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 245. Td
+(  "action": "redirect",) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 234. Td
+(  "url": "https://checkout.stripe.com/...",) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 223. Td
+(  "sessionId": "cs_...") Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 212. Td
+(}) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 197. Td
+(For paypal ó redirect to approval:) Tj
+ET
+0.94 0.94 0.96 rg
+48. 186. 516. -65. re
+f
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 176. Td
+({) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 165. Td
+(  "action": "paypal_approve",) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 154. Td
+(  "orderId": "ORDER_ID",) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 143. Td
+(  "approveUrl": "https://www.paypal.com/checkouts/...") Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 132. Td
+(}) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 117. Td
+(Rate limited: 10 requests per 60 seconds per user.) Tj
+ET
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0.216 0.255 0.318 rg
+50. 92. Td
+(4.4 Currency Purchase \(Direct\)) Tj
+ET
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0.294 0.333 0.388 rg
+50. 66. Td
+(POST /api/payments/purchase-currency) Tj
+ET
+endstream
+endobj
+11 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/MediaBox [0 0 612. 792.]
+/Contents 12 0 R
+>>
+endobj
+12 0 obj
+<<
+/Length 4609
+>>
+stream
+0.5 w
+0.82 0.84 0.86 RG
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 742. Td
+(Purchase a product using gold or gems directly.) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 723. Td
+(Request:) Tj
+ET
+0.94 0.94 0.96 rg
+48. 712. 516. -54. re
+f
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 702. Td
+({) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 691. Td
+(  "productId": "premium_pack_bundle",) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 680. Td
+(  "currencyType": "gold"    // "gold" | "gems") Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 669. Td
+(}) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 654. Td
+(Success Response:) Tj
+ET
+0.94 0.94 0.96 rg
+48. 643. 516. -98. re
+f
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 633. Td
+({) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 622. Td
+(  "message": "Purchase successful",) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 611. Td
+(  "transaction": { "id": "...", "productId": "premium_pack_bundle", ... },) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 600. Td
+(  "cards": [) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 589. Td
+(    { "cardId": "fire_001", "rarity": "Rare", "isNew": true, "cardName": "Flame Serpent", "element": "fire", ") Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 578. Td
+(  ],) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 567. Td
+(  "currencies": { "gold": 200, "gems": 100, "dust": 0 }) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 556. Td
+(}) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 541. Td
+(Error Responses:) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 528. Td
+(  ï 400 ó Product not found, insufficient balance, not purchasable with currency) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 515. Td
+(  ï 400 ó "This one-time purchase has already been claimed") Tj
+ET
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0.216 0.255 0.318 rg
+50. 490. Td
+(4.5 Stripe Endpoints) Tj
+ET
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0.294 0.333 0.388 rg
+50. 464. Td
+(POST /api/payments/stripe/create-checkout) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 449. Td
+(Create a Stripe Checkout session for a product.) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 430. Td
+(Request:) Tj
+ET
+0.94 0.94 0.96 rg
+48. 419. 516. -21. re
+f
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 409. Td
+({ "productId": "gems_550" }) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 394. Td
+(Response:) Tj
+ET
+0.94 0.94 0.96 rg
+48. 383. 516. -54. re
+f
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 373. Td
+({) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 362. Td
+(  "sessionId": "cs_test_...",) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 351. Td
+(  "url": "https://checkout.stripe.com/c/pay/cs_test_...") Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 340. Td
+(}) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 325. Td
+(Mobile Flow: Open url in an in-app browser/WebView. After payment, Stripe redirects to a success URL containing session_id.) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 312. Td
+(Extract it and call verify-session.) Tj
+ET
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0.294 0.333 0.388 rg
+50. 289. Td
+(GET /api/payments/stripe/verify-session?session_id=cs_test_...) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 274. Td
+(Verify a completed Stripe session and fulfill the purchase.) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 255. Td
+(Response:) Tj
+ET
+0.94 0.94 0.96 rg
+48. 244. 516. -65. re
+f
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 234. Td
+({) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 223. Td
+(  "message": "Purchase successful",) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 212. Td
+(  "transaction": { ... },) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 201. Td
+(  "cards": [ ... ]) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 190. Td
+(}) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 175. Td
+(Or if already fulfilled:) Tj
+ET
+0.94 0.94 0.96 rg
+48. 164. 516. -54. re
+f
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 154. Td
+({) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 143. Td
+(  "message": "Purchase already completed",) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 132. Td
+(  "alreadyFulfilled": true) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 121. Td
+(}) Tj
+ET
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0.294 0.333 0.388 rg
+50. 102. Td
+(GET /api/payments/stripe/success?session_id=cs_test_...) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 87. Td
+(Alias for verify-session. Identical behavior and response.) Tj
+ET
+endstream
+endobj
+13 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/MediaBox [0 0 612. 792.]
+/Contents 14 0 R
+>>
+endobj
+14 0 obj
+<<
+/Length 3747
+>>
+stream
+0.5 w
+0.82 0.84 0.86 RG
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0.216 0.255 0.318 rg
+50. 742. Td
+(4.6 PayPal Endpoints) Tj
+ET
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0.294 0.333 0.388 rg
+50. 716. Td
+(POST /api/payments/paypal/create-order) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 701. Td
+(Create a PayPal order for a product.) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 682. Td
+(Request:) Tj
+ET
+0.94 0.94 0.96 rg
+48. 671. 516. -21. re
+f
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 661. Td
+({ "productId": "gems_550" }) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 646. Td
+(Response:) Tj
+ET
+0.94 0.94 0.96 rg
+48. 635. 516. -54. re
+f
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 625. Td
+({) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 614. Td
+(  "orderId": "ORDER_ID_123",) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 603. Td
+(  "approveUrl": "https://www.sandbox.paypal.com/checkouts/...") Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 592. Td
+(}) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 577. Td
+(Mobile Flow: Open approveUrl in an in-app browser. After user approves payment, extract the orderId from the return URL and) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 564. Td
+(call capture-order.) Tj
+ET
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0.294 0.333 0.388 rg
+50. 541. Td
+(POST /api/payments/paypal/capture-order) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 526. Td
+(Capture \(finalize\) a PayPal order after user approval.) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 507. Td
+(Request:) Tj
+ET
+0.94 0.94 0.96 rg
+48. 496. 516. -54. re
+f
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 486. Td
+({) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 475. Td
+(  "orderId": "ORDER_ID_123",) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 464. Td
+(  "productId": "gems_550") Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 453. Td
+(}) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 438. Td
+(Response:) Tj
+ET
+0.94 0.94 0.96 rg
+48. 427. 516. -65. re
+f
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 417. Td
+({) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 406. Td
+(  "message": "Purchase successful",) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 395. Td
+(  "transaction": { ... },) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 384. Td
+(  "cards": [ ... ]) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 373. Td
+(}) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 358. Td
+(Server-side validations on capture:) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 345. Td
+(  ï Verifies status === "COMPLETED") Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 332. Td
+(  ï Validates custom_id metadata matches userId and productId) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 319. Td
+(  ï Checks captured amount >= product price) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 306. Td
+(  ï Idempotent ó duplicate captures return existing transaction) Tj
+ET
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0.216 0.255 0.318 rg
+50. 281. Td
+(4.7 Stripe Webhook \(Server-Only\)) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 259. Td
+(POST /api/payments/stripe/webhook ó Server receives Stripe webhook events. This is NOT called by the mobile app. The) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 246. Td
+(server uses it as a safety net for fulfillment if verify-session is never called.) Tj
+ET
+0.9 0.91 0.92 RG
+0.5 w
+50. 227. m
+562. 227. l
+S
+BT
+/F2 14 Tf
+16.0999999999999979 TL
+0.145 0.388 0.922 rg
+50. 201. Td
+(5. Purchase Flows \(Step-by-Step\)) Tj
+ET
+0.82 0.84 0.86 RG
+0.5 w
+50. 183. m
+562. 183. l
+S
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0.216 0.255 0.318 rg
+50. 165. Td
+(5.1 Gold/Gems Purchase Flow) Tj
+ET
+0.94 0.94 0.96 rg
+endstream
+endobj
+15 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/MediaBox [0 0 612. 792.]
+/Contents 16 0 R
+>>
+endobj
+16 0 obj
+<<
+/Length 5949
+>>
+stream
+0.5 w
+0.82 0.84 0.86 RG
+48. 744. 516. -109. re
+f
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 734. Td
+( 1 .   M o b i l e :   G E T   / a p i / p a y m e n t s / p r o d u c t s  !í   d i s p l a y   c a t a l o g) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 723. Td
+( 2 .   M o b i l e :   G E T   / a p i / c u r r e n c i e s  !í   c h e c k   u s e r   b a l a n c e s) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 712. Td
+(3. User taps "Buy with Gold" or "Buy with Gems") Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 701. Td
+(4. Mobile: POST /api/payments/purchase-currency) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 690. Td
+(   { productId: "premium_pack_bundle", currencyType: "gold" }) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 679. Td
+(5. Server: Validates balance, deducts currency, grants items atomically) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 668. Td
+(6. Response: { transaction, cards, currencies }) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 657. Td
+(7. Mobile: Show pack opening animation with cards array) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 646. Td
+(8. Mobile: Update local currency display from currencies object) Tj
+ET
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0.216 0.255 0.318 rg
+50. 625. Td
+(5.2 Stripe Purchase Flow) Tj
+ET
+0.94 0.94 0.96 rg
+48. 605. 516. -153. re
+f
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 595. Td
+( 1 .   M o b i l e :   G E T   / a p i / p a y m e n t s / c o n f i g  !í   c o n f i r m   s t r i p e E n a b l e d) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 584. Td
+( 2 .   M o b i l e :   G E T   / a p i / p a y m e n t s / p r o d u c t s  !í   d i s p l a y   c a t a l o g) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 573. Td
+(3. User taps "Buy with Card") Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 562. Td
+(4. Mobile: POST /api/payments/stripe/create-checkout) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 551. Td
+(   { productId: "gems_550" }) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 540. Td
+(5. Response: { sessionId, url }) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 529. Td
+(6. Mobile: Open url in in-app browser \(SafariVC / Chrome Custom Tab\)) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 518. Td
+(7. User completes payment on Stripe checkout page) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 507. Td
+(8. Stripe redirects to success URL with session_id parameter) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 496. Td
+(9. Mobile: Intercept redirect, extract session_id) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 485. Td
+(10. Mobile: GET /api/payments/stripe/verify-session?session_id=<id>) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 474. Td
+(11. Response: { transaction, cards }) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 463. Td
+(12. Mobile: Show success + pack opening if applicable) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 448. Td
+(Deep Link / URL Scheme:) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 435. Td
+(The Stripe success_url includes the session_id. Configure your app to intercept:) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 422. Td
+(https://wisdom-and-chance.replit.app/shop?payment=success&session_id={CHECKOUT_SESSION_ID}&product_id={PRODUC) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 409. Td
+(T_ID}) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 390. Td
+(For mobile, you may want the server to redirect to a custom URL scheme. Currently the success URL points to the web app.) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 377. Td
+(Your mobile flow should:) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 364. Td
+(  ï Detect the redirect in the WebView) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 351. Td
+(  ï Extract session_id from the URL query parameters) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 338. Td
+(  ï Close the WebView) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 325. Td
+(  ï Call /api/payments/stripe/verify-session with the session_id) Tj
+ET
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0.216 0.255 0.318 rg
+50. 300. Td
+(5.3 PayPal Purchase Flow) Tj
+ET
+0.94 0.94 0.96 rg
+48. 280. 516. -153. re
+f
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 270. Td
+( 1 .   M o b i l e :   G E T   / a p i / p a y m e n t s / c o n f i g  !í   c o n f i r m   p a y p a l E n a b l e d) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 259. Td
+( 2 .   M o b i l e :   G E T   / a p i / p a y m e n t s / p r o d u c t s  !í   d i s p l a y   c a t a l o g) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 248. Td
+(3. User taps "Buy with PayPal") Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 237. Td
+(4. Mobile: POST /api/payments/paypal/create-order) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 226. Td
+(   { productId: "gems_550" }) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 215. Td
+(5. Response: { orderId, approveUrl }) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 204. Td
+(6. Mobile: Open approveUrl in in-app browser) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 193. Td
+(7. User approves payment in PayPal) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 182. Td
+(8. PayPal redirects back \(user closes PayPal UI\)) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 171. Td
+(9. Mobile: POST /api/payments/paypal/capture-order) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 160. Td
+(   { orderId: "ORDER_ID", productId: "gems_550" }) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 149. Td
+(10. Response: { transaction, cards }) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 138. Td
+(11. Mobile: Show success + pack opening if applicable) Tj
+ET
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0.216 0.255 0.318 rg
+50. 117. Td
+(5.4 One-Time Purchase Flow \(e.g., Starter Bundle\)) Tj
+ET
+0.94 0.94 0.96 rg
+endstream
+endobj
+17 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/MediaBox [0 0 612. 792.]
+/Contents 18 0 R
+>>
+endobj
+18 0 obj
+<<
+/Length 2093
+>>
+stream
+0.5 w
+0.82 0.84 0.86 RG
+48. 744. 516. -87. re
+f
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 734. Td
+(1. Mobile: POST /api/payments/check-purchased) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 723. Td
+(   { productIds: ["starter_bundle"] }) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 712. Td
+(2. Response: { "starter_bundle": false }) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 701. Td
+( 3 .   I f   f a l s e  !í   s h o w   " B u y "   b u t t o n) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 690. Td
+( 4 .   I f   t r u e  !í   s h o w   " A l r e a d y   O w n e d "   b a d g e ,   d i s a b l e   p u r c h a s e) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 679. Td
+(5. Purchase via any method above) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 668. Td
+(6. Server enforces one-time with transactional SELECT FOR UPDATE lock) Tj
+ET
+0.9 0.91 0.92 RG
+0.5 w
+50. 653. m
+562. 653. l
+S
+BT
+/F2 14 Tf
+16.0999999999999979 TL
+0.145 0.388 0.922 rg
+50. 627. Td
+(6. Battle Pass Premium Track) Tj
+ET
+0.82 0.84 0.86 RG
+0.5 w
+50. 609. m
+562. 609. l
+S
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0.216 0.255 0.318 rg
+50. 591. Td
+(6.1 Overview) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 569. Td
+(The battle pass now has a premium track. Certain levels \(milestones and late-game\) are marked as premium. Players must) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 556. Td
+(purchase the Premium Battle Pass product to claim premium rewards.) Tj
+ET
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0.216 0.255 0.318 rg
+50. 531. Td
+(6.2 Premium Levels) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 509. Td
+(Premium levels are: 10, 20, 25, 30, 35, 40, 45, 50 \(milestone levels and levels >= 25 at every 5th interval\).) Tj
+ET
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0.216 0.255 0.318 rg
+50. 484. Td
+(6.3 Updated Battle Pass API Response) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 462. Td
+(Endpoint: GET /api/battlepass) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 443. Td
+(Response \(updated fields highlighted\):) Tj
+ET
+0.94 0.94 0.96 rg
+endstream
+endobj
+19 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/MediaBox [0 0 612. 792.]
+/Contents 20 0 R
+>>
+endobj
+20 0 obj
+<<
+/Length 4489
+>>
+stream
+0.5 w
+0.82 0.84 0.86 RG
+48. 744. 516. -428. re
+f
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 734. Td
+({) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 723. Td
+(  "season": {) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 712. Td
+(    "id": "uuid",) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 701. Td
+(    "name": "Season 1: Dawn of the Elements",) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 690. Td
+(    "endsAt": "2026-04-28T00:00:00.000Z",) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 679. Td
+(    "daysRemaining": 30) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 668. Td
+(  },) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 657. Td
+(  "progress": {) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 646. Td
+(    "currentXp": 1500,) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 635. Td
+(    "currentLevel": 7,) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 624. Td
+(    "xpIntoCurrentLevel": 100,) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 613. Td
+(    "xpForNextLevel": 1600,) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 602. Td
+(    "claimedLevels": [1, 2, 3],) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 591. Td
+(         " p r e m i u m U n l o c k e d " :   f a l s e               / /  !ê   N E W :   t r u e   i f   u s e r   b o u g h t   p r e m i u m   B P) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 580. Td
+(  },) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 569. Td
+(  "levels": [) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 558. Td
+(    {) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 547. Td
+(      "level": 1,) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 536. Td
+(      "xpRequired": 200,) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 525. Td
+(      "rewardType": "gold",) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 514. Td
+(      "rewardAmount": 50,) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 503. Td
+(      "rewardDescription": "50 Gold",) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 492. Td
+(             " i s P r e m i u m " :   f a l s e ,                       / /  !ê   N E W :   t r u e   f o r   p r e m i u m - t r a c k   l e v e l s) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 481. Td
+(      "claimed": false,) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 470. Td
+(      "unlocked": true) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 459. Td
+(    },) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 448. Td
+(    {) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 437. Td
+(      "level": 10,) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 426. Td
+(      "xpRequired": 2000,) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 415. Td
+(      "rewardType": "pack",) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 404. Td
+(      "rewardAmount": 1,) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 393. Td
+(      "rewardDescription": "1x Standard Pack",) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 382. Td
+(             " i s P r e m i u m " :   t r u e ,                         / /  !ê   P R E M I U M   L E V E L) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 371. Td
+(      "claimed": false,) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 360. Td
+(      "unlocked": false) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 349. Td
+(    }) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 338. Td
+(  ]) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 327. Td
+(}) Tj
+ET
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0.216 0.255 0.318 rg
+50. 306. Td
+(6.4 Claiming Rewards) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 284. Td
+(Endpoint: POST /api/battlepass/claim) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 265. Td
+(Request: { "level": 10 }) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 246. Td
+(Error Responses:) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 233. Td
+(  ï 400 ó "Level not unlocked yet" \(insufficient XP\)) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 220. Td
+(  ï 400 ó "Reward already claimed") Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 207. Td
+(  ï 403 ó "Premium battle pass required to claim this reward" \(level.isPremium && !premiumUnlocked\)) Tj
+ET
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0.216 0.255 0.318 rg
+50. 182. Td
+(6.5 Mobile UI Requirements for Premium Track) Tj
+ET
+0.94 0.94 0.96 rg
+endstream
+endobj
+21 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/MediaBox [0 0 612. 792.]
+/Contents 22 0 R
+>>
+endobj
+22 0 obj
+<<
+/Length 5106
+>>
+stream
+0.5 w
+0.82 0.84 0.86 RG
+48. 744. 516. -142. re
+f
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 734. Td
+(For each battle pass level:) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 723. Td
+(  if level.isPremium === true:) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 712. Td
+(    Show a "Premium" badge/crown icon on the level card) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 701. Td
+(    if progress.premiumUnlocked === false:) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 690. Td
+(      - Dim/grey out the level) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 679. Td
+(      - Show lock icon instead of claim button) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 668. Td
+(      - Tapping should prompt "Upgrade to Premium Battle Pass") Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 657. Td
+(    if progress.premiumUnlocked === true:) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 646. Td
+(      - Show level normally with premium styling \(gold/amber accent\)) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 635. Td
+(      - Allow claiming when level.unlocked === true) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 624. Td
+(  else:) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 613. Td
+(    Show as normal free-track level) Tj
+ET
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0.216 0.255 0.318 rg
+50. 592. Td
+(6.6 Purchasing Premium Battle Pass) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 570. Td
+(Product ID: premium_battle_pass) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 557. Td
+(  ï USD: $5) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 544. Td
+(  ï Gold: 500) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 531. Td
+(  ï Gems: 500) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 512. Td
+(After purchase, GET /api/battlepass will return premiumUnlocked: true in the progress object. All previously-locked premium) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 499. Td
+(levels become claimable \(if XP-unlocked\).) Tj
+ET
+0.9 0.91 0.92 RG
+0.5 w
+50. 480. m
+562. 480. l
+S
+BT
+/F2 14 Tf
+16.0999999999999979 TL
+0.145 0.388 0.922 rg
+50. 454. Td
+(7. Economy Constants & Pricing) Tj
+ET
+0.82 0.84 0.86 RG
+0.5 w
+50. 436. m
+562. 436. l
+S
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0.216 0.255 0.318 rg
+50. 418. Td
+(Currency Exchange Rate) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 402. Td
+(  ï 100 gold = $1 USD) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 389. Td
+(  ï 100 gems = $1 USD) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 376. Td
+(  ï Gold is earned through gameplay \(matches, quests\)) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 363. Td
+(  ï Gems are primarily purchased with real money) Tj
+ET
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0.216 0.255 0.318 rg
+50. 338. Td
+(Existing Pack Types \(from original shop\)) Tj
+ET
+0.94 0.96 1. rg
+50. 318. 512. -14. re
+f
+BT
+/F2 7.5 Tf
+8.625 TL
+0. g
+53. 308. Td
+(Pack) Tj
+ET
+BT
+/F2 7.5 Tf
+8.625 TL
+0. g
+155.4000000000000057 308. Td
+(Gold Cost) Tj
+ET
+BT
+/F2 7.5 Tf
+8.625 TL
+0. g
+257.8000000000000114 308. Td
+(Gems Cost) Tj
+ET
+BT
+/F2 7.5 Tf
+8.625 TL
+0. g
+360.2000000000000455 308. Td
+(Cards) Tj
+ET
+BT
+/F2 7.5 Tf
+8.625 TL
+0. g
+462.6000000000000227 308. Td
+(Odds) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 304. m
+562. 304. l
+S
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+53. 294. Td
+(Standard) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+155.4000000000000057 294. Td
+(100) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+257.8000000000000114 294. Td
+(100) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+360.2000000000000455 294. Td
+(5) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+462.6000000000000227 294. Td
+(C:60% R:25% E:10% L:5%) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 290. m
+562. 290. l
+S
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+53. 280. Td
+(Premium) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+155.4000000000000057 280. Td
+(250) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+257.8000000000000114 280. Td
+(250) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+360.2000000000000455 280. Td
+(5) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+462.6000000000000227 280. Td
+(Guaranteed 1+ Rare or better) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 276. m
+562. 276. l
+S
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+53. 266. Td
+(Element \(each\)) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+155.4000000000000057 266. Td
+(150) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+257.8000000000000114 266. Td
+(150) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+360.2000000000000455 266. Td
+(5) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+462.6000000000000227 266. Td
+(Filtered to specific element) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 262. m
+562. 262. l
+S
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0.216 0.255 0.318 rg
+50. 248. Td
+(Match Rewards) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 232. Td
+(  ï Win: 30 gold + 100 BP XP) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 219. Td
+(  ï Loss: 10 gold + 30 BP XP) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 206. Td
+(  ï Draw: 15 gold) Tj
+ET
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0.216 0.255 0.318 rg
+50. 181. Td
+(Pack Opening Response \(cards array\)) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 159. Td
+(When a purchase includes packs, the response cards array contains:) Tj
+ET
+0.94 0.94 0.96 rg
+endstream
+endobj
+23 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/MediaBox [0 0 612. 792.]
+/Contents 24 0 R
+>>
+endobj
+24 0 obj
+<<
+/Length 8563
+>>
+stream
+0.3 w
+0.82 0.84 0.86 RG
+48. 744. 516. -120. re
+f
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 734. Td
+([) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 723. Td
+(  {) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 712. Td
+(    "cardId": "fire_001",) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 701. Td
+(    "rarity": "Rare",) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 690. Td
+(    "isNew": true,) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 679. Td
+(    "cardName": "Flame Serpent",) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 668. Td
+(    "element": "fire",) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 657. Td
+(    "power": 5) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 646. Td
+(  }) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 635. Td
+(]) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 620. Td
+(Use this array to drive the pack opening animation on mobile. isNew indicates whether the player already owned this card ó) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 607. Td
+(highlight new cards.) Tj
+ET
+0.9 0.91 0.92 RG
+0.5 w
+50. 588. m
+562. 588. l
+S
+BT
+/F2 14 Tf
+16.0999999999999979 TL
+0.145 0.388 0.922 rg
+50. 562. Td
+(8. Error Handling Reference) Tj
+ET
+0.82 0.84 0.86 RG
+0.5 w
+50. 544. m
+562. 544. l
+S
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0.216 0.255 0.318 rg
+50. 526. Td
+(HTTP Status Codes) Tj
+ET
+0.94 0.96 1. rg
+50. 506. 512. -14. re
+f
+BT
+/F2 7.5 Tf
+8.625 TL
+0. g
+53. 496. Td
+(Code) Tj
+ET
+BT
+/F2 7.5 Tf
+8.625 TL
+0. g
+223.6666666666666572 496. Td
+(Meaning) Tj
+ET
+BT
+/F2 7.5 Tf
+8.625 TL
+0. g
+394.3333333333333144 496. Td
+(Action) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 492. m
+562. 492. l
+S
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+53. 482. Td
+(200) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+223.6666666666666572 482. Td
+(Success) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+394.3333333333333144 482. Td
+(Process response normally) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 478. m
+562. 478. l
+S
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+53. 468. Td
+(400) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+223.6666666666666572 468. Td
+(Bad request / validation error) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+394.3333333333333144 468. Td
+(Show error message to user) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 464. m
+562. 464. l
+S
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+53. 454. Td
+(401) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+223.6666666666666572 454. Td
+(Unauthorized) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+394.3333333333333144 454. Td
+(Re-authenticate, refresh token) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 450. m
+562. 450. l
+S
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+53. 440. Td
+(403) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+223.6666666666666572 440. Td
+(Forbidden \(e.g., premium required\)) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+394.3333333333333144 440. Td
+(Show upgrade prompt) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 436. m
+562. 436. l
+S
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+53. 426. Td
+(429) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+223.6666666666666572 426. Td
+(Rate limited) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+394.3333333333333144 426. Td
+(Show "Please wait" message, retry after ) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 422. m
+562. 422. l
+S
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+53. 412. Td
+(500) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+223.6666666666666572 412. Td
+(Server error) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+394.3333333333333144 412. Td
+(Show generic error, allow retry) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 408. m
+562. 408. l
+S
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+53. 398. Td
+(503) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+223.6666666666666572 398. Td
+(Payment provider not configured) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+394.3333333333333144 398. Td
+(Hide that payment method) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 394. m
+562. 394. l
+S
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0.216 0.255 0.318 rg
+50. 380. Td
+(Common Error Messages) Tj
+ET
+0.94 0.96 1. rg
+50. 360. 512. -14. re
+f
+BT
+/F2 7.5 Tf
+8.625 TL
+0. g
+53. 350. Td
+(Error) Tj
+ET
+BT
+/F2 7.5 Tf
+8.625 TL
+0. g
+223.6666666666666572 350. Td
+(Cause) Tj
+ET
+BT
+/F2 7.5 Tf
+8.625 TL
+0. g
+394.3333333333333144 350. Td
+(Mobile Action) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 346. m
+562. 346. l
+S
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+53. 336. Td
+("Product not found") Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+223.6666666666666572 336. Td
+(Invalid productId) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+394.3333333333333144 336. Td
+(Refresh product catalog) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 332. m
+562. 332. l
+S
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+53. 322. Td
+("Insufficient gold/gems") Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+223.6666666666666572 322. Td
+(Not enough currency) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+394.3333333333333144 322. Td
+(Show "Not enough [currency]" dialog) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 318. m
+562. 318. l
+S
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+53. 308. Td
+("This product can only be purchased with) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+223.6666666666666572 308. Td
+(Gem packs can't use gold/gems) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+394.3333333333333144 308. Td
+(Only show Stripe/PayPal buttons) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 304. m
+562. 304. l
+S
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+53. 294. Td
+("This product cannot be purchased with [) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+223.6666666666666572 294. Td
+(Price is 0 for that currency) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+394.3333333333333144 294. Td
+(Show other currency option) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 290. m
+562. 290. l
+S
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+53. 280. Td
+("This one-time purchase has already been) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+223.6666666666666572 280. Td
+(Duplicate one-time buy) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+394.3333333333333144 280. Td
+(Show "Already Owned" badge) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 276. m
+562. 276. l
+S
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+53. 266. Td
+("Payment not completed") Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+223.6666666666666572 266. Td
+(Stripe session unpaid) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+394.3333333333333144 266. Td
+(User may have cancelled; allow retry) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 262. m
+562. 262. l
+S
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+53. 252. Td
+("Payment does not belong to this user") Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+223.6666666666666572 252. Td
+(Session/user mismatch) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+394.3333333333333144 252. Td
+(Security error; log and show generic err) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 248. m
+562. 248. l
+S
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+53. 238. Td
+("Payment amount mismatch") Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+223.6666666666666572 238. Td
+(Tampered payment) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+394.3333333333333144 238. Td
+(Security error; log and show generic err) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 234. m
+562. 234. l
+S
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+53. 224. Td
+("Payment already fulfilled") Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+223.6666666666666572 224. Td
+(Duplicate fulfillment call) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+394.3333333333333144 224. Td
+(Treat as success \(idempotent\)) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 220. m
+562. 220. l
+S
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+53. 210. Td
+("PayPal is not configured yet") Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+223.6666666666666572 210. Td
+(No PayPal credentials) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+394.3333333333333144 210. Td
+(Hide PayPal option) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 206. m
+562. 206. l
+S
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+53. 196. Td
+("Stripe is not configured yet") Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+223.6666666666666572 196. Td
+(No Stripe credentials) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+394.3333333333333144 196. Td
+(Hide Stripe option) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 192. m
+562. 192. l
+S
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+53. 182. Td
+("Too many requests. Please try again lat) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+223.6666666666666572 182. Td
+(Rate limited) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+394.3333333333333144 182. Td
+(Show cooldown message) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 178. m
+562. 178. l
+S
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+53. 168. Td
+("Premium battle pass required to claim t) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+223.6666666666666572 168. Td
+(Claiming premium BP level) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+394.3333333333333144 168. Td
+(Show premium upgrade prompt) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 164. m
+562. 164. l
+S
+0.9 0.91 0.92 RG
+0.5 w
+50. 156. m
+562. 156. l
+S
+BT
+/F2 14 Tf
+16.0999999999999979 TL
+0.145 0.388 0.922 rg
+50. 130. Td
+(9. Mobile Implementation Checklist) Tj
+ET
+0.82 0.84 0.86 RG
+0.5 w
+50. 112. m
+562. 112. l
+S
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0.216 0.255 0.318 rg
+50. 94. Td
+(Phase 3 Update: Shop & Economy \(NEW ó Payment Integration\)) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 72. Td
+(This replaces the original Phase 3 from the v2.4.0 guide.) Tj
+ET
+endstream
+endobj
+25 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/MediaBox [0 0 612. 792.]
+/Contents 26 0 R
+>>
+endobj
+26 0 obj
+<<
+/Length 8132
+>>
+stream
+0.5 w
+0.82 0.84 0.86 RG
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0.294 0.333 0.388 rg
+50. 742. Td
+(3a. Payment Configuration) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+58. 727. Td
+(&) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+72. 727. Td
+(Fetch GET /api/payments/config on startup) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+58. 715. Td
+(&) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+72. 715. Td
+(Store stripeEnabled, paypalEnabled, stripePublishableKey, paypalClientId) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+58. 703. Td
+(&) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+72. 703. Td
+(Only show enabled payment methods in UI) Tj
+ET
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0.294 0.333 0.388 rg
+50. 681. Td
+(3b. Premium Store / Product Catalog) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+58. 666. Td
+(&) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+72. 666. Td
+(Fetch GET /api/payments/products to get full catalog) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+58. 654. Td
+(&) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+72. 654. Td
+(Group products by productType in UI:) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 642. Td
+(  - "Gem Packs" section for productType: "gems") Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 629. Td
+(  - "Pack Bundles" section for productType: "pack_bundle") Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 616. Td
+(  - "Battle Pass" section for productType: "battle_pass") Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 603. Td
+(  - "Special Bundles" section for productType: "bundle") Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+58. 590. Td
+(&) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+72. 590. Td
+(Show badgeText as a ribbon/badge on product cards) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+58. 578. Td
+(&) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+72. 578. Td
+(Show dual pricing: gold price AND gems price \(when isCurrencyPurchasable\)) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+58. 566. Td
+(&) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+72. 566. Td
+(Show USD price for all products) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+58. 554. Td
+(&) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+72. 554. Td
+(Disable gold/gems buttons when isCurrencyPurchasable === false) Tj
+ET
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0.294 0.333 0.388 rg
+50. 532. Td
+(3c. One-Time Purchase Tracking) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+58. 517. Td
+(&) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+72. 517. Td
+(On shop load, call POST /api/payments/check-purchased with all one-time product IDs) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+58. 505. Td
+(&) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+72. 505. Td
+(Show "Already Owned" state for purchased one-time items) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+58. 493. Td
+(&) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+72. 493. Td
+(Disable buy buttons for already-purchased one-time items) Tj
+ET
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0.294 0.333 0.388 rg
+50. 471. Td
+(3d. In-Game Currency Purchase Flow) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+58. 456. Td
+(&) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+72. 456. Td
+( " B u y   w i t h   G o l d "   b u t t o n  !í   P O S T   / a p i / p a y m e n t s / p u r c h a s e - c u r r e n c y   {   c u r r e n c y T y p e :   " g o l d "   }) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+58. 444. Td
+(&) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+72. 444. Td
+( " B u y   w i t h   G e m s "   b u t t o n  !í   P O S T   / a p i / p a y m e n t s / p u r c h a s e - c u r r e n c y   {   c u r r e n c y T y p e :   " g e m s "   }) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+58. 432. Td
+(&) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+72. 432. Td
+(Show confirmation dialog before purchase with cost breakdown) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+58. 420. Td
+(&) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+72. 420. Td
+(Smart default: if user can't afford gold, default to gems \(and vice versa\)) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+58. 408. Td
+(&) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+72. 408. Td
+(After purchase: update currency display from response currencies object) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+58. 396. Td
+(&) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+72. 396. Td
+(After purchase: trigger pack opening animation if cards array is non-empty) Tj
+ET
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0.294 0.333 0.388 rg
+50. 374. Td
+(3e. Stripe Purchase Flow) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+58. 359. Td
+(&) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+72. 359. Td
+( " P a y   w i t h   C a r d "   b u t t o n  !í   P O S T   / a p i / p a y m e n t s / s t r i p e / c r e a t e - c h e c k o u t) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+58. 347. Td
+(&) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+72. 347. Td
+(Open returned url in in-app browser \(SFSafariViewController / Chrome Custom Tabs\)) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+58. 335. Td
+(&) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+72. 335. Td
+(Intercept success redirect URL, extract session_id query parameter) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+58. 323. Td
+(&) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+72. 323. Td
+(Call GET /api/payments/stripe/verify-session?session_id=<id> to fulfill) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+58. 311. Td
+(&) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+72. 311. Td
+(Handle alreadyFulfilled: true as success \(idempotent\)) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+58. 299. Td
+(&) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+72. 299. Td
+(On cancel redirect, show "Payment cancelled" message) Tj
+ET
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0.294 0.333 0.388 rg
+50. 277. Td
+(3f. PayPal Purchase Flow) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+58. 262. Td
+(&) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+72. 262. Td
+( " P a y   w i t h   P a y P a l "   b u t t o n  !í   P O S T   / a p i / p a y m e n t s / p a y p a l / c r e a t e - o r d e r) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+58. 250. Td
+(&) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+72. 250. Td
+(Open returned approveUrl in in-app browser) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+58. 238. Td
+(&) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+72. 238. Td
+(After user returns from PayPal approval:) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 226. Td
+(  - Call POST /api/payments/paypal/capture-order { orderId, productId }) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+58. 213. Td
+(&) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+72. 213. Td
+(Handle capture errors \(user cancelled, payment failed\)) Tj
+ET
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0.294 0.333 0.388 rg
+50. 191. Td
+(3g. Purchase History) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+58. 176. Td
+(&) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+72. 176. Td
+(Purchase history screen: GET /api/payments/history) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+58. 164. Td
+(&) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+72. 164. Td
+(Show transaction list with: product name, payment method, amount, date) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+58. 152. Td
+(&) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+72. 152. Td
+(Show "No purchases yet" empty state) Tj
+ET
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0.294 0.333 0.388 rg
+50. 130. Td
+(3h. Existing Shop Endpoints \(Still Active\)) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 115. Td
+(The original shop endpoints still work and remain unchanged:) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 102. Td
+(  ï GET /api/shop/catalog ó Pack catalog \(Standard, Premium, Element\)) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 89. Td
+(  ï GET /api/shop/daily-deals ó Daily deal with discount) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 76. Td
+(  ï POST /api/shop/purchase ó Buy pack with gold) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 63. Td
+(  ï POST /api/shop/purchase-bundle ó Buy bundle with gems) Tj
+ET
+endstream
+endobj
+27 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/MediaBox [0 0 612. 792.]
+/Contents 28 0 R
+>>
+endobj
+28 0 obj
+<<
+/Length 5843
+>>
+stream
+0.5 w
+0.82 0.84 0.86 RG
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 742. Td
+(These coexist with the new payment endpoints. The new /api/payments/* endpoints are the recommended path for the premium) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 729. Td
+(store, while the original /api/shop/* endpoints handle the base gold shop.) Tj
+ET
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0.216 0.255 0.318 rg
+50. 704. Td
+(Phase 6 Update: Battle Pass Premium Track) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+58. 682. Td
+(&) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+72. 682. Td
+(Check progress.premiumUnlocked from GET /api/battlepass) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+58. 670. Td
+(&) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+72. 670. Td
+(For each level, check level.isPremium) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+58. 658. Td
+(&) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+72. 658. Td
+(Premium-locked levels: show lock icon + "Premium" badge + dimmed styling) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+58. 646. Td
+(&) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+72. 646. Td
+(Premium-unlocked levels: show gold/amber accent + "Premium" badge) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+58. 634. Td
+(&) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+72. 634. Td
+( T a p p i n g   l o c k e d   p r e m i u m   l e v e l  !í   s h o w   u p g r a d e   p r o m p t   l i n k i n g   t o   p r e m i u m _ b a t t l e _ p a s s   p r o d u c t) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+58. 622. Td
+(&) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0. g
+72. 622. Td
+( A f t e r   p u r c h a s i n g   p r e m i u m   B P  !í   r e f r e s h   b a t t l e   p a s s   d a t a   t o   u p d a t e   p r e m i u m U n l o c k e d) Tj
+ET
+0.9 0.91 0.92 RG
+0.5 w
+50. 604. m
+562. 604. l
+S
+BT
+/F2 14 Tf
+16.0999999999999979 TL
+0.145 0.388 0.922 rg
+50. 578. Td
+(10. Critical Implementation Notes) Tj
+ET
+0.82 0.84 0.86 RG
+0.5 w
+50. 560. m
+562. 560. l
+S
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0.216 0.255 0.318 rg
+50. 542. Td
+(Authentication) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 526. Td
+(All /api/payments/* endpoints use the same Bearer token authentication as every other endpoint. The unified auth middleware) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 513. Td
+(handles both web sessions and mobile JWT tokens identically.) Tj
+ET
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0.216 0.255 0.318 rg
+50. 488. Td
+(Idempotency) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 472. Td
+(  ï Stripe verify-session and PayPal capture-order are idempotent) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 459. Td
+(  ï Calling them multiple times for the same payment returns success without duplicate fulfillment) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 446. Td
+(  ï The server uses paymentId uniqueness \(Stripe session ID / PayPal order ID\) to prevent duplicates) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 433. Td
+(  ï One-time purchases use transactional SELECT FOR UPDATE locks for race condition safety) Tj
+ET
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0.216 0.255 0.318 rg
+50. 408. Td
+(Rate Limiting) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 392. Td
+(Payment creation endpoints are rate-limited:) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 379. Td
+(  ï /api/payments/purchase: 10 requests per 60 seconds per user) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 366. Td
+(  ï /api/payments/purchase-currency: 10 requests per 60 seconds per user) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 353. Td
+(  ï /api/payments/stripe/create-checkout: 5 requests per 60 seconds per user) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 340. Td
+(  ï /api/payments/paypal/create-order: 5 requests per 60 seconds per user) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 327. Td
+(  ï /api/payments/paypal/capture-order: 5 requests per 60 seconds per user) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 308. Td
+(Mobile should implement client-side debouncing on purchase buttons to avoid hitting rate limits.) Tj
+ET
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0.216 0.255 0.318 rg
+50. 283. Td
+(Fulfillment Details) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 267. Td
+(When a purchase is fulfilled, the server atomically:) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 254. Td
+(  1. Creates a purchase_transaction record with status "completed") Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 241. Td
+(  2. Grants gems \(if gemsAmount > 0\)) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 228. Td
+(  3. Grants dust \(if dustAmount > 0\)) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 215. Td
+(  4. Opens packs \(if packsJson has entries\) ó cards are added to collection) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 202. Td
+(  5. Unlocks premium battle pass \(if product is battle_pass or season_pass_bundle\)) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 183. Td
+(All of this happens in a single database transaction. If any step fails, everything rolls back.) Tj
+ET
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0.216 0.255 0.318 rg
+50. 158. Td
+(WebView Payment Handling \(iOS/Android\)) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 136. Td
+(iOS \(SFSafariViewController\):) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 123. Td
+(  ï Use SFSafariViewController for Stripe/PayPal checkout) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 110. Td
+(  ï Register a URL scheme or Universal Link for redirect interception) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 97. Td
+(  ï Dismiss the view controller when redirect is detected) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 78. Td
+(Android \(Chrome Custom Tabs\):) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 65. Td
+(  ï Use Chrome Custom Tabs for Stripe/PayPal checkout) Tj
+ET
+endstream
+endobj
+29 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/MediaBox [0 0 612. 792.]
+/Contents 30 0 R
+>>
+endobj
+30 0 obj
+<<
+/Length 5666
+>>
+stream
+0.5 w
+0.82 0.84 0.86 RG
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 742. Td
+(  ï Register an intent filter for redirect URL interception) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 729. Td
+(  ï The activity stack handles return automatically) Tj
+ET
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0.216 0.255 0.318 rg
+50. 704. Td
+(Sandbox vs Production) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 688. Td
+(  ï PayPal currently uses sandbox: https://api-m.sandbox.paypal.com) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 675. Td
+(  ï For production, the server will switch to https://api-m.paypal.com) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 662. Td
+(  ï The mobile app does NOT need to know which environment ó the server handles all PayPal API calls) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 649. Td
+(  ï Stripe environment is determined by the publishable key prefix \(pk_test_ vs pk_live_\)) Tj
+ET
+0.9 0.91 0.92 RG
+0.5 w
+50. 630. m
+562. 630. l
+S
+BT
+/F2 14 Tf
+16.0999999999999979 TL
+0.145 0.388 0.922 rg
+50. 604. Td
+(11. Updated Server File Reference) Tj
+ET
+0.82 0.84 0.86 RG
+0.5 w
+50. 586. m
+562. 586. l
+S
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 574. Td
+(New and updated server-side files \(mobile app does NOT modify these\):) Tj
+ET
+0.94 0.96 1. rg
+50. 557. 512. -14. re
+f
+BT
+/F2 7.5 Tf
+8.625 TL
+0. g
+53. 547. Td
+(File) Tj
+ET
+BT
+/F2 7.5 Tf
+8.625 TL
+0. g
+309. 547. Td
+(Purpose) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 543. m
+562. 543. l
+S
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+53. 533. Td
+(server/paymentRoutes.ts) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+309. 533. Td
+(All payment REST endpoints \(products, pu) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 529. m
+562. 529. l
+S
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+53. 519. Td
+(server/paymentService.ts) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+309. 519. Td
+(Product catalog, fulfillment logic, curr) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 515. m
+562. 515. l
+S
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+53. 505. Td
+(server/stripeClient.ts) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+309. 505. Td
+(Stripe client initialization via Replit ) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 501. m
+562. 501. l
+S
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+53. 491. Td
+(shared/models/economy.ts) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+309. 491. Td
+(Purchase products/transactions DB schema) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 487. m
+562. 487. l
+S
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+53. 477. Td
+(server/routes.ts) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+309. 477. Td
+(Battle pass endpoints updated with isPre) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 473. m
+562. 473. l
+S
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0.216 0.255 0.318 rg
+50. 459. Td
+(Pre-Existing Files \(Unchanged\)) Tj
+ET
+0.94 0.96 1. rg
+50. 439. 512. -14. re
+f
+BT
+/F2 7.5 Tf
+8.625 TL
+0. g
+53. 429. Td
+(File) Tj
+ET
+BT
+/F2 7.5 Tf
+8.625 TL
+0. g
+309. 429. Td
+(Purpose) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 425. m
+562. 425. l
+S
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+53. 415. Td
+(server/economyService.ts) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+309. 415. Td
+(Gold/gems/dust grant helpers, pack openi) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 411. m
+562. 411. l
+S
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+53. 401. Td
+(server/mobileAuth.ts) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+309. 401. Td
+(Mobile JWT auth \(login, refresh, me\)) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 397. m
+562. 397. l
+S
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+53. 387. Td
+(server/unifiedAuth.ts) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0. g
+309. 387. Td
+(Unified auth middleware \(session + JWT\)) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+50. 383. m
+562. 383. l
+S
+0.9 0.91 0.92 RG
+0.5 w
+50. 375. m
+562. 375. l
+S
+BT
+/F2 14 Tf
+16.0999999999999979 TL
+0.145 0.388 0.922 rg
+50. 349. Td
+(Quick Reference Card) Tj
+ET
+0.82 0.84 0.86 RG
+0.5 w
+50. 331. m
+562. 331. l
+S
+0.94 0.94 0.96 rg
+48. 321. 516. -219. re
+f
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 311. Td
+(PAYMENT CONFIG:     GET  /api/payments/config) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 300. Td
+(PRODUCT CATALOG:    GET  /api/payments/products) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 289. Td
+(PURCHASE HISTORY:   GET  /api/payments/history) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 278. Td
+(CHECK PURCHASED:    POST /api/payments/check-purchased) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 256. Td
+(BUY WITH CURRENCY:  POST /api/payments/purchase-currency) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 245. Td
+(UNIFIED PURCHASE:   POST /api/payments/purchase) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 223. Td
+(STRIPE CHECKOUT:    POST /api/payments/stripe/create-checkout) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 212. Td
+(STRIPE VERIFY:      GET  /api/payments/stripe/verify-session?session_id=) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 201. Td
+(STRIPE SUCCESS:     GET  /api/payments/stripe/success?session_id=) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 179. Td
+(PAYPAL CREATE:      POST /api/payments/paypal/create-order) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 168. Td
+(PAYPAL CAPTURE:     POST /api/payments/paypal/capture-order) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 146. Td
+(BATTLE PASS:        GET  /api/battlepass) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 135. Td
+(CLAIM REWARD:       POST /api/battlepass/claim) Tj
+ET
+BT
+/F5 7.5 Tf
+8.625 TL
+0.118 0.161 0.231 rg
+54. 113. Td
+(CURRENCIES:         GET  /api/currencies) Tj
+ET
+0.9 0.91 0.92 RG
+0.5 w
+50. 98. m
+562. 98. l
+S
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 82. Td
+(This document was generated on March 29, 2026 for server version 2.5.0.) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 69. Td
+(For the most current API reference, check GET /api/api-docs or GET /api/admin/sync?code=4838.) Tj
+ET
+endstream
+endobj
+31 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/MediaBox [0 0 612. 792.]
+/Contents 32 0 R
+>>
+endobj
+32 0 obj
+<<
+/Length 172
+>>
+stream
+0.5 w
+0.9 0.91 0.92 RG
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0. g
+50. 742. Td
+(The mobile app should be a pure consumer of these APIs. No server modifications required.) Tj
+ET
+endstream
+endobj
+1 0 obj
+<</Type /Pages
+/Kids [3 0 R 5 0 R 7 0 R 9 0 R 11 0 R 13 0 R 15 0 R 17 0 R 19 0 R 21 0 R 23 0 R 25 0 R 27 0 R 29 0 R 31 0 R ]
+/Count 15
+>>
+endobj
+33 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+34 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+35 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica-Oblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+36 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica-BoldOblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+37 0 obj
+<<
+/Type /Font
+/BaseFont /Courier
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+38 0 obj
+<<
+/Type /Font
+/BaseFont /Courier-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+39 0 obj
+<<
+/Type /Font
+/BaseFont /Courier-Oblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+40 0 obj
+<<
+/Type /Font
+/BaseFont /Courier-BoldOblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+41 0 obj
+<<
+/Type /Font
+/BaseFont /Times-Roman
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+42 0 obj
+<<
+/Type /Font
+/BaseFont /Times-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+43 0 obj
+<<
+/Type /Font
+/BaseFont /Times-Italic
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+44 0 obj
+<<
+/Type /Font
+/BaseFont /Times-BoldItalic
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+45 0 obj
+<<
+/Type /Font
+/BaseFont /ZapfDingbats
+/Subtype /Type1
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+46 0 obj
+<<
+/Type /Font
+/BaseFont /Symbol
+/Subtype /Type1
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+2 0 obj
+<<
+/ProcSet [/PDF /Text /ImageB /ImageC /ImageI]
+/Font <<
+/F1 33 0 R
+/F2 34 0 R
+/F3 35 0 R
+/F4 36 0 R
+/F5 37 0 R
+/F6 38 0 R
+/F7 39 0 R
+/F8 40 0 R
+/F9 41 0 R
+/F10 42 0 R
+/F11 43 0 R
+/F12 44 0 R
+/F13 45 0 R
+/F14 46 0 R
+>>
+/XObject <<
+>>
+>>
+endobj
+47 0 obj
+<<
+/Producer (jsPDF 4.2.1)
+/CreationDate (D:20260329205414-00'00')
+>>
+endobj
+48 0 obj
+<<
+/Type /Catalog
+/Pages 1 0 R
+/OpenAction [3 0 R /FitH null]
+/PageLayout /OneColumn
+>>
+endobj
+xref
+0 49
+0000000000 65535 f 
+0000081410 00000 n 
+0000083328 00000 n 
+0000000015 00000 n 
+0000000120 00000 n 
+0000005470 00000 n 
+0000005575 00000 n 
+0000012273 00000 n 
+0000012378 00000 n 
+0000020691 00000 n 
+0000020797 00000 n 
+0000025282 00000 n 
+0000025389 00000 n 
+0000030051 00000 n 
+0000030158 00000 n 
+0000033958 00000 n 
+0000034065 00000 n 
+0000040067 00000 n 
+0000040174 00000 n 
+0000042320 00000 n 
+0000042427 00000 n 
+0000046969 00000 n 
+0000047076 00000 n 
+0000052235 00000 n 
+0000052342 00000 n 
+0000060958 00000 n 
+0000061065 00000 n 
+0000069250 00000 n 
+0000069357 00000 n 
+0000075253 00000 n 
+0000075360 00000 n 
+0000081079 00000 n 
+0000081186 00000 n 
+0000081563 00000 n 
+0000081689 00000 n 
+0000081820 00000 n 
+0000081954 00000 n 
+0000082092 00000 n 
+0000082216 00000 n 
+0000082345 00000 n 
+0000082477 00000 n 
+0000082613 00000 n 
+0000082741 00000 n 
+0000082868 00000 n 
+0000082997 00000 n 
+0000083130 00000 n 
+0000083232 00000 n 
+0000083581 00000 n 
+0000083667 00000 n 
+trailer
+<<
+/Size 49
+/Root 48 0 R
+/Info 47 0 R
+/ID [ <FB2519856AE9A040785923257DB4FCC6> <FB2519856AE9A040785923257DB4FCC6> ]
+>>
+startxref
+83771
+%%EOF

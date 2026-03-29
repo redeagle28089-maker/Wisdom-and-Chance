@@ -42,3 +42,15 @@ id = "180xIlgT98BQCHjiTYlSl"
 uri = "file://WC_TCG_Mobile_AI_Agent_Guide.pdf"
 type = "pdf"
 title = "Wisdom & Chance TCG - Mobile AI Agent Sync Guide"
+
+[[outputs]]
+id = "qp2cr5Vo6x6KuJGxdI7EV"
+uri = "file://attached_assets/Wisdom_Chance_TCG_Mobile_Payment_Sync_Guide.pdf"
+type = "pdf"
+title = "Mobile Payment Integration Sync Guide (PDF)"
+
+[[outputs]]
+id = "jnXSBCOxj23xIi9no_OW2"
+uri = "file://attached_assets/mobile_payment_sync_guide.md"
+type = "text"
+title = "Mobile Payment Integration Sync Guide (Markdown Source)"
