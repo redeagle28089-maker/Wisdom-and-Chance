@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import type { Server } from "http";
 import { z } from "zod";
-import { eq, or, and, lt, desc, sql } from "drizzle-orm";
+import { eq, or, and, lt, lte, desc, sql } from "drizzle-orm";
 import { storage } from "./storage";
 import { db } from "./db";
 import { insertCardSchema, insertDeckSchema, insertPlayerSchema, insertGameSchema, ELEMENTS, userDecks, insertUserDeckSchema, GAME_CONSTANTS, cardImages, insertCardImageSchema, TRAITS, BUFF_DEBUFF_COLORS, users, friendships, friendMessages, cardImageMappings, commanderImageMappings, GAME_PHASES, GAME_MODE_CONFIG, AI_DIFFICULTY, GAME_STATUS, featureFlags, serverConfig, DEFAULT_FEATURE_FLAGS, playerCurrencies, playerCollection, ECONOMY_CONSTANTS, getCardRarity, type CardRarity, playerChallenges, playerAchievements, PACK_TYPES, dailyDeals, shopCatalog, shopBundles, seasons, seasonHistory, battlePassLevels, playerBattlePass, weeklyChallenges, playerWeeklyChallenges, RANKED_TIERS, SEASON_REWARDS, BATTLE_PASS_XP, playerRatings } from "@shared/schema";
@@ -2663,7 +2663,7 @@ IMPORTANT:
       const challenges = await db.select().from(weeklyChallenges)
         .where(and(
           eq(weeklyChallenges.seasonId, activeSeason.id),
-          lt(weeklyChallenges.activeFrom, now),
+          lte(weeklyChallenges.activeFrom, now),
           sql`${weeklyChallenges.activeUntil} > ${now}`
         ));
 

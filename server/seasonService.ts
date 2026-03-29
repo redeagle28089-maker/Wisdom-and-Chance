@@ -35,7 +35,11 @@ export async function checkAndTransitionSeason() {
     const allRatings = await db.select().from(playerRatings);
 
     for (const pr of allRatings) {
-      const peakTier = getTierForRating(pr.highestRating);
+      const safeRating = pr.rating ?? 1000;
+      const safeHighest = pr.highestRating ?? safeRating;
+      const safeWins = pr.wins ?? 0;
+      const safeLosses = pr.losses ?? 0;
+      const peakTier = getTierForRating(safeHighest);
 
       const [existingHistory] = await db.select().from(seasonHistory)
         .where(and(eq(seasonHistory.userId, pr.userId), eq(seasonHistory.seasonId, activeSeason.id)))
@@ -47,11 +51,11 @@ export async function checkAndTransitionSeason() {
         await db.insert(seasonHistory).values({
           userId: pr.userId,
           seasonId: activeSeason.id,
-          finalRating: pr.rating,
-          peakRating: pr.highestRating,
+          finalRating: safeRating,
+          peakRating: safeHighest,
           tier: peakTier,
-          gamesPlayed: pr.wins + pr.losses,
-          wins: pr.wins,
+          gamesPlayed: safeWins + safeLosses,
+          wins: safeWins,
           rewardsClaimed: false,
         }).onConflictDoNothing();
       }
@@ -78,7 +82,7 @@ export async function checkAndTransitionSeason() {
         .set({ rewardsClaimed: true, cosmeticReward })
         .where(and(eq(seasonHistory.userId, pr.userId), eq(seasonHistory.seasonId, activeSeason.id)));
 
-      const newRating = Math.round(SEASON_BASELINE_RATING + (pr.rating - SEASON_BASELINE_RATING) * SEASON_SOFT_RESET_RATIO);
+      const newRating = Math.round(SEASON_BASELINE_RATING + (safeRating - SEASON_BASELINE_RATING) * SEASON_SOFT_RESET_RATIO);
       await db.update(playerRatings)
         .set({
           rating: newRating,
