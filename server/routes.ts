@@ -2543,7 +2543,8 @@ IMPORTANT:
 
         if (level > progress.currentLevel) throw new Error("LEVEL_NOT_UNLOCKED");
 
-        const claimed: number[] = JSON.parse(progress.claimedLevels || "[]");
+        const originalClaimedStr = progress.claimedLevels || "[]";
+        const claimed: number[] = JSON.parse(originalClaimedStr);
         if (claimed.includes(level)) throw new Error("ALREADY_CLAIMED");
 
         const [bpLevel] = await tx.select().from(battlePassLevels)
@@ -2607,9 +2608,15 @@ IMPORTANT:
         }
 
         claimed.push(level);
-        await tx.update(playerBattlePass)
-          .set({ claimedLevels: JSON.stringify(claimed), updatedAt: new Date() })
-          .where(eq(playerBattlePass.id, progress.id));
+        const newClaimedStr = JSON.stringify(claimed);
+        const [updateResult] = await tx.update(playerBattlePass)
+          .set({ claimedLevels: newClaimedStr, updatedAt: new Date() })
+          .where(and(
+            eq(playerBattlePass.id, progress.id),
+            eq(playerBattlePass.claimedLevels, originalClaimedStr)
+          ))
+          .returning();
+        if (!updateResult) throw new Error("ALREADY_CLAIMED");
 
         const [currencies] = await tx.select().from(playerCurrencies).where(eq(playerCurrencies.userId, userId));
 
@@ -2642,8 +2649,12 @@ IMPORTANT:
       if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
       const now = new Date();
+      const [activeSeason] = await db.select().from(seasons).where(eq(seasons.isActive, true)).limit(1);
+      if (!activeSeason) return res.json([]);
+
       const challenges = await db.select().from(weeklyChallenges)
         .where(and(
+          eq(weeklyChallenges.seasonId, activeSeason.id),
           lt(weeklyChallenges.activeFrom, now),
           sql`${weeklyChallenges.activeUntil} > ${now}`
         ));
@@ -2691,11 +2702,22 @@ IMPORTANT:
       const challengeId = req.params.id;
 
       const result = await db.transaction(async (tx) => {
+        const [activeSeason] = await tx.select().from(seasons).where(eq(seasons.isActive, true)).limit(1);
+        if (!activeSeason) throw new Error("NO_SEASON");
+
         const [challenge] = await tx.select().from(weeklyChallenges)
-          .where(eq(weeklyChallenges.id, challengeId)).limit(1);
+          .where(and(eq(weeklyChallenges.id, challengeId), eq(weeklyChallenges.seasonId, activeSeason.id)))
+          .limit(1);
         if (!challenge) throw new Error("NOT_FOUND");
 
-        const [progress] = await tx.select().from(playerWeeklyChallenges)
+        const [progress] = await tx.select({
+          id: playerWeeklyChallenges.id,
+          userId: playerWeeklyChallenges.userId,
+          challengeId: playerWeeklyChallenges.challengeId,
+          progress: playerWeeklyChallenges.progress,
+          completedAt: playerWeeklyChallenges.completedAt,
+          claimedAt: playerWeeklyChallenges.claimedAt,
+        }).from(playerWeeklyChallenges)
           .where(and(
             eq(playerWeeklyChallenges.userId, userId),
             eq(playerWeeklyChallenges.challengeId, challengeId)
@@ -2704,9 +2726,14 @@ IMPORTANT:
         if (!progress || !progress.completedAt) throw new Error("NOT_COMPLETED");
         if (progress.claimedAt) throw new Error("ALREADY_CLAIMED");
 
-        await tx.update(playerWeeklyChallenges)
+        const [updateResult] = await tx.update(playerWeeklyChallenges)
           .set({ claimedAt: new Date() })
-          .where(eq(playerWeeklyChallenges.id, progress.id));
+          .where(and(
+            eq(playerWeeklyChallenges.id, progress.id),
+            sql`${playerWeeklyChallenges.claimedAt} IS NULL`
+          ))
+          .returning();
+        if (!updateResult) throw new Error("ALREADY_CLAIMED");
 
         const [existingCur] = await tx.select().from(playerCurrencies).where(eq(playerCurrencies.userId, userId)).limit(1);
         if (!existingCur) {
@@ -2777,7 +2804,8 @@ IMPORTANT:
       res.json(result);
     } catch (error: any) {
       const msg = error?.message;
-      if (msg === "NOT_FOUND") return res.status(404).json({ error: "Challenge not found" });
+      if (msg === "NO_SEASON") return res.status(400).json({ error: "No active season" });
+      if (msg === "NOT_FOUND") return res.status(404).json({ error: "Challenge not found or not in current season" });
       if (msg === "NOT_COMPLETED") return res.status(400).json({ error: "Challenge not completed" });
       if (msg === "ALREADY_CLAIMED") return res.status(400).json({ error: "Reward already claimed" });
       console.error("Error claiming weekly challenge:", error);
