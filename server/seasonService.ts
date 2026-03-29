@@ -36,18 +36,25 @@ export async function checkAndTransitionSeason() {
 
     for (const pr of allRatings) {
       const peakTier = getTierForRating(pr.highestRating);
-      const finalTier = getTierForRating(pr.rating);
 
-      await db.insert(seasonHistory).values({
-        userId: pr.userId,
-        seasonId: activeSeason.id,
-        finalRating: pr.rating,
-        peakRating: pr.highestRating,
-        tier: peakTier,
-        gamesPlayed: pr.wins + pr.losses,
-        wins: pr.wins,
-        rewardsClaimed: true,
-      }).onConflictDoNothing();
+      const [existingHistory] = await db.select().from(seasonHistory)
+        .where(and(eq(seasonHistory.userId, pr.userId), eq(seasonHistory.seasonId, activeSeason.id)))
+        .limit(1);
+
+      if (existingHistory && existingHistory.rewardsClaimed) continue;
+
+      if (!existingHistory) {
+        await db.insert(seasonHistory).values({
+          userId: pr.userId,
+          seasonId: activeSeason.id,
+          finalRating: pr.rating,
+          peakRating: pr.highestRating,
+          tier: peakTier,
+          gamesPlayed: pr.wins + pr.losses,
+          wins: pr.wins,
+          rewardsClaimed: false,
+        }).onConflictDoNothing();
+      }
 
       const rewards = SEASON_REWARDS[peakTier as keyof typeof SEASON_REWARDS];
       if (rewards) {
@@ -65,6 +72,10 @@ export async function checkAndTransitionSeason() {
           }
         }
       }
+
+      await db.update(seasonHistory)
+        .set({ rewardsClaimed: true })
+        .where(and(eq(seasonHistory.userId, pr.userId), eq(seasonHistory.seasonId, activeSeason.id)));
 
       const newRating = Math.round(SEASON_BASELINE_RATING + (pr.rating - SEASON_BASELINE_RATING) * SEASON_SOFT_RESET_RATIO);
       await db.update(playerRatings)
@@ -92,13 +103,16 @@ export async function checkAndTransitionSeason() {
     } catch (_e) {}
     const nextEnd = new Date(nextStart.getTime() + seasonDurationDays * 24 * 60 * 60 * 1000);
 
-    const [newSeason] = await db.insert(seasons).values({
+    const [existingNext] = await db.select().from(seasons)
+      .where(eq(seasons.seasonNumber, nextSeasonNumber)).limit(1);
+
+    const newSeason = existingNext || (await db.insert(seasons).values({
       name: `Season ${nextSeasonNumber}`,
       seasonNumber: nextSeasonNumber,
       startsAt: nextStart,
       endsAt: nextEnd,
       isActive: true,
-    }).returning();
+    }).onConflictDoNothing().returning())[0];
 
     if (newSeason) {
       const levelRewards = [

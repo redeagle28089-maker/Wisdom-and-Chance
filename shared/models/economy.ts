@@ -269,7 +269,9 @@ export const seasonHistory = pgTable("season_history", {
   wins: integer("wins").notNull().default(0),
   rewardsClaimed: boolean("rewards_claimed").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  uniqueIndex("uq_season_history_user_season").on(table.userId, table.seasonId),
+]);
 
 export type SeasonHistory = typeof seasonHistory.$inferSelect;
 
@@ -281,7 +283,9 @@ export const battlePassLevels = pgTable("battle_pass_levels", {
   rewardType: varchar("reward_type", { length: 50 }).notNull(),
   rewardAmount: integer("reward_amount").notNull().default(1),
   rewardDescription: varchar("reward_description", { length: 255 }).notNull(),
-});
+}, (table) => [
+  uniqueIndex("uq_battle_pass_levels_season_level").on(table.seasonId, table.level),
+]);
 
 export type BattlePassLevel = typeof battlePassLevels.$inferSelect;
 
@@ -293,7 +297,9 @@ export const playerBattlePass = pgTable("player_battle_pass", {
   currentLevel: integer("current_level").notNull().default(0),
   claimedLevels: varchar("claimed_levels", { length: 2000 }).notNull().default("[]"),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (table) => [
+  uniqueIndex("uq_player_battle_pass_user_season").on(table.userId, table.seasonId),
+]);
 
 export type PlayerBattlePass = typeof playerBattlePass.$inferSelect;
 
@@ -308,7 +314,9 @@ export const weeklyChallenges = pgTable("weekly_challenges", {
   goldReward: integer("gold_reward").notNull().default(50),
   activeFrom: timestamp("active_from").notNull(),
   activeUntil: timestamp("active_until").notNull(),
-});
+}, (table) => [
+  uniqueIndex("uq_weekly_challenges_season_week_type").on(table.seasonId, table.weekNumber, table.challengeType),
+]);
 
 export type WeeklyChallenge = typeof weeklyChallenges.$inferSelect;
 
@@ -319,7 +327,9 @@ export const playerWeeklyChallenges = pgTable("player_weekly_challenges", {
   progress: integer("progress").notNull().default(0),
   completedAt: timestamp("completed_at"),
   claimedAt: timestamp("claimed_at"),
-});
+}, (table) => [
+  uniqueIndex("uq_player_weekly_challenges_user_challenge").on(table.userId, table.challengeId),
+]);
 
 export type PlayerWeeklyChallenge = typeof playerWeeklyChallenges.$inferSelect;
 
