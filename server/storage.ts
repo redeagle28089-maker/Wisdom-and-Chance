@@ -12,6 +12,7 @@ import {
   ELEMENTS,
   TRAITS,
   BUFF_DEBUFF_COLORS,
+  getCardRarity,
   cardImageMappings,
   commanderImageMappings,
 } from "@shared/schema";
@@ -378,6 +379,7 @@ export class MemStorage implements IStorage {
           name: cardData.name,
           element: element as typeof ELEMENTS[number],
           power,
+          rarity: getCardRarity(power),
           trait: cardData.trait as typeof TRAITS[number] | null,
           traitValue: cardData.traitValue,
           buffModifier: cardData.buff,
@@ -711,7 +713,7 @@ export class MemStorage implements IStorage {
 
   async createCard(insertCard: InsertCard): Promise<Card> {
     const id = randomUUID();
-    const card: Card = { ...insertCard, id };
+    const card: Card = { ...insertCard, id, rarity: getCardRarity(insertCard.power) };
     this.cards.set(id, card);
     return card;
   }

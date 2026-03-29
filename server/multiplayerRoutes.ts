@@ -826,6 +826,14 @@ export function registerMultiplayerRoutes(app: Express) {
       .where(eq(playerChallenges.id, playerCh.id))
       .returning();
 
+    try {
+      const { grantGold, ensureCurrencies } = await import("./economyService");
+      const { ECONOMY_CONSTANTS } = await import("@shared/schema");
+      await grantGold(userId, ECONOMY_CONSTANTS.REWARDS.DAILY_CHALLENGE_GOLD, "daily_challenge");
+    } catch (e) {
+      console.warn("[multiplayer] Failed to grant challenge gold:", e);
+    }
+
     res.json(updated);
   });
 

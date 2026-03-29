@@ -976,37 +976,6 @@ IMPORTANT:
     }
   });
 
-  app.post("/api/challenges/:id/claim", isAuthenticated, requireEconomy, async (req: any, res) => {
-    try {
-      const userId = req.user?.claims?.sub;
-      if (!userId) return res.status(401).json({ message: "Unauthorized" });
-
-      const challengeId = req.params.id;
-      const [pc] = await db.select().from(playerChallenges)
-        .where(and(
-          eq(playerChallenges.userId, userId),
-          eq(playerChallenges.challengeId, challengeId)
-        ))
-        .limit(1);
-
-      if (!pc) return res.status(404).json({ message: "Challenge progress not found" });
-      if (!pc.completedAt) return res.status(400).json({ message: "Challenge not yet completed" });
-      if (pc.claimedAt) return res.status(400).json({ message: "Already claimed" });
-
-      await db.update(playerChallenges)
-        .set({ claimedAt: new Date() })
-        .where(eq(playerChallenges.id, pc.id));
-
-      await grantGold(userId, ECONOMY_CONSTANTS.REWARDS.DAILY_CHALLENGE_GOLD, "daily_challenge");
-
-      const balances = await ensureCurrencies(userId);
-      res.json({ claimed: true, goldAwarded: ECONOMY_CONSTANTS.REWARDS.DAILY_CHALLENGE_GOLD, currencies: balances });
-    } catch (error) {
-      console.error("[economy] Error claiming challenge:", error);
-      res.status(500).json({ message: "Failed to claim challenge" });
-    }
-  });
-
   app.post("/api/achievements/:id/claim", isAuthenticated, requireEconomy, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
@@ -1022,6 +991,11 @@ IMPORTANT:
 
       if (!pa) return res.status(404).json({ message: "Achievement progress not found" });
       if (!pa.unlockedAt) return res.status(400).json({ message: "Achievement not yet unlocked" });
+      if (pa.goldClaimed) return res.status(400).json({ message: "Gold already claimed for this achievement" });
+
+      await db.update(playerAchievements)
+        .set({ goldClaimed: true })
+        .where(eq(playerAchievements.id, pa.id));
 
       await grantGold(userId, ECONOMY_CONSTANTS.REWARDS.ACHIEVEMENT_GOLD, "achievement_unlock");
 

@@ -903,17 +903,14 @@ const API_DOCS = {
       },
       claimChallenge: {
         method: "POST",
-        path: "/api/challenges/:id/claim",
+        path: "/api/player-challenges/:id/claim",
         requiresAuth: true,
-        description: "Claim gold reward for a completed daily challenge.",
+        description: "Claim reward for a completed daily challenge. Gold is automatically granted when economy is enabled. Uses claimedAt field for idempotency.",
         response: {
-          claimed: { type: "boolean" },
-          goldAwarded: { type: "number" },
-          currencies: { type: "object", description: "Updated currency balances" },
+          type: "PlayerChallenge object with claimedAt set",
         },
         errors: {
           400: "Challenge not completed or already claimed",
-          404: "Challenge progress not found",
         },
       },
       claimAchievement: {

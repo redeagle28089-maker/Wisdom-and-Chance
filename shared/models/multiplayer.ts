@@ -199,6 +199,7 @@ export const playerAchievements = pgTable(
     achievementId: varchar("achievement_id").notNull().references(() => achievements.id),
     progress: integer("progress").default(0),
     unlockedAt: timestamp("unlocked_at"),
+    goldClaimed: boolean("gold_claimed").notNull().default(false),
     createdAt: timestamp("created_at").defaultNow(),
   },
   (table) => [

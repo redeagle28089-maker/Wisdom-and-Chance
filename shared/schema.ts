@@ -32,6 +32,7 @@ export const cardSchema = z.object({
   name: z.string(),
   element: z.enum(ELEMENTS),
   power: z.number().min(1).max(10),
+  rarity: z.enum(["Common", "Rare", "Epic", "Legendary"] as const).optional(),
   trait: z.enum(TRAITS).nullable(),
   traitValue: z.number().nullable().default(null),
   buffModifier: z.number().default(0),
