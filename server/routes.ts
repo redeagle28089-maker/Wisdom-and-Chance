@@ -802,7 +802,7 @@ IMPORTANT:
     }
   });
 
-  app.get("/api/shop/daily-deal", requireEconomy, async (_req: any, res) => {
+  app.get("/api/shop/daily-deals", requireEconomy, async (_req: any, res) => {
     try {
       const today = new Date().toISOString().split("T")[0];
       let [deal] = await db.select().from(dailyDeals).where(eq(dailyDeals.dealDate, today)).limit(1);

@@ -3,7 +3,8 @@ import { useLocation, useSearch } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Coins, ArrowLeft, Sparkles, ShoppingBag, Star } from "lucide-react";
+import { Coins, ArrowLeft, Sparkles, ShoppingBag, Star, Recycle } from "lucide-react";
+import { ECONOMY_CONSTANTS } from "@shared/schema";
 import type { CardRarity } from "@shared/schema";
 
 interface PulledCard {
@@ -181,9 +182,13 @@ export default function PackOpeningPage() {
                   <div
                     className={`w-full h-full rounded-xl bg-gradient-to-br ${RARITY_BG[card.rarity]} border-2 ${RARITY_BORDER[card.rarity]} ${RARITY_GLOW[card.rarity]} flex flex-col items-center justify-between p-3 transition-shadow duration-500`}
                   >
-                    {card.isNew && (
+                    {card.isNew ? (
                       <Badge className="absolute -top-2 -right-2 bg-green-500 text-white text-[10px] border-0 z-10 animate-bounce">
                         NEW!
+                      </Badge>
+                    ) : (
+                      <Badge className="absolute -top-2 -right-2 bg-slate-600 text-slate-200 text-[10px] border-0 z-10">
+                        DUPE
                       </Badge>
                     )}
 
@@ -229,6 +234,26 @@ export default function PackOpeningPage() {
               <span>Remaining: <span className="text-amber-300 font-semibold" data-testid="text-remaining-gold">{packData.remainingGold.toLocaleString()}</span></span>
             </div>
           </div>
+
+          {(() => {
+            const newCards = packData.cards.filter(c => c.isNew).length;
+            const dupes = packData.cards.filter(c => !c.isNew).length;
+            const dustValue = packData.cards
+              .filter(c => !c.isNew)
+              .reduce((sum, c) => sum + (ECONOMY_CONSTANTS.DISENCHANT_VALUE[c.rarity as keyof typeof ECONOMY_CONSTANTS.DISENCHANT_VALUE] ?? 0), 0);
+            return (
+              <div className="flex items-center justify-center gap-4 text-sm mt-2" data-testid="pack-summary">
+                <span className="text-green-400">{newCards} new</span>
+                {dupes > 0 && (
+                  <div className="flex items-center gap-1 text-slate-400">
+                    <Recycle className="w-3.5 h-3.5" />
+                    <span>{dupes} duplicate{dupes > 1 ? "s" : ""}</span>
+                    <span className="text-purple-400">(~{dustValue} dust if disenchanted)</span>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           <div className="flex gap-3 justify-center">
             <Button

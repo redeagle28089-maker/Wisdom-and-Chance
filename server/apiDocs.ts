@@ -949,7 +949,7 @@ const API_DOCS = {
       },
       shopDailyDeal: {
         method: "GET",
-        path: "/api/shop/daily-deal",
+        path: "/api/shop/daily-deals",
         requiresAuth: false,
         description: "Get today's daily deal. Auto-generates a new deal if none exists for the current date.",
         response: {
