@@ -30,3 +30,9 @@ id = "SJMR7n6qrUWd3rcpsrDVC"
 uri = "file://Mobile_App_Server_Sync_Instructions.pdf"
 type = "pdf"
 title = "Mobile App Server Sync Instructions (PDF)"
+
+[[outputs]]
+id = "oBC0tqS2PaCY0QYRCuaEI"
+uri = "file://WC_Mobile_Sync_Guide.pdf"
+type = "pdf"
+title = "Mobile Sync Guide & Feature Roadmap PDF"
