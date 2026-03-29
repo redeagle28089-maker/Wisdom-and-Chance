@@ -2321,7 +2321,12 @@ IMPORTANT:
     if (existing) return;
 
     const now = new Date();
-    const endsAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+    let seasonDurationDays = 30;
+    try {
+      const [cfg] = await db.select().from(serverConfig).where(eq(serverConfig.key, "season_duration_days")).limit(1);
+      if (cfg && typeof cfg.value === "number") seasonDurationDays = cfg.value;
+    } catch (_e) {}
+    const endsAt = new Date(now.getTime() + seasonDurationDays * 24 * 60 * 60 * 1000);
 
     const [season] = await db.insert(seasons).values({
       name: "Season 1: Dawn of the Elements",
@@ -2573,6 +2578,19 @@ IMPORTANT:
                     set: { quantity: sql`${playerCollection.quantity} + 1` },
                   });
               }
+            }
+          }
+        } else if (bpLevel.rewardType === "card") {
+          const allCards = await storage.getCards();
+          const filteredCards = allCards.filter(c => c.rarity);
+          for (let ci = 0; ci < bpLevel.rewardAmount; ci++) {
+            const card = filteredCards[Math.floor(Math.random() * filteredCards.length)];
+            if (card) {
+              await tx.insert(playerCollection).values({ userId, cardId: card.id, quantity: 1 })
+                .onConflictDoUpdate({
+                  target: [playerCollection.userId, playerCollection.cardId],
+                  set: { quantity: sql`${playerCollection.quantity} + 1` },
+                });
             }
           }
         }

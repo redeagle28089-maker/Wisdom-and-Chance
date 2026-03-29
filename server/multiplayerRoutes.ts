@@ -831,8 +831,10 @@ export function registerMultiplayerRoutes(app: Express) {
     try {
       const flag = await db.select().from(featureFlags).where(eq(featureFlags.key, "economy_enabled")).limit(1);
       if (flag.length > 0 && flag[0].enabled) {
-        const { grantGold } = await import("./economyService");
+        const { grantGold, grantBattlePassXP } = await import("./economyService");
         await grantGold(userId, ECONOMY_CONSTANTS.REWARDS.DAILY_CHALLENGE_GOLD, "daily_challenge");
+        const { BATTLE_PASS_XP: BP_XP } = await import("@shared/schema");
+        await grantBattlePassXP(userId, BP_XP.DAILY_CHALLENGE, "daily_challenge");
       }
     } catch (e) {
       console.warn("[multiplayer] Failed to grant challenge gold:", e);

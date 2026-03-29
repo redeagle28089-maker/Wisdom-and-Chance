@@ -3,8 +3,10 @@ import { eq, and, sql, ne, lt } from "drizzle-orm";
 import {
   seasons, seasonHistory, playerBattlePass, battlePassLevels,
   weeklyChallenges, playerWeeklyChallenges, playerRatings,
+  playerCurrencies,
   RANKED_TIERS, SEASON_REWARDS, BATTLE_PASS_XP,
 } from "@shared/schema";
+import { serverConfig } from "@shared/schema";
 import { grantGold, ensureCurrencies } from "./economyService";
 
 function getTierForRating(rating: number): string {
@@ -51,6 +53,17 @@ export async function checkAndTransitionSeason() {
       if (rewards) {
         await ensureCurrencies(pr.userId);
         if (rewards.gold > 0) await grantGold(pr.userId, rewards.gold, `season_${activeSeason.seasonNumber}_reward`);
+        if (rewards.dust > 0) {
+          await db.update(playerCurrencies)
+            .set({ dust: sql`dust + ${rewards.dust}`, updatedAt: new Date() })
+            .where(eq(playerCurrencies.userId, pr.userId));
+        }
+        if (rewards.packs > 0) {
+          const { openPackForUser } = await import("./economyService");
+          for (let p = 0; p < rewards.packs; p++) {
+            await openPackForUser(pr.userId, rewards.packs >= 5 ? "premium" : "standard");
+          }
+        }
       }
 
       const newRating = Math.round(SEASON_BASELINE_RATING + (pr.rating - SEASON_BASELINE_RATING) * SEASON_SOFT_RESET_RATIO);
@@ -72,7 +85,12 @@ export async function checkAndTransitionSeason() {
 
     const nextSeasonNumber = activeSeason.seasonNumber + 1;
     const nextStart = new Date();
-    const nextEnd = new Date(nextStart.getTime() + 30 * 24 * 60 * 60 * 1000);
+    let seasonDurationDays = 30;
+    try {
+      const [cfg] = await db.select().from(serverConfig).where(eq(serverConfig.key, "season_duration_days")).limit(1);
+      if (cfg && typeof cfg.value === "number") seasonDurationDays = cfg.value;
+    } catch (_e) {}
+    const nextEnd = new Date(nextStart.getTime() + seasonDurationDays * 24 * 60 * 60 * 1000);
 
     const [newSeason] = await db.insert(seasons).values({
       name: `Season ${nextSeasonNumber}`,
