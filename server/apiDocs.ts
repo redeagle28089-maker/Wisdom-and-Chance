@@ -2,7 +2,7 @@ import type { Express } from "express";
 
 const API_DOCS = {
   title: "Wisdom & Chance TCG - Mobile API Reference",
-  version: "2.1.0",
+  version: "2.2.0",
   baseUrl: "https://wisdom-and-chance.replit.app",
   apiPrefix: "/api",
   authentication: {
@@ -710,6 +710,73 @@ const API_DOCS = {
       wins: "number",
       losses: "number",
       streak: "number",
+    },
+  },
+  configEndpoint: {
+    overview: "GET /api/config should be the FIRST call on app launch. It returns feature flags, season info, maintenance status, and API version for client compatibility checking. No authentication required.",
+    endpoint: {
+      method: "GET",
+      path: "/api/config",
+      requiresAuth: false,
+      description: "Returns server configuration, feature flags, and current season info. Both web and mobile clients should call this on launch and cache for 5 minutes.",
+      response: {
+        apiVersion: "string (semver, e.g. '2.2.0') — check against minClientVersion",
+        features: {
+          description: "Object of feature flag keys to boolean values. Only show UI for features that are true.",
+          example: {
+            economy_enabled: false,
+            collection_enabled: false,
+            shop_enabled: false,
+            pack_opening_enabled: false,
+            crafting_enabled: false,
+            ranked_seasons: false,
+            battle_pass: false,
+            weekly_challenges: false,
+            emotes: false,
+            spectator_mode: true,
+            practice_mode: true,
+            multiplayer: true,
+            friends_system: true,
+            daily_challenges: true,
+            achievements: true,
+            leaderboard: true,
+          },
+        },
+        season: "object | null — { id, name, startDate, endDate, daysRemaining } when a ranked season is active",
+        maintenance: "{ active: boolean, message?: string } — if active is true, show maintenance screen and block gameplay",
+        minClientVersion: "string (semver) — mobile should compare against their app version and prompt update if too old",
+        serverTime: "string (ISO 8601) — use for clock sync on daily/weekly challenge timers",
+      },
+    },
+    adminEndpoints: {
+      getFlags: {
+        method: "GET",
+        path: "/api/admin/feature-flags",
+        requiresAuth: true,
+        adminOnly: true,
+        description: "List all feature flags with descriptions",
+      },
+      updateFlag: {
+        method: "PATCH",
+        path: "/api/admin/feature-flags/:key",
+        requiresAuth: true,
+        adminOnly: true,
+        body: { enabled: "boolean" },
+        description: "Toggle a feature flag on or off",
+      },
+      updateConfig: {
+        method: "PUT",
+        path: "/api/admin/server-config/:key",
+        requiresAuth: true,
+        adminOnly: true,
+        body: { value: "any (JSON object)" },
+        description: "Update server config. Allowed keys: maintenance, current_season, min_client_version",
+        examples: {
+          maintenance: { value: { active: true, message: "Server maintenance in progress" } },
+          current_season: { value: { id: "season-1", name: "Season 1: Dawn", startDate: "2026-04-01", endDate: "2026-04-30" } },
+          min_client_version: { value: { version: "1.2.0" } },
+        },
+      },
     },
   },
 };

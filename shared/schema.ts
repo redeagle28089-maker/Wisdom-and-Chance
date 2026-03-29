@@ -3,6 +3,7 @@ import { z } from "zod";
 export * from "./models/auth";
 export * from "./models/multiplayer";
 export * from "./models/chat";
+export * from "./models/config";
 
 export const ELEMENTS = ["Fire", "Water", "Earth", "Air", "Nature"] as const;
 export type Element = typeof ELEMENTS[number];

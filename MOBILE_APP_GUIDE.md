@@ -38,17 +38,27 @@ AUTHENTICATION:
 - Refresh token: POST /api/mobile/auth/refresh (with Bearer token)
 - Get current user: GET /api/mobile/auth/me
 
+APP CONFIG (CALL THIS FIRST ON EVERY LAUNCH):
+- GET https://wisdom-and-chance.replit.app/api/config
+  Returns feature flags, API version, season info, maintenance status, and server time.
+  - Check features.* booleans to show/hide UI sections (e.g. if economy_enabled is false, don't show shop)
+  - Check maintenance.active — if true, show maintenance screen and block gameplay
+  - Compare minClientVersion against your app version — prompt update if too old
+  - Use serverTime for clock sync on challenge/season timers
+  - Cache response for 5 minutes, then re-fetch
+
 HEALTH CHECK:
 - GET https://wisdom-and-chance.replit.app/api/health
   Returns server status, database connectivity, and service availability
 
 FULL API DOCUMENTATION:
 - GET https://wisdom-and-chance.replit.app/api/docs
-  Returns complete JSON documentation of ALL endpoints, request/response schemas, WebSocket events, and game rules. FETCH THIS FIRST and use it as your reference.
+  Returns complete JSON documentation of ALL endpoints, request/response schemas, WebSocket events, and game rules. FETCH THIS AFTER CONFIG and use it as your reference.
 
 KEY API ENDPOINTS (all prefixed with https://wisdom-and-chance.replit.app):
 
 Public (no auth needed):
+- GET /api/config - Server config, feature flags, season info (CALL FIRST)
 - GET /api/cards - All game cards
 - GET /api/cards/:id - Single card
 - GET /api/cards/element/:element - Cards by element (fire, water, earth, air, nature)

@@ -16,6 +16,7 @@ import { NavHeader } from "@/components/nav-header";
  */
 import { LandscapeOverlay } from "@/components/landscape-overlay";
 import { PWAInstallPrompt } from "@/components/pwa-install-prompt";
+import { ConfigProvider } from "@/lib/config";
 import HomePage from "@/pages/home";
 import RulesPage from "@/pages/rules";
 import CardDatabasePage from "@/pages/card-database";
@@ -84,15 +85,16 @@ function AppContent() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider defaultTheme="dark" storageKey="wisdom-chance-theme">
-        <TooltipProvider>
-          <Toaster />
-          {/* MOBILE LANDSCAPE OVERLAY - TO REVERT: Remove this component */}
-          <LandscapeOverlay />
-          <PWAInstallPrompt />
-          <AppContent />
-        </TooltipProvider>
-      </ThemeProvider>
+      <ConfigProvider>
+        <ThemeProvider defaultTheme="dark" storageKey="wisdom-chance-theme">
+          <TooltipProvider>
+            <Toaster />
+            <LandscapeOverlay />
+            <PWAInstallPrompt />
+            <AppContent />
+          </TooltipProvider>
+        </ThemeProvider>
+      </ConfigProvider>
     </QueryClientProvider>
   );
 }

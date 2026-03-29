@@ -4,7 +4,7 @@ import { z } from "zod";
 import { eq, or, and, lt, desc, sql } from "drizzle-orm";
 import { storage } from "./storage";
 import { db } from "./db";
-import { insertCardSchema, insertDeckSchema, insertPlayerSchema, insertGameSchema, ELEMENTS, userDecks, insertUserDeckSchema, GAME_CONSTANTS, cardImages, insertCardImageSchema, TRAITS, BUFF_DEBUFF_COLORS, users, friendships, friendMessages, cardImageMappings, commanderImageMappings, GAME_PHASES, GAME_MODE_CONFIG, AI_DIFFICULTY, GAME_STATUS } from "@shared/schema";
+import { insertCardSchema, insertDeckSchema, insertPlayerSchema, insertGameSchema, ELEMENTS, userDecks, insertUserDeckSchema, GAME_CONSTANTS, cardImages, insertCardImageSchema, TRAITS, BUFF_DEBUFF_COLORS, users, friendships, friendMessages, cardImageMappings, commanderImageMappings, GAME_PHASES, GAME_MODE_CONFIG, AI_DIFFICULTY, GAME_STATUS, featureFlags, serverConfig, DEFAULT_FEATURE_FLAGS } from "@shared/schema";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import { registerMultiplayerRoutes } from "./multiplayerRoutes";
 import { registerMobileAuthRoutes } from "./mobileAuth";
@@ -111,7 +111,7 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
       res.json({
         status: "ok",
         timestamp: new Date().toISOString(),
-        version: "2.1.0",
+        version: "2.2.0",
         database: dbCheck ? "connected" : "error",
         services: {
           auth: "available",
@@ -123,9 +123,50 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
       res.status(503).json({
         status: "error",
         timestamp: new Date().toISOString(),
-        version: "2.1.0",
+        version: "2.2.0",
         database: "error",
       });
+    }
+  });
+
+  app.get("/api/config", async (_req, res) => {
+    try {
+      const flags = await db.select().from(featureFlags);
+      const flagMap: Record<string, boolean> = {};
+      for (const [key, def] of Object.entries(DEFAULT_FEATURE_FLAGS)) {
+        const dbFlag = flags.find(f => f.key === key);
+        flagMap[key] = dbFlag ? dbFlag.enabled : def.enabled;
+      }
+      for (const f of flags) {
+        if (!(f.key in flagMap)) flagMap[f.key] = f.enabled;
+      }
+
+      const maintenanceRow = await db.select().from(serverConfig).where(eq(serverConfig.key, "maintenance")).limit(1);
+      const maintenanceVal = maintenanceRow[0]?.value as { active: boolean; message?: string } | undefined;
+
+      const seasonRow = await db.select().from(serverConfig).where(eq(serverConfig.key, "current_season")).limit(1);
+      const seasonVal = seasonRow[0]?.value as { id: string; name: string; startDate: string; endDate: string } | null;
+
+      let season = null;
+      if (seasonVal && seasonVal.endDate) {
+        const daysRemaining = Math.max(0, Math.ceil((new Date(seasonVal.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+        season = { ...seasonVal, daysRemaining };
+      }
+
+      const minVersionRow = await db.select().from(serverConfig).where(eq(serverConfig.key, "min_client_version")).limit(1);
+      const minClientVersion = (minVersionRow[0]?.value as { version: string })?.version || "1.0.0";
+
+      res.json({
+        apiVersion: "2.2.0",
+        features: flagMap,
+        season,
+        maintenance: maintenanceVal || { active: false },
+        minClientVersion,
+        serverTime: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error("[config] Error fetching config:", error);
+      res.status(500).json({ message: "Failed to fetch config" });
     }
   });
 
@@ -712,6 +753,87 @@ IMPORTANT:
     const userEmail = req.user?.claims?.email;
     const isAdminUser = userEmail === ADMIN_EMAIL;
     res.json({ isAdmin: isAdminUser });
+  });
+
+  app.get("/api/admin/feature-flags", isAuthenticated, isAdmin, async (_req, res) => {
+    try {
+      const flags = await db.select().from(featureFlags);
+      const result: Record<string, { enabled: boolean; description: string | null }> = {};
+      for (const [key, def] of Object.entries(DEFAULT_FEATURE_FLAGS)) {
+        const dbFlag = flags.find(f => f.key === key);
+        result[key] = {
+          enabled: dbFlag ? dbFlag.enabled : def.enabled,
+          description: dbFlag?.description || def.description,
+        };
+      }
+      for (const f of flags) {
+        if (!(f.key in result)) {
+          result[f.key] = { enabled: f.enabled, description: f.description };
+        }
+      }
+      res.json(result);
+    } catch (error) {
+      console.error("[admin] Error fetching feature flags:", error);
+      res.status(500).json({ message: "Failed to fetch feature flags" });
+    }
+  });
+
+  app.patch("/api/admin/feature-flags/:key", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { key } = req.params;
+      if (!(key in DEFAULT_FEATURE_FLAGS)) {
+        return res.status(400).json({ message: `Unknown feature flag. Allowed keys: ${Object.keys(DEFAULT_FEATURE_FLAGS).join(", ")}` });
+      }
+      const parsed = z.object({ enabled: z.boolean() }).safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "enabled must be a boolean", errors: parsed.error.flatten() });
+      }
+      const description = DEFAULT_FEATURE_FLAGS[key]?.description || null;
+      await db.insert(featureFlags)
+        .values({ key, enabled: parsed.data.enabled, description, updatedAt: new Date() })
+        .onConflictDoUpdate({
+          target: featureFlags.key,
+          set: { enabled: parsed.data.enabled, updatedAt: new Date() },
+        });
+      res.json({ key, enabled: parsed.data.enabled, description });
+    } catch (error) {
+      console.error("[admin] Error updating feature flag:", error);
+      res.status(500).json({ message: "Failed to update feature flag" });
+    }
+  });
+
+  const serverConfigSchemas: Record<string, z.ZodType> = {
+    maintenance: z.object({ active: z.boolean(), message: z.string().optional() }),
+    current_season: z.object({ id: z.string(), name: z.string(), startDate: z.string(), endDate: z.string() }),
+    min_client_version: z.object({ version: z.string() }),
+  };
+
+  app.put("/api/admin/server-config/:key", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { key } = req.params;
+      const schema = serverConfigSchemas[key];
+      if (!schema) {
+        return res.status(400).json({ message: `Invalid config key. Allowed: ${Object.keys(serverConfigSchemas).join(", ")}` });
+      }
+      const { value } = req.body;
+      if (value === undefined) {
+        return res.status(400).json({ message: "value is required" });
+      }
+      const parsed = schema.safeParse(value);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Invalid value shape", errors: (parsed as any).error?.flatten() });
+      }
+      await db.insert(serverConfig)
+        .values({ key, value: parsed.data, updatedAt: new Date() })
+        .onConflictDoUpdate({
+          target: serverConfig.key,
+          set: { value: parsed.data, updatedAt: new Date() },
+        });
+      res.json({ key, value: parsed.data });
+    } catch (error) {
+      console.error("[admin] Error updating server config:", error);
+      res.status(500).json({ message: "Failed to update server config" });
+    }
   });
 
   app.post("/api/admin/generate-card-art", isAuthenticated, isAdmin, async (req, res) => {
