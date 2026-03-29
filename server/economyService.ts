@@ -59,44 +59,55 @@ export async function grantBattlePassXP(userId: string, xpAmount: number, reason
     const [season] = await db.select().from(seasons).where(eq(seasons.isActive, true)).limit(1);
     if (!season) return;
 
-    let [bp] = await db.select().from(playerBattlePass)
-      .where(and(eq(playerBattlePass.userId, userId), eq(playerBattlePass.seasonId, season.id)))
-      .limit(1);
+    await db.transaction(async (tx) => {
+      let [bp] = await tx.select().from(playerBattlePass)
+        .where(and(eq(playerBattlePass.userId, userId), eq(playerBattlePass.seasonId, season.id)))
+        .limit(1);
 
-    if (!bp) {
-      [bp] = await db.insert(playerBattlePass).values({
-        userId,
-        seasonId: season.id,
-        currentXp: 0,
-        currentLevel: 0,
-        claimedLevels: "[]",
-      }).onConflictDoNothing().returning();
       if (!bp) {
-        [bp] = await db.select().from(playerBattlePass)
-          .where(and(eq(playerBattlePass.userId, userId), eq(playerBattlePass.seasonId, season.id)))
-          .limit(1);
+        [bp] = await tx.insert(playerBattlePass).values({
+          userId,
+          seasonId: season.id,
+          currentXp: 0,
+          currentLevel: 0,
+          claimedLevels: "[]",
+        }).onConflictDoNothing().returning();
+        if (!bp) {
+          [bp] = await tx.select().from(playerBattlePass)
+            .where(and(eq(playerBattlePass.userId, userId), eq(playerBattlePass.seasonId, season.id)))
+            .limit(1);
+        }
+        if (!bp) return;
       }
-      if (!bp) return;
-    }
 
-    const newXp = bp.currentXp + xpAmount;
-    const allLevels = await db.select().from(battlePassLevels)
-      .where(eq(battlePassLevels.seasonId, season.id));
-    const sorted = allLevels.sort((a, b) => a.level - b.level);
+      await tx.update(playerBattlePass)
+        .set({ currentXp: sql`${playerBattlePass.currentXp} + ${xpAmount}`, updatedAt: new Date() })
+        .where(eq(playerBattlePass.id, bp.id));
 
-    let newLevel = 0;
-    let xpAccum = 0;
-    for (const l of sorted) {
-      xpAccum += l.xpRequired;
-      if (newXp >= xpAccum) newLevel = l.level;
-      else break;
-    }
+      const [updated] = await tx.select().from(playerBattlePass)
+        .where(eq(playerBattlePass.id, bp.id)).limit(1);
+      if (!updated) return;
 
-    await db.update(playerBattlePass)
-      .set({ currentXp: newXp, currentLevel: newLevel, updatedAt: new Date() })
-      .where(eq(playerBattlePass.id, bp.id));
+      const allLevels = await tx.select().from(battlePassLevels)
+        .where(eq(battlePassLevels.seasonId, season.id));
+      const sorted = allLevels.sort((a, b) => a.level - b.level);
 
-    console.log(`[battlepass] Granted ${xpAmount} BP XP to ${userId}: ${reason} (now level ${newLevel})`);
+      let newLevel = 0;
+      let xpAccum = 0;
+      for (const l of sorted) {
+        xpAccum += l.xpRequired;
+        if (updated.currentXp >= xpAccum) newLevel = l.level;
+        else break;
+      }
+
+      if (newLevel !== updated.currentLevel) {
+        await tx.update(playerBattlePass)
+          .set({ currentLevel: newLevel, updatedAt: new Date() })
+          .where(eq(playerBattlePass.id, bp.id));
+      }
+
+      console.log(`[battlepass] Granted ${xpAmount} BP XP to ${userId}: ${reason} (now level ${newLevel})`);
+    });
   } catch (error) {
     console.error("[battlepass] Error granting XP:", error);
   }

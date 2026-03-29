@@ -73,8 +73,9 @@ export async function checkAndTransitionSeason() {
         }
       }
 
+      const cosmeticReward = rewards?.cosmetic ?? null;
       await db.update(seasonHistory)
-        .set({ rewardsClaimed: true })
+        .set({ rewardsClaimed: true, cosmeticReward })
         .where(and(eq(seasonHistory.userId, pr.userId), eq(seasonHistory.seasonId, activeSeason.id)));
 
       const newRating = Math.round(SEASON_BASELINE_RATING + (pr.rating - SEASON_BASELINE_RATING) * SEASON_SOFT_RESET_RATIO);

@@ -2593,16 +2593,24 @@ IMPORTANT:
             }
           }
         } else if (bpLevel.rewardType === "card") {
-          const allCards = await storage.getCards();
-          const filteredCards = allCards.filter(c => c.rarity);
-          for (let ci = 0; ci < bpLevel.rewardAmount; ci++) {
-            const card = filteredCards[Math.floor(Math.random() * filteredCards.length)];
-            if (card) {
-              await tx.insert(playerCollection).values({ userId, cardId: card.id, quantity: 1 })
-                .onConflictDoUpdate({
-                  target: [playerCollection.userId, playerCollection.cardId],
-                  set: { quantity: sql`${playerCollection.quantity} + 1` },
-                });
+          if (bpLevel.rewardCardId) {
+            await tx.insert(playerCollection).values({ userId, cardId: bpLevel.rewardCardId, quantity: bpLevel.rewardAmount })
+              .onConflictDoUpdate({
+                target: [playerCollection.userId, playerCollection.cardId],
+                set: { quantity: sql`${playerCollection.quantity} + ${bpLevel.rewardAmount}` },
+              });
+          } else {
+            const allCards = await storage.getCards();
+            const filteredCards = allCards.filter(c => c.rarity);
+            for (let ci = 0; ci < bpLevel.rewardAmount; ci++) {
+              const card = filteredCards[Math.floor(Math.random() * filteredCards.length)];
+              if (card) {
+                await tx.insert(playerCollection).values({ userId, cardId: card.id, quantity: 1 })
+                  .onConflictDoUpdate({
+                    target: [playerCollection.userId, playerCollection.cardId],
+                    set: { quantity: sql`${playerCollection.quantity} + 1` },
+                  });
+              }
             }
           }
         }

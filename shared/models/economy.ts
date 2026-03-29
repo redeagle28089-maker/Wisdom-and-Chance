@@ -268,6 +268,7 @@ export const seasonHistory = pgTable("season_history", {
   gamesPlayed: integer("games_played").notNull().default(0),
   wins: integer("wins").notNull().default(0),
   rewardsClaimed: boolean("rewards_claimed").notNull().default(false),
+  cosmeticReward: varchar("cosmetic_reward", { length: 255 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => [
   uniqueIndex("uq_season_history_user_season").on(table.userId, table.seasonId),
@@ -283,6 +284,7 @@ export const battlePassLevels = pgTable("battle_pass_levels", {
   rewardType: varchar("reward_type", { length: 50 }).notNull(),
   rewardAmount: integer("reward_amount").notNull().default(1),
   rewardDescription: varchar("reward_description", { length: 255 }).notNull(),
+  rewardCardId: varchar("reward_card_id", { length: 255 }),
 }, (table) => [
   uniqueIndex("uq_battle_pass_levels_season_level").on(table.seasonId, table.level),
 ]);
