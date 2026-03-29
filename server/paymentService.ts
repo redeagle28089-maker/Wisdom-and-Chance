@@ -206,12 +206,18 @@ export async function fulfillPurchase(
     if (existing) return { success: false, error: "Payment already fulfilled" };
   }
 
-  if (product.isOneTimePurchase) {
-    const already = await hasAlreadyPurchased(userId, product.id);
-    if (already) return { success: false, error: "This one-time purchase has already been claimed" };
-  }
-
   return db.transaction(async (tx) => {
+    if (product.isOneTimePurchase) {
+      const [existing] = await tx.select().from(purchaseTransactions)
+        .where(and(
+          eq(purchaseTransactions.userId, userId),
+          eq(purchaseTransactions.productId, product.id),
+          eq(purchaseTransactions.status, "completed"),
+        ))
+        .for("update")
+        .limit(1);
+      if (existing) return { success: false, error: "This one-time purchase has already been claimed" };
+    }
     return fulfillInTransaction(tx, userId, product, paymentMethod, paymentId, amountUsd, currencySpent);
   });
 }
@@ -228,14 +234,21 @@ export async function purchaseWithCurrency(
   const cost = currencyType === "gold" ? product.priceGold : product.priceGems;
   if (cost <= 0) return { success: false, error: `This product cannot be purchased with ${currencyType}` };
 
-  if (product.isOneTimePurchase) {
-    const already = await hasAlreadyPurchased(userId, productId);
-    if (already) return { success: false, error: "This one-time purchase has already been claimed" };
-  }
-
   await ensureCurrencies(userId);
 
   return db.transaction(async (tx) => {
+    if (product.isOneTimePurchase) {
+      const [existing] = await tx.select().from(purchaseTransactions)
+        .where(and(
+          eq(purchaseTransactions.userId, userId),
+          eq(purchaseTransactions.productId, productId),
+          eq(purchaseTransactions.status, "completed"),
+        ))
+        .for("update")
+        .limit(1);
+      if (existing) return { success: false, error: "This one-time purchase has already been claimed" };
+    }
+
     const field = currencyType === "gold" ? playerCurrencies.gold : playerCurrencies.gems;
     const deducted = await tx.update(playerCurrencies)
       .set({
