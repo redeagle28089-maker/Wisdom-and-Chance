@@ -38,6 +38,7 @@ import AdminCardArtPage from "@/pages/admin-card-art";
 import AdminImageDatabasePage from "@/pages/admin-image-database";
 import AdminUserDatabasePage from "@/pages/admin-user-database";
 import AboutCreatorPage from "@/pages/about-creator";
+import CollectionPage from "@/pages/collection";
 import NotFound from "@/pages/not-found";
 
 /**
@@ -58,6 +59,7 @@ function AppContent() {
           <Route path="/tutorial" component={TutorialPage} />
           <Route path="/cards" component={CardDatabasePage} />
           <Route path="/deck-builder" component={DeckBuilderPage} />
+          <Route path="/collection" component={CollectionPage} />
           <Route path="/practice" component={PracticePage} />
           <Route path="/game/:id" component={GameBoardPage} />
           <Route path="/profile" component={ProfilePage} />

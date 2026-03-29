@@ -16,7 +16,9 @@ import {
   playerStats,
   users,
   userDecks,
-  GAME_CONSTANTS
+  featureFlags,
+  GAME_CONSTANTS,
+  ECONOMY_CONSTANTS
 } from "@shared/schema";
 import { eq, and, or, desc, sql, gte, lt } from "drizzle-orm";
 import { getWebSocketServer } from "./websocket";
@@ -827,9 +829,11 @@ export function registerMultiplayerRoutes(app: Express) {
       .returning();
 
     try {
-      const { grantGold, ensureCurrencies } = await import("./economyService");
-      const { ECONOMY_CONSTANTS } = await import("@shared/schema");
-      await grantGold(userId, ECONOMY_CONSTANTS.REWARDS.DAILY_CHALLENGE_GOLD, "daily_challenge");
+      const flag = await db.select().from(featureFlags).where(eq(featureFlags.key, "economy_enabled")).limit(1);
+      if (flag.length > 0 && flag[0].enabled) {
+        const { grantGold } = await import("./economyService");
+        await grantGold(userId, ECONOMY_CONSTANTS.REWARDS.DAILY_CHALLENGE_GOLD, "daily_challenge");
+      }
     } catch (e) {
       console.warn("[multiplayer] Failed to grant challenge gold:", e);
     }

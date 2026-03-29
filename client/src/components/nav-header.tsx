@@ -15,7 +15,7 @@ import { useQuery } from "@tanstack/react-query";
 import { 
   Home, BookOpen, Database, Layers, Swords, Trophy, User, GraduationCap, 
   LogIn, LogOut, Users, Gamepad2, Medal, Calendar, BarChart3, Eye, 
-  BookMarked, Palette, ImageIcon, ChevronDown, X, UserCircle
+  BookMarked, Palette, ImageIcon, ChevronDown, X, UserCircle, Package
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -31,6 +31,7 @@ const menuItems: NavItem[] = [
   { title: "Tutorial", url: "/tutorial", icon: GraduationCap },
   { title: "Card Database", url: "/cards", icon: Database },
   { title: "Deck Builder", url: "/deck-builder", icon: Layers },
+  { title: "My Collection", url: "/collection", icon: Package, featureFlag: "economy_enabled" },
 ];
 
 const playItems: NavItem[] = [
