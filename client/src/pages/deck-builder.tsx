@@ -23,6 +23,8 @@ interface CollectionEntry {
   quantity: number;
 }
 
+type CardWithOwnership = CardType & { _owned?: number };
+
 interface DeckSuggestion {
   deckName: string;
   strategy: string;
@@ -157,13 +159,13 @@ export default function DeckBuilderPage() {
       });
 
     if (economyEnabled && isAuthenticated) {
-      result = result.map(card => ({
+      return result.map(card => ({
         ...card,
         _owned: ownedMap.get(card.id) ?? 0,
-      }));
+      })) as CardWithOwnership[];
     }
 
-    return result;
+    return result as CardWithOwnership[];
   }, [cards, selectedElement, economyEnabled, isAuthenticated, ownedMap]);
 
   const totalCards = Array.from(deckCards.values()).reduce((sum, count) => sum + count, 0);
@@ -462,7 +464,7 @@ export default function DeckBuilderPage() {
                     {uniqueCards.map((card) => {
                       const count = deckCards.get(card.id) || 0;
                       const powerCount = powerCounts[card.power];
-                      const owned = (card as any)._owned as number | undefined;
+                      const owned = (card as CardWithOwnership)._owned;
                       const maxByOwnership = economyEnabled && isAuthenticated && owned !== undefined
                         ? Math.min(GAME_CONSTANTS.MAX_COPIES_PER_CARD, owned)
                         : GAME_CONSTANTS.MAX_COPIES_PER_CARD;

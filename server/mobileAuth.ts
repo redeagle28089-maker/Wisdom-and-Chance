@@ -92,6 +92,14 @@ export function registerMobileAuthRoutes(app: Express) {
         console.warn("[mobile-auth] Failed to seed starter decks:", error);
       }
 
+      try {
+        const { ensureCurrencies, grantStarterCollection } = await import("./economyService");
+        await ensureCurrencies(user.id);
+        await grantStarterCollection(user.id);
+      } catch (error) {
+        console.warn("[mobile-auth] Failed to grant starter economy:", error);
+      }
+
       const token = generateToken({ userId: user.id, email: user.email || email });
       if (!token) {
         return res.status(503).json({ error: "Mobile auth is not configured" });

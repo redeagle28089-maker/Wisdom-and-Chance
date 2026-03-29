@@ -895,10 +895,40 @@ const API_DOCS = {
         method: "POST",
         path: "/api/collection/starter",
         requiresAuth: true,
-        description: "Claim starter collection and currencies. Idempotent — safe to call multiple times.",
+        description: "Claim starter collection and currencies. Idempotent — safe to call multiple times. Also auto-granted on registration.",
         response: {
           collection: { type: "array", description: "Full collection after claiming" },
           currencies: { type: "object", description: "Currency balances after claiming" },
+        },
+      },
+      claimChallenge: {
+        method: "POST",
+        path: "/api/challenges/:id/claim",
+        requiresAuth: true,
+        description: "Claim gold reward for a completed daily challenge.",
+        response: {
+          claimed: { type: "boolean" },
+          goldAwarded: { type: "number" },
+          currencies: { type: "object", description: "Updated currency balances" },
+        },
+        errors: {
+          400: "Challenge not completed or already claimed",
+          404: "Challenge progress not found",
+        },
+      },
+      claimAchievement: {
+        method: "POST",
+        path: "/api/achievements/:id/claim",
+        requiresAuth: true,
+        description: "Claim gold reward for an unlocked achievement.",
+        response: {
+          claimed: { type: "boolean" },
+          goldAwarded: { type: "number" },
+          currencies: { type: "object", description: "Updated currency balances" },
+        },
+        errors: {
+          400: "Achievement not yet unlocked",
+          404: "Achievement progress not found",
         },
       },
     },

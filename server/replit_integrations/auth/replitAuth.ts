@@ -414,6 +414,14 @@ async function upsertUser(claims: JWTClaims) {
     lastName: claims.last_name || null,
     profileImageUrl: claims.profile_image_url || null,
   });
+
+  try {
+    const { ensureCurrencies, grantStarterCollection } = await import("../../economyService");
+    await ensureCurrencies(claims.sub);
+    await grantStarterCollection(claims.sub);
+  } catch (e) {
+    console.error("[auth] Error granting starter economy:", e);
+  }
 }
 
 // Exchange authorization code for tokens

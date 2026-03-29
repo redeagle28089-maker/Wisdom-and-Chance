@@ -4,7 +4,7 @@ import { z } from "zod";
 import { eq, or, and, lt, desc, sql } from "drizzle-orm";
 import { storage } from "./storage";
 import { db } from "./db";
-import { insertCardSchema, insertDeckSchema, insertPlayerSchema, insertGameSchema, ELEMENTS, userDecks, insertUserDeckSchema, GAME_CONSTANTS, cardImages, insertCardImageSchema, TRAITS, BUFF_DEBUFF_COLORS, users, friendships, friendMessages, cardImageMappings, commanderImageMappings, GAME_PHASES, GAME_MODE_CONFIG, AI_DIFFICULTY, GAME_STATUS, featureFlags, serverConfig, DEFAULT_FEATURE_FLAGS, playerCurrencies, playerCollection, ECONOMY_CONSTANTS, getCardRarity, type CardRarity } from "@shared/schema";
+import { insertCardSchema, insertDeckSchema, insertPlayerSchema, insertGameSchema, ELEMENTS, userDecks, insertUserDeckSchema, GAME_CONSTANTS, cardImages, insertCardImageSchema, TRAITS, BUFF_DEBUFF_COLORS, users, friendships, friendMessages, cardImageMappings, commanderImageMappings, GAME_PHASES, GAME_MODE_CONFIG, AI_DIFFICULTY, GAME_STATUS, featureFlags, serverConfig, DEFAULT_FEATURE_FLAGS, playerCurrencies, playerCollection, ECONOMY_CONSTANTS, getCardRarity, type CardRarity, playerChallenges, playerAchievements } from "@shared/schema";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import { registerMultiplayerRoutes } from "./multiplayerRoutes";
 import { registerMobileAuthRoutes } from "./mobileAuth";
@@ -433,17 +433,15 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
     cardIds: z.array(z.string()).length(GAME_CONSTANTS.DECK_SIZE, `Deck must have exactly ${GAME_CONSTANTS.DECK_SIZE} cards`),
   });
 
-  async function validateDeckCards(cardIds: string[]): Promise<{ valid: boolean; error?: string }> {
+  async function validateDeckCards(cardIds: string[], userId?: string): Promise<{ valid: boolean; error?: string }> {
     const allCards = await storage.getCards();
     const cardMap = new Map(allCards.map(c => [c.id, c]));
 
-    // Check all cards exist
     const invalidCards = cardIds.filter(id => !cardMap.has(id));
     if (invalidCards.length > 0) {
       return { valid: false, error: `Invalid card IDs: ${invalidCards.slice(0, 5).join(", ")}` };
     }
 
-    // Check max 3 copies per card
     const cardCounts = new Map<string, number>();
     for (const cardId of cardIds) {
       const count = (cardCounts.get(cardId) || 0) + 1;
@@ -454,7 +452,6 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
       cardCounts.set(cardId, count);
     }
 
-    // Check 4 cards per power rank
     const powerCounts: Record<number, number> = {};
     for (let i = 1; i <= 10; i++) powerCounts[i] = 0;
     
@@ -468,6 +465,19 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
     for (let power = 1; power <= 10; power++) {
       if (powerCounts[power] !== GAME_CONSTANTS.CARDS_PER_POWER_RANK) {
         return { valid: false, error: `Power ${power} needs exactly ${GAME_CONSTANTS.CARDS_PER_POWER_RANK} cards, found ${powerCounts[power]}` };
+      }
+    }
+
+    if (userId && await isEconomyEnabled()) {
+      const collection = await db.select().from(playerCollection).where(eq(playerCollection.userId, userId));
+      const ownedMap = new Map(collection.map(e => [e.cardId, e.quantity]));
+
+      for (const [cardId, needed] of cardCounts.entries()) {
+        const owned = ownedMap.get(cardId) ?? 0;
+        if (owned < needed) {
+          const card = cardMap.get(cardId);
+          return { valid: false, error: `You only own ${owned} copies of "${card?.name}" but need ${needed}` };
+        }
       }
     }
 
@@ -494,8 +504,7 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
         return res.status(400).json({ error: "Invalid commander" });
       }
 
-      // Validate deck cards (existence, copies, power distribution)
-      const deckValidation = await validateDeckCards(cardIds);
+      const deckValidation = await validateDeckCards(cardIds, userId);
       if (!deckValidation.valid) {
         return res.status(400).json({ error: deckValidation.error });
       }
@@ -553,9 +562,8 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
         }
       }
 
-      // Validate cards if provided (existence, copies, power distribution)
       if (updates.cardIds) {
-        const deckValidation = await validateDeckCards(updates.cardIds);
+        const deckValidation = await validateDeckCards(updates.cardIds, userId);
         if (!deckValidation.valid) {
           return res.status(400).json({ error: deckValidation.error });
         }
@@ -965,6 +973,63 @@ IMPORTANT:
     } catch (error) {
       console.error("[economy] Error granting starter collection:", error);
       res.status(500).json({ message: "Failed to grant starter collection" });
+    }
+  });
+
+  app.post("/api/challenges/:id/claim", isAuthenticated, requireEconomy, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+      const challengeId = req.params.id;
+      const [pc] = await db.select().from(playerChallenges)
+        .where(and(
+          eq(playerChallenges.userId, userId),
+          eq(playerChallenges.challengeId, challengeId)
+        ))
+        .limit(1);
+
+      if (!pc) return res.status(404).json({ message: "Challenge progress not found" });
+      if (!pc.completedAt) return res.status(400).json({ message: "Challenge not yet completed" });
+      if (pc.claimedAt) return res.status(400).json({ message: "Already claimed" });
+
+      await db.update(playerChallenges)
+        .set({ claimedAt: new Date() })
+        .where(eq(playerChallenges.id, pc.id));
+
+      await grantGold(userId, ECONOMY_CONSTANTS.REWARDS.DAILY_CHALLENGE_GOLD, "daily_challenge");
+
+      const balances = await ensureCurrencies(userId);
+      res.json({ claimed: true, goldAwarded: ECONOMY_CONSTANTS.REWARDS.DAILY_CHALLENGE_GOLD, currencies: balances });
+    } catch (error) {
+      console.error("[economy] Error claiming challenge:", error);
+      res.status(500).json({ message: "Failed to claim challenge" });
+    }
+  });
+
+  app.post("/api/achievements/:id/claim", isAuthenticated, requireEconomy, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+      const achievementId = req.params.id;
+      const [pa] = await db.select().from(playerAchievements)
+        .where(and(
+          eq(playerAchievements.userId, userId),
+          eq(playerAchievements.achievementId, achievementId)
+        ))
+        .limit(1);
+
+      if (!pa) return res.status(404).json({ message: "Achievement progress not found" });
+      if (!pa.unlockedAt) return res.status(400).json({ message: "Achievement not yet unlocked" });
+
+      await grantGold(userId, ECONOMY_CONSTANTS.REWARDS.ACHIEVEMENT_GOLD, "achievement_unlock");
+
+      const balances = await ensureCurrencies(userId);
+      res.json({ claimed: true, goldAwarded: ECONOMY_CONSTANTS.REWARDS.ACHIEVEMENT_GOLD, currencies: balances });
+    } catch (error) {
+      console.error("[economy] Error claiming achievement:", error);
+      res.status(500).json({ message: "Failed to claim achievement" });
     }
   });
 
