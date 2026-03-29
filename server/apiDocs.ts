@@ -962,6 +962,43 @@ const API_DOCS = {
           expiresAt: { type: "string", description: "ISO timestamp when the deal expires" },
         },
       },
+      shopBundles: {
+        method: "GET",
+        path: "/api/shop/bundles",
+        requiresAuth: false,
+        description: "Get all active special offer bundles. Each bundle contains multiple packs at a discounted price.",
+        response: {
+          type: "array",
+          items: {
+            id: { type: "string" },
+            name: { type: "string" },
+            description: { type: "string" },
+            costGold: { type: "number", description: "Discounted bundle price" },
+            originalCostGold: { type: "number", description: "Original total price of all packs" },
+            packs: { type: "array", description: "Array of { type, count }" },
+          },
+        },
+      },
+      shopPurchaseBundle: {
+        method: "POST",
+        path: "/api/shop/purchase-bundle",
+        requiresAuth: true,
+        description: "Purchase a bundle of packs at the discounted bundle price. All packs are opened in a single atomic transaction.",
+        body: {
+          bundleId: { type: "string", required: true, description: "Bundle ID to purchase" },
+        },
+        response: {
+          packTypeId: { type: "string" },
+          packName: { type: "string" },
+          cards: { type: "array", description: "All cards from all packs in the bundle" },
+          costGold: { type: "number" },
+          remainingGold: { type: "number" },
+          remainingGems: { type: "number" },
+        },
+        errors: {
+          400: "Invalid bundle / Not enough gold",
+        },
+      },
       shopPurchase: {
         method: "POST",
         path: "/api/shop/purchase",

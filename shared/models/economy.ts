@@ -105,6 +105,31 @@ export const packResultSchema = z.object({
 
 export type PackResult = z.infer<typeof packResultSchema>;
 
+export const shopCatalog = pgTable("shop_catalog", {
+  id: varchar("id", { length: 50 }).primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: varchar("description", { length: 1000 }).notNull(),
+  costGold: integer("cost_gold").notNull().default(100),
+  costGems: integer("cost_gems").notNull().default(0),
+  cardsPerPack: integer("cards_per_pack").notNull().default(5),
+  elementFilter: varchar("element_filter", { length: 50 }),
+  guaranteedMinRarity: varchar("guaranteed_min_rarity", { length: 50 }),
+  isActive: boolean("is_active").notNull().default(true),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const shopBundles = pgTable("shop_bundles", {
+  id: varchar("id", { length: 50 }).primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: varchar("description", { length: 1000 }).notNull(),
+  costGold: integer("cost_gold").notNull(),
+  originalCostGold: integer("original_cost_gold").notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  packsJson: varchar("packs_json", { length: 2000 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const dailyDeals = pgTable("daily_deals", {
   id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
   dealDate: date("deal_date").notNull(),

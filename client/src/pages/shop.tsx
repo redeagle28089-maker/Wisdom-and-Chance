@@ -12,8 +12,6 @@ import {
   Coins, Gem, Sparkles, ShoppingBag, Timer, Flame, Droplets, Mountain,
   Wind, Leaf, Star, LogIn, Tag, Package, Gift, AlertTriangle, Check, X
 } from "lucide-react";
-import { ECONOMY_CONSTANTS } from "@shared/schema";
-
 interface PackCatalogItem {
   id: string;
   name: string;
@@ -35,6 +33,15 @@ interface DailyDeal {
   expiresAt: string;
 }
 
+interface ShopBundle {
+  id: string;
+  name: string;
+  description: string;
+  costGold: number;
+  originalCostGold: number;
+  packs: { type: string; count: number }[];
+}
+
 interface Currencies {
   gold: number;
   gems: number;
@@ -46,6 +53,7 @@ interface ConfirmPurchase {
   packName: string;
   cost: number;
   useDailyDeal?: boolean;
+  isBundle?: boolean;
 }
 
 const ELEMENT_ICONS: Record<string, typeof Flame> = {
@@ -63,38 +71,6 @@ const ELEMENT_COLORS: Record<string, string> = {
   Air: "from-sky-500/30 to-indigo-500/30 border-sky-400/40",
   Nature: "from-green-600/30 to-emerald-600/30 border-green-500/40",
 };
-
-const SPECIAL_OFFERS = [
-  {
-    id: "starter-bundle",
-    name: "Starter Bundle",
-    description: "Perfect for new players! Get 3 Standard Packs and 1 Premium Pack at a discounted price.",
-    costGold: 500,
-    originalCostGold: 550,
-    icon: Gift,
-    color: "from-emerald-600/30 to-teal-600/30 border-emerald-500/40",
-    packs: [
-      { type: "standard", count: 3 },
-      { type: "premium", count: 1 },
-    ],
-  },
-  {
-    id: "element-sampler",
-    name: "Element Sampler",
-    description: "One pack from each element! Great for exploring all playstyles.",
-    costGold: 650,
-    originalCostGold: 750,
-    icon: Sparkles,
-    color: "from-violet-600/30 to-fuchsia-600/30 border-violet-500/40",
-    packs: [
-      { type: "fire", count: 1 },
-      { type: "water", count: 1 },
-      { type: "earth", count: 1 },
-      { type: "air", count: 1 },
-      { type: "nature", count: 1 },
-    ],
-  },
-];
 
 function CountdownTimer({ expiresAt }: { expiresAt: string }) {
   const [timeLeft, setTimeLeft] = useState("");
@@ -247,6 +223,11 @@ export default function ShopPage() {
     enabled: economyEnabled,
   });
 
+  const { data: bundles = [] } = useQuery<ShopBundle[]>({
+    queryKey: ["/api/shop/bundles"],
+    enabled: economyEnabled,
+  });
+
   const { data: currencies } = useQuery<Currencies>({
     queryKey: ["/api/currencies"],
     enabled: isAuthenticated && economyEnabled,
@@ -277,24 +258,9 @@ export default function ShopPage() {
   });
 
   const bundlePurchaseMutation = useMutation({
-    mutationFn: async ({ packs }: { packs: { type: string; count: number }[] }) => {
-      const results = [];
-      for (const pack of packs) {
-        for (let i = 0; i < pack.count; i++) {
-          const res = await apiRequest("POST", "/api/shop/purchase", { packTypeId: pack.type });
-          results.push(await res.json());
-        }
-      }
-      const allCards = results.flatMap(r => r.cards);
-      const lastResult = results[results.length - 1];
-      return {
-        packTypeId: "bundle",
-        packName: "Bundle Pack",
-        cards: allCards,
-        costGold: results.reduce((sum, r) => sum + r.costGold, 0),
-        remainingGold: lastResult?.remainingGold ?? 0,
-        remainingGems: lastResult?.remainingGems ?? 0,
-      };
+    mutationFn: async ({ bundleId }: { bundleId: string }) => {
+      const res = await apiRequest("POST", "/api/shop/purchase-bundle", { bundleId });
+      return res.json();
     },
     onSuccess: (data) => {
       setConfirmPurchase(null);
@@ -351,16 +317,15 @@ export default function ShopPage() {
 
   const canAfford = (cost: number) => (currencies?.gold ?? 0) >= cost;
 
-  const handleBuyClick = (packTypeId: string, packName: string, cost: number, useDailyDeal?: boolean) => {
-    setConfirmPurchase({ packTypeId, packName, cost, useDailyDeal });
+  const handleBuyClick = (packTypeId: string, packName: string, cost: number, useDailyDeal?: boolean, isBundle?: boolean) => {
+    setConfirmPurchase({ packTypeId, packName, cost, useDailyDeal, isBundle });
   };
 
   const handleConfirmPurchase = () => {
     if (!confirmPurchase) return;
 
-    const specialOffer = SPECIAL_OFFERS.find(o => o.id === confirmPurchase.packTypeId);
-    if (specialOffer) {
-      bundlePurchaseMutation.mutate({ packs: specialOffer.packs });
+    if (confirmPurchase.isBundle) {
+      bundlePurchaseMutation.mutate({ bundleId: confirmPurchase.packTypeId });
     } else {
       purchaseMutation.mutate({
         packTypeId: confirmPurchase.packTypeId,
@@ -566,15 +531,14 @@ export default function ShopPage() {
 
       {activeTab === "offers" && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto" data-testid="special-offers-grid">
-          {SPECIAL_OFFERS.map((offer) => {
+          {bundles.map((offer) => {
             const affordable = canAfford(offer.costGold);
-            const OfferIcon = offer.icon;
             const savingsPercent = Math.round((1 - offer.costGold / offer.originalCostGold) * 100);
 
             return (
               <Card
                 key={offer.id}
-                className={`bg-gradient-to-br ${offer.color} border hover:border-opacity-60 transition-all hover:scale-[1.02] relative overflow-hidden`}
+                className="bg-gradient-to-br from-emerald-600/20 to-teal-600/20 border-emerald-500/30 border hover:border-opacity-60 transition-all hover:scale-[1.02] relative overflow-hidden"
                 data-testid={`card-offer-${offer.id}`}
               >
                 <div className="absolute top-2 right-2">
@@ -584,7 +548,7 @@ export default function ShopPage() {
                 </div>
                 <CardHeader>
                   <div className="flex items-center gap-2">
-                    <OfferIcon className="w-6 h-6 text-white/80" />
+                    <Gift className="w-6 h-6 text-white/80" />
                     <CardTitle className="text-lg text-white">{offer.name}</CardTitle>
                   </div>
                 </CardHeader>
@@ -592,7 +556,7 @@ export default function ShopPage() {
                   <p className="text-sm text-slate-300 mb-3">{offer.description}</p>
 
                   <div className="flex flex-wrap gap-1.5 mb-4">
-                    {offer.packs.map((p, idx) => (
+                    {offer.packs.map((p: { type: string; count: number }, idx: number) => (
                       <Badge key={idx} variant="secondary" className="bg-slate-700/60 text-slate-200 text-xs">
                         {p.count}x {p.type.charAt(0).toUpperCase() + p.type.slice(1)}
                       </Badge>
@@ -613,7 +577,7 @@ export default function ShopPage() {
                     <Button
                       size="sm"
                       disabled={!affordable || isPurchasing}
-                      onClick={() => handleBuyClick(offer.id, offer.name, offer.costGold)}
+                      onClick={() => handleBuyClick(offer.id, offer.name, offer.costGold, false, true)}
                       className={affordable
                         ? "bg-emerald-600 hover:bg-emerald-700 text-white"
                         : "bg-slate-700 text-slate-500 cursor-not-allowed"

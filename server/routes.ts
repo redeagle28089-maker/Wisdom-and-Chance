@@ -4,7 +4,7 @@ import { z } from "zod";
 import { eq, or, and, lt, desc, sql } from "drizzle-orm";
 import { storage } from "./storage";
 import { db } from "./db";
-import { insertCardSchema, insertDeckSchema, insertPlayerSchema, insertGameSchema, ELEMENTS, userDecks, insertUserDeckSchema, GAME_CONSTANTS, cardImages, insertCardImageSchema, TRAITS, BUFF_DEBUFF_COLORS, users, friendships, friendMessages, cardImageMappings, commanderImageMappings, GAME_PHASES, GAME_MODE_CONFIG, AI_DIFFICULTY, GAME_STATUS, featureFlags, serverConfig, DEFAULT_FEATURE_FLAGS, playerCurrencies, playerCollection, ECONOMY_CONSTANTS, getCardRarity, type CardRarity, playerChallenges, playerAchievements, PACK_TYPES, dailyDeals } from "@shared/schema";
+import { insertCardSchema, insertDeckSchema, insertPlayerSchema, insertGameSchema, ELEMENTS, userDecks, insertUserDeckSchema, GAME_CONSTANTS, cardImages, insertCardImageSchema, TRAITS, BUFF_DEBUFF_COLORS, users, friendships, friendMessages, cardImageMappings, commanderImageMappings, GAME_PHASES, GAME_MODE_CONFIG, AI_DIFFICULTY, GAME_STATUS, featureFlags, serverConfig, DEFAULT_FEATURE_FLAGS, playerCurrencies, playerCollection, ECONOMY_CONSTANTS, getCardRarity, type CardRarity, playerChallenges, playerAchievements, PACK_TYPES, dailyDeals, shopCatalog, shopBundles } from "@shared/schema";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import { registerMultiplayerRoutes } from "./multiplayerRoutes";
 import { registerMobileAuthRoutes } from "./mobileAuth";
@@ -784,19 +784,108 @@ IMPORTANT:
     }
   });
 
+  async function seedShopCatalog() {
+    const existing = await db.select().from(shopCatalog).limit(1);
+    if (existing.length > 0) return;
+    console.log("[shop] Seeding shop catalog from PACK_TYPES...");
+    let sortOrder = 0;
+    for (const pack of Object.values(PACK_TYPES)) {
+      await db.insert(shopCatalog).values({
+        id: pack.id,
+        name: pack.name,
+        description: pack.description,
+        costGold: pack.costGold,
+        costGems: pack.costGems,
+        cardsPerPack: pack.cardsPerPack,
+        elementFilter: pack.elementFilter,
+        guaranteedMinRarity: pack.guaranteedMinRarity,
+        isActive: true,
+        sortOrder: sortOrder++,
+      }).onConflictDoNothing();
+    }
+    const existingBundles = await db.select().from(shopBundles).limit(1);
+    if (existingBundles.length === 0) {
+      console.log("[shop] Seeding shop bundles...");
+      await db.insert(shopBundles).values([
+        {
+          id: "starter-bundle",
+          name: "Starter Bundle",
+          description: "Perfect for new players! Get 3 Standard Packs and 1 Premium Pack at a discounted price.",
+          costGold: 500,
+          originalCostGold: 550,
+          isActive: true,
+          packsJson: JSON.stringify([{ type: "standard", count: 3 }, { type: "premium", count: 1 }]),
+        },
+        {
+          id: "element-sampler",
+          name: "Element Sampler",
+          description: "One pack from each element! Great for exploring all playstyles.",
+          costGold: 650,
+          originalCostGold: 750,
+          isActive: true,
+          packsJson: JSON.stringify([{ type: "fire", count: 1 }, { type: "water", count: 1 }, { type: "earth", count: 1 }, { type: "air", count: 1 }, { type: "nature", count: 1 }]),
+        },
+      ]).onConflictDoNothing();
+    }
+    console.log("[shop] Shop catalog seeded.");
+  }
+
+  seedShopCatalog().catch(e => console.error("[shop] Failed to seed catalog:", e));
+
+  async function rotateDailyDeal() {
+    const today = new Date().toISOString().split("T")[0];
+    const [existing] = await db.select().from(dailyDeals).where(eq(dailyDeals.dealDate, today)).limit(1);
+    if (existing) return;
+
+    const packIds = Object.keys(PACK_TYPES) as (keyof typeof PACK_TYPES)[];
+    const randomPackId = packIds[Math.floor(Math.random() * packIds.length)];
+    const discount = [15, 20, 25, 30][Math.floor(Math.random() * 4)];
+    const allCards = await storage.getCards();
+    const featuredCard = allCards[Math.floor(Math.random() * allCards.length)];
+
+    await db.insert(dailyDeals).values({
+      dealDate: today,
+      packTypeId: randomPackId,
+      discountPercent: discount,
+      featuredCardId: featuredCard?.id ?? null,
+    }).onConflictDoNothing();
+    console.log(`[shop] Daily deal rotated: ${randomPackId} at ${discount}% off`);
+  }
+
+  rotateDailyDeal().catch(e => console.error("[shop] Failed to rotate daily deal:", e));
+
+  setInterval(() => {
+    rotateDailyDeal().catch(e => console.error("[shop] Daily deal rotation failed:", e));
+  }, 60 * 60 * 1000);
+
   app.get("/api/shop/catalog", requireEconomy, async (_req: any, res) => {
     try {
-      const catalog = Object.values(PACK_TYPES).map(p => ({
-        id: p.id,
-        name: p.name,
-        description: p.description,
-        costGold: p.costGold,
-        costGems: p.costGems,
-        cardsPerPack: p.cardsPerPack,
-        elementFilter: p.elementFilter,
-        guaranteedMinRarity: p.guaranteedMinRarity,
-      }));
-      res.json(catalog);
+      const dbCatalog = await db.select().from(shopCatalog).where(eq(shopCatalog.isActive, true));
+      if (dbCatalog.length > 0) {
+        const sorted = dbCatalog.sort((a, b) => a.sortOrder - b.sortOrder);
+        res.json(sorted.map(p => ({
+          id: p.id,
+          name: p.name,
+          description: p.description,
+          costGold: p.costGold,
+          costGems: p.costGems,
+          cardsPerPack: p.cardsPerPack,
+          elementFilter: p.elementFilter,
+          guaranteedMinRarity: p.guaranteedMinRarity,
+        })));
+      } else {
+        const catalog = Object.values(PACK_TYPES).map(p => ({
+          id: p.id,
+          name: p.name,
+          description: p.description,
+          costGold: p.costGold,
+          costGems: p.costGems,
+          cardsPerPack: p.cardsPerPack,
+          elementFilter: p.elementFilter,
+          guaranteedMinRarity: p.guaranteedMinRarity,
+        }));
+        res.json(catalog);
+      }
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch catalog" });
     }
@@ -840,6 +929,128 @@ IMPORTANT:
     } catch (error) {
       console.error("[shop] Error fetching daily deal:", error);
       res.status(500).json({ message: "Failed to fetch daily deal" });
+    }
+  });
+
+  app.get("/api/shop/bundles", requireEconomy, async (_req: any, res) => {
+    try {
+      const bundles = await db.select().from(shopBundles).where(eq(shopBundles.isActive, true));
+      res.json(bundles.map(b => ({
+        id: b.id,
+        name: b.name,
+        description: b.description,
+        costGold: b.costGold,
+        originalCostGold: b.originalCostGold,
+        packs: JSON.parse(b.packsJson),
+      })));
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch bundles" });
+    }
+  });
+
+  app.post("/api/shop/purchase-bundle", isAuthenticated, requireEconomy, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+      const { bundleId } = req.body || {};
+      const [bundle] = await db.select().from(shopBundles).where(and(eq(shopBundles.id, bundleId), eq(shopBundles.isActive, true))).limit(1);
+      if (!bundle) return res.status(400).json({ message: "Invalid bundle" });
+
+      const cost = bundle.costGold;
+      const packs: { type: string; count: number }[] = JSON.parse(bundle.packsJson);
+
+      await ensureCurrencies(userId);
+
+      const result = await db.transaction(async (tx) => {
+        const deducted = await tx.update(playerCurrencies)
+          .set({ gold: sql`gold - ${cost}`, updatedAt: new Date() })
+          .where(and(eq(playerCurrencies.userId, userId), sql`gold >= ${cost}`))
+          .returning({ gold: playerCurrencies.gold });
+
+        if (deducted.length === 0) {
+          const cur = await tx.select().from(playerCurrencies).where(eq(playerCurrencies.userId, userId)).limit(1);
+          return { error: true, message: "Not enough gold", required: cost, current: cur[0]?.gold ?? 0 };
+        }
+
+        const allCards = await storage.getCards();
+        const existingCollection = await tx.select().from(playerCollection).where(eq(playerCollection.userId, userId));
+        const ownedMap = new Map(existingCollection.map(e => [e.cardId, e.quantity]));
+        const allPulledCards: { cardId: string; rarity: CardRarity; isNew: boolean; cardName: string; element: string; power: number }[] = [];
+
+        for (const packEntry of packs) {
+          const packDef = PACK_TYPES[packEntry.type as keyof typeof PACK_TYPES];
+          if (!packDef) continue;
+
+          for (let p = 0; p < packEntry.count; p++) {
+            let pool = allCards;
+            if (packDef.elementFilter) {
+              pool = allCards.filter(c => c.element === packDef.elementFilter);
+            }
+
+            const cardsByRarity: Record<CardRarity, typeof allCards> = {
+              Common: pool.filter(c => getCardRarity(c.power) === "Common"),
+              Rare: pool.filter(c => getCardRarity(c.power) === "Rare"),
+              Epic: pool.filter(c => getCardRarity(c.power) === "Epic"),
+              Legendary: pool.filter(c => getCardRarity(c.power) === "Legendary"),
+            };
+
+            const weights = packDef.rarityWeights as Record<CardRarity, number>;
+            const totalWeight = Object.values(weights).reduce((a, b) => a + b, 0);
+
+            for (let i = 0; i < packDef.cardsPerPack; i++) {
+              let roll = Math.random() * totalWeight;
+              let selectedRarity: CardRarity = "Common";
+              for (const [rarity, weight] of Object.entries(weights) as [CardRarity, number][]) {
+                roll -= weight;
+                if (roll <= 0) { selectedRarity = rarity; break; }
+              }
+
+              let rarityPool = cardsByRarity[selectedRarity];
+              if (rarityPool.length === 0) {
+                for (const fallback of ["Common", "Rare", "Epic", "Legendary"] as CardRarity[]) {
+                  if (cardsByRarity[fallback].length > 0) { rarityPool = cardsByRarity[fallback]; selectedRarity = fallback; break; }
+                }
+              }
+              if (rarityPool.length === 0) continue;
+
+              const card = rarityPool[Math.floor(Math.random() * rarityPool.length)];
+              const isNew = !ownedMap.has(card.id);
+              ownedMap.set(card.id, (ownedMap.get(card.id) || 0) + 1);
+
+              await tx.insert(playerCollection)
+                .values({ userId, cardId: card.id, quantity: 1 })
+                .onConflictDoUpdate({
+                  target: [playerCollection.userId, playerCollection.cardId],
+                  set: { quantity: sql`${playerCollection.quantity} + 1` },
+                });
+
+              allPulledCards.push({ cardId: card.id, rarity: selectedRarity, isNew, cardName: card.name, element: card.element, power: card.power });
+            }
+          }
+        }
+
+        const updated = await tx.select().from(playerCurrencies).where(eq(playerCurrencies.userId, userId)).limit(1);
+        return {
+          error: false,
+          data: {
+            packTypeId: bundleId,
+            packName: bundle.name,
+            cards: allPulledCards,
+            costGold: cost,
+            remainingGold: updated[0]?.gold ?? 0,
+            remainingGems: updated[0]?.gems ?? 0,
+          },
+        };
+      });
+
+      if (result.error) {
+        return res.status(400).json({ message: result.message, required: result.required, current: result.current });
+      }
+      res.json(result.data);
+    } catch (error) {
+      console.error("[shop] Error purchasing bundle:", error);
+      res.status(500).json({ message: "Failed to purchase bundle" });
     }
   });
 
