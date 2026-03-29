@@ -848,7 +848,10 @@ IMPORTANT:
       packTypeId: randomPackId,
       discountPercent: discount,
       featuredCardId: featuredCard?.id ?? null,
-    }).onConflictDoNothing();
+    }).onConflictDoUpdate({
+      target: dailyDeals.dealDate,
+      set: { packTypeId: randomPackId, discountPercent: discount, featuredCardId: featuredCard?.id ?? null },
+    });
     console.log(`[shop] Daily deal rotated: ${randomPackId} at ${discount}% off`);
   }
 

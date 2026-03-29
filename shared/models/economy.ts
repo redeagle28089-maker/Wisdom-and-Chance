@@ -132,7 +132,7 @@ export const shopBundles = pgTable("shop_bundles", {
 
 export const dailyDeals = pgTable("daily_deals", {
   id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
-  dealDate: date("deal_date").notNull(),
+  dealDate: date("deal_date").notNull().unique(),
   packTypeId: varchar("pack_type_id", { length: 50 }).notNull(),
   discountPercent: integer("discount_percent").notNull().default(20),
   featuredCardId: varchar("featured_card_id", { length: 255 }),
