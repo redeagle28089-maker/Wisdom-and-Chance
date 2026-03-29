@@ -15,7 +15,7 @@ import { generateImage, generateText } from "./replit_integrations/image/client"
 import { getWebSocketServer } from "./websocket";
 import { filterObscenity } from "./obscenity-filter";
 import { gameEngine } from "./gameEngine";
-import { ensureCurrencies, grantGold, grantStarterCollection } from "./economyService";
+import { ensureCurrencies, grantGold, grantStarterCollection, grantBattlePassXP } from "./economyService";
 
 const ADMIN_EMAIL = "redeagle28089@gmail.com";
 
@@ -1396,6 +1396,7 @@ IMPORTANT:
         .where(eq(playerAchievements.id, pa.id));
 
       await grantGold(userId, ECONOMY_CONSTANTS.REWARDS.ACHIEVEMENT_GOLD, "achievement_unlock");
+      await grantBattlePassXP(userId, BATTLE_PASS_XP.ACHIEVEMENT, "achievement_unlock");
 
       const balances = await ensureCurrencies(userId);
       res.json({ claimed: true, goldAwarded: ECONOMY_CONSTANTS.REWARDS.ACHIEVEMENT_GOLD, currencies: balances });
@@ -2397,6 +2398,10 @@ IMPORTANT:
   }
 
   seedCurrentSeason().catch(e => console.error("[season] Failed to seed season:", e));
+  import("./seasonService").then(({ startSeasonChecker, checkAndTransitionSeason }) => {
+    checkAndTransitionSeason().catch(e => console.error("[season] Initial transition check error:", e));
+    startSeasonChecker();
+  });
 
   app.get("/api/season/current", async (_req, res) => {
     try {
@@ -2522,78 +2527,81 @@ IMPORTANT:
       const { level } = req.body;
       if (!level || typeof level !== "number") return res.status(400).json({ error: "Level is required" });
 
-      const [season] = await db.select().from(seasons).where(eq(seasons.isActive, true)).limit(1);
-      if (!season) return res.status(400).json({ error: "No active season" });
+      const result = await db.transaction(async (tx) => {
+        const [season] = await tx.select().from(seasons).where(eq(seasons.isActive, true)).limit(1);
+        if (!season) throw new Error("NO_ACTIVE_SEASON");
 
-      const [progress] = await db.select().from(playerBattlePass)
-        .where(and(eq(playerBattlePass.userId, userId), eq(playerBattlePass.seasonId, season.id)))
-        .limit(1);
-      if (!progress) return res.status(400).json({ error: "No battle pass progress found" });
+        const [progress] = await tx.select().from(playerBattlePass)
+          .where(and(eq(playerBattlePass.userId, userId), eq(playerBattlePass.seasonId, season.id)))
+          .limit(1);
+        if (!progress) throw new Error("NO_PROGRESS");
 
-      if (level > progress.currentLevel) return res.status(400).json({ error: "Level not unlocked yet" });
+        if (level > progress.currentLevel) throw new Error("LEVEL_NOT_UNLOCKED");
 
-      const claimed: number[] = JSON.parse(progress.claimedLevels || "[]");
-      if (claimed.includes(level)) return res.status(400).json({ error: "Reward already claimed" });
+        const claimed: number[] = JSON.parse(progress.claimedLevels || "[]");
+        if (claimed.includes(level)) throw new Error("ALREADY_CLAIMED");
 
-      const [bpLevel] = await db.select().from(battlePassLevels)
-        .where(and(eq(battlePassLevels.seasonId, season.id), eq(battlePassLevels.level, level)))
-        .limit(1);
-      if (!bpLevel) return res.status(400).json({ error: "Invalid level" });
+        const [bpLevel] = await tx.select().from(battlePassLevels)
+          .where(and(eq(battlePassLevels.seasonId, season.id), eq(battlePassLevels.level, level)))
+          .limit(1);
+        if (!bpLevel) throw new Error("INVALID_LEVEL");
 
-      await ensureCurrencies(userId);
+        await ensureCurrencies(userId);
 
-      if (bpLevel.rewardType === "gold") {
-        await grantGold(userId, bpLevel.rewardAmount, "battle_pass_reward");
-      } else if (bpLevel.rewardType === "gems") {
-        await db.update(playerCurrencies)
-          .set({ gems: sql`gems + ${bpLevel.rewardAmount}`, updatedAt: new Date() })
-          .where(eq(playerCurrencies.userId, userId));
-      } else if (bpLevel.rewardType === "dust") {
-        await db.update(playerCurrencies)
-          .set({ dust: sql`dust + ${bpLevel.rewardAmount}`, updatedAt: new Date() })
-          .where(eq(playerCurrencies.userId, userId));
-      } else if (bpLevel.rewardType === "pack") {
-        const packType = bpLevel.rewardAmount >= 3 ? "premium" : "standard";
-        for (let p = 0; p < bpLevel.rewardAmount; p++) {
-          const packDef = PACK_TYPES[packType as keyof typeof PACK_TYPES];
-          const allCards = await storage.getCards();
-          const filteredCards = allCards.filter(c => c.rarity);
-          const pulledCards = [];
-          for (let ci = 0; ci < packDef.cardsPerPack; ci++) {
-            const card = filteredCards[Math.floor(Math.random() * filteredCards.length)];
-            if (card) {
-              pulledCards.push(card);
-              const [existingEntry] = await db.select().from(playerCollection)
-                .where(and(eq(playerCollection.userId, userId), eq(playerCollection.cardId, card.id)))
-                .limit(1);
-              if (existingEntry) {
-                await db.update(playerCollection)
-                  .set({ quantity: sql`quantity + 1` })
-                  .where(eq(playerCollection.id, existingEntry.id));
-              } else {
-                await db.insert(playerCollection).values({ userId, cardId: card.id, quantity: 1 });
+        if (bpLevel.rewardType === "gold") {
+          await grantGold(userId, bpLevel.rewardAmount, "battle_pass_reward");
+        } else if (bpLevel.rewardType === "gems") {
+          await tx.update(playerCurrencies)
+            .set({ gems: sql`gems + ${bpLevel.rewardAmount}`, updatedAt: new Date() })
+            .where(eq(playerCurrencies.userId, userId));
+        } else if (bpLevel.rewardType === "dust") {
+          await tx.update(playerCurrencies)
+            .set({ dust: sql`dust + ${bpLevel.rewardAmount}`, updatedAt: new Date() })
+            .where(eq(playerCurrencies.userId, userId));
+        } else if (bpLevel.rewardType === "pack") {
+          const packType = bpLevel.rewardAmount >= 3 ? "premium" : "standard";
+          for (let p = 0; p < bpLevel.rewardAmount; p++) {
+            const packDef = PACK_TYPES[packType as keyof typeof PACK_TYPES];
+            const allCards = await storage.getCards();
+            const filteredCards = allCards.filter(c => c.rarity);
+            for (let ci = 0; ci < packDef.cardsPerPack; ci++) {
+              const card = filteredCards[Math.floor(Math.random() * filteredCards.length)];
+              if (card) {
+                await tx.insert(playerCollection).values({ userId, cardId: card.id, quantity: 1 })
+                  .onConflictDoUpdate({
+                    target: [playerCollection.userId, playerCollection.cardId],
+                    set: { quantity: sql`${playerCollection.quantity} + 1` },
+                  });
               }
             }
           }
         }
-      }
 
-      claimed.push(level);
-      await db.update(playerBattlePass)
-        .set({ claimedLevels: JSON.stringify(claimed), updatedAt: new Date() })
-        .where(eq(playerBattlePass.id, progress.id));
+        claimed.push(level);
+        await tx.update(playerBattlePass)
+          .set({ claimedLevels: JSON.stringify(claimed), updatedAt: new Date() })
+          .where(eq(playerBattlePass.id, progress.id));
 
-      const [currencies] = await db.select().from(playerCurrencies).where(eq(playerCurrencies.userId, userId));
+        const [currencies] = await tx.select().from(playerCurrencies).where(eq(playerCurrencies.userId, userId));
 
-      res.json({
-        claimed: true,
-        level,
-        rewardType: bpLevel.rewardType,
-        rewardAmount: bpLevel.rewardAmount,
-        rewardDescription: bpLevel.rewardDescription,
-        currencies: currencies ? { gold: currencies.gold, gems: currencies.gems, dust: currencies.dust } : null,
+        return {
+          claimed: true,
+          level,
+          rewardType: bpLevel.rewardType,
+          rewardAmount: bpLevel.rewardAmount,
+          rewardDescription: bpLevel.rewardDescription,
+          currencies: currencies ? { gold: currencies.gold, gems: currencies.gems, dust: currencies.dust } : null,
+        };
       });
-    } catch (error) {
+
+      res.json(result);
+    } catch (error: any) {
+      const msg = error?.message;
+      if (msg === "NO_ACTIVE_SEASON") return res.status(400).json({ error: "No active season" });
+      if (msg === "NO_PROGRESS") return res.status(400).json({ error: "No battle pass progress found" });
+      if (msg === "LEVEL_NOT_UNLOCKED") return res.status(400).json({ error: "Level not unlocked yet" });
+      if (msg === "ALREADY_CLAIMED") return res.status(400).json({ error: "Reward already claimed" });
+      if (msg === "INVALID_LEVEL") return res.status(400).json({ error: "Invalid level" });
       console.error("Error claiming battle pass reward:", error);
       res.status(500).json({ error: "Failed to claim reward" });
     }
@@ -2653,66 +2661,50 @@ IMPORTANT:
 
       const challengeId = req.params.id;
 
-      const [challenge] = await db.select().from(weeklyChallenges)
-        .where(eq(weeklyChallenges.id, challengeId)).limit(1);
-      if (!challenge) return res.status(404).json({ error: "Challenge not found" });
+      const result = await db.transaction(async (tx) => {
+        const [challenge] = await tx.select().from(weeklyChallenges)
+          .where(eq(weeklyChallenges.id, challengeId)).limit(1);
+        if (!challenge) throw new Error("NOT_FOUND");
 
-      const [progress] = await db.select().from(playerWeeklyChallenges)
-        .where(and(
-          eq(playerWeeklyChallenges.userId, userId),
-          eq(playerWeeklyChallenges.challengeId, challengeId)
-        )).limit(1);
+        const [progress] = await tx.select().from(playerWeeklyChallenges)
+          .where(and(
+            eq(playerWeeklyChallenges.userId, userId),
+            eq(playerWeeklyChallenges.challengeId, challengeId)
+          )).limit(1);
 
-      if (!progress || !progress.completedAt) return res.status(400).json({ error: "Challenge not completed" });
-      if (progress.claimedAt) return res.status(400).json({ error: "Reward already claimed" });
+        if (!progress || !progress.completedAt) throw new Error("NOT_COMPLETED");
+        if (progress.claimedAt) throw new Error("ALREADY_CLAIMED");
 
-      await ensureCurrencies(userId);
+        await tx.update(playerWeeklyChallenges)
+          .set({ claimedAt: new Date() })
+          .where(eq(playerWeeklyChallenges.id, progress.id));
 
-      if (challenge.goldReward > 0) {
-        await grantGold(userId, challenge.goldReward, "weekly_challenge_reward");
-      }
+        await ensureCurrencies(userId);
 
-      if (challenge.xpReward > 0) {
-        const [season] = await db.select().from(seasons).where(eq(seasons.isActive, true)).limit(1);
-        if (season) {
-          const [bp] = await db.select().from(playerBattlePass)
-            .where(and(eq(playerBattlePass.userId, userId), eq(playerBattlePass.seasonId, season.id)))
-            .limit(1);
-
-          if (bp) {
-            const newXp = bp.currentXp + BATTLE_PASS_XP.WEEKLY_CHALLENGE;
-            const allLevels = await db.select().from(battlePassLevels)
-              .where(eq(battlePassLevels.seasonId, season.id));
-            const sorted = allLevels.sort((a, b) => a.level - b.level);
-
-            let newLevel = 0;
-            let xpAccum = 0;
-            for (const l of sorted) {
-              xpAccum += l.xpRequired;
-              if (newXp >= xpAccum) newLevel = l.level;
-              else break;
-            }
-
-            await db.update(playerBattlePass)
-              .set({ currentXp: newXp, currentLevel: newLevel, updatedAt: new Date() })
-              .where(eq(playerBattlePass.id, bp.id));
-          }
+        if (challenge.goldReward > 0) {
+          await grantGold(userId, challenge.goldReward, "weekly_challenge_reward");
         }
-      }
 
-      await db.update(playerWeeklyChallenges)
-        .set({ claimedAt: new Date() })
-        .where(eq(playerWeeklyChallenges.id, progress.id));
+        if (challenge.xpReward > 0) {
+          await grantBattlePassXP(userId, BATTLE_PASS_XP.WEEKLY_CHALLENGE, "weekly_challenge");
+        }
 
-      const [currencies] = await db.select().from(playerCurrencies).where(eq(playerCurrencies.userId, userId));
+        const [currencies] = await tx.select().from(playerCurrencies).where(eq(playerCurrencies.userId, userId));
 
-      res.json({
-        claimed: true,
-        goldReward: challenge.goldReward,
-        xpReward: challenge.xpReward,
-        currencies: currencies ? { gold: currencies.gold, gems: currencies.gems, dust: currencies.dust } : null,
+        return {
+          claimed: true,
+          goldReward: challenge.goldReward,
+          xpReward: challenge.xpReward,
+          currencies: currencies ? { gold: currencies.gold, gems: currencies.gems, dust: currencies.dust } : null,
+        };
       });
-    } catch (error) {
+
+      res.json(result);
+    } catch (error: any) {
+      const msg = error?.message;
+      if (msg === "NOT_FOUND") return res.status(404).json({ error: "Challenge not found" });
+      if (msg === "NOT_COMPLETED") return res.status(400).json({ error: "Challenge not completed" });
+      if (msg === "ALREADY_CLAIMED") return res.status(400).json({ error: "Reward already claimed" });
       console.error("Error claiming weekly challenge:", error);
       res.status(500).json({ error: "Failed to claim reward" });
     }
