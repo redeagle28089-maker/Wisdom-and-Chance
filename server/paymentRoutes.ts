@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { z } from "zod";
 import { isAuthenticated } from "./replit_integrations/auth";
 import { getActiveProducts, getProduct, purchaseWithCurrency, fulfillPurchase, getPurchaseHistory, seedPurchaseProducts, hasAlreadyPurchased } from "./paymentService";
+import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
 
 export async function registerPaymentRoutes(app: Express) {
   await seedPurchaseProducts();
@@ -94,6 +95,7 @@ export async function registerPaymentRoutes(app: Express) {
         },
         body: "grant_type=client_credentials",
       });
+      if (!authResponse.ok) return res.status(500).json({ message: "PayPal auth failed" });
       const authData = await authResponse.json() as any;
       if (!authData.access_token) return res.status(500).json({ message: "PayPal auth failed" });
 
@@ -118,6 +120,7 @@ export async function registerPaymentRoutes(app: Express) {
           }],
         }),
       });
+      if (!orderResponse.ok) return res.status(500).json({ message: "Failed to create PayPal order" });
       const orderData = await orderResponse.json() as any;
       if (!orderData.id) return res.status(500).json({ message: "Failed to create PayPal order" });
 
@@ -153,6 +156,7 @@ export async function registerPaymentRoutes(app: Express) {
         },
         body: "grant_type=client_credentials",
       });
+      if (!authResponse.ok) return res.status(500).json({ message: "PayPal auth failed" });
       const authData = await authResponse.json() as any;
 
       const captureResponse = await fetch(`${baseUrl}/v2/checkout/orders/${orderId}/capture`, {
@@ -162,6 +166,7 @@ export async function registerPaymentRoutes(app: Express) {
           Authorization: `Bearer ${authData.access_token}`,
         },
       });
+      if (!captureResponse.ok) return res.status(500).json({ message: "PayPal capture failed" });
       const captureData = await captureResponse.json() as any;
 
       if (captureData.status !== "COMPLETED") {
@@ -204,11 +209,12 @@ export async function registerPaymentRoutes(app: Express) {
         if (already) return res.status(400).json({ message: "This one-time purchase has already been claimed" });
       }
 
-      const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
-      if (!stripeSecretKey) return res.status(503).json({ message: "Stripe is not configured yet" });
-
-      const Stripe = (await import("stripe")).default;
-      const stripe = new Stripe(stripeSecretKey);
+      let stripe;
+      try {
+        stripe = await getUncachableStripeClient();
+      } catch {
+        return res.status(503).json({ message: "Stripe is not configured yet" });
+      }
 
       const protocol = req.headers["x-forwarded-proto"] || "https";
       const host = req.headers.host;
@@ -257,11 +263,12 @@ export async function registerPaymentRoutes(app: Express) {
       const sessionId = req.query.session_id as string;
       if (!sessionId) return res.status(400).json({ message: "session_id required" });
 
-      const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
-      if (!stripeSecretKey) return res.status(503).json({ message: "Stripe is not configured" });
-
-      const Stripe = (await import("stripe")).default;
-      const stripe = new Stripe(stripeSecretKey);
+      let stripe;
+      try {
+        stripe = await getUncachableStripeClient();
+      } catch {
+        return res.status(503).json({ message: "Stripe is not configured" });
+      }
 
       const session = await stripe.checkout.sessions.retrieve(sessionId);
       if (session.payment_status !== "paid") {
@@ -299,19 +306,21 @@ export async function registerPaymentRoutes(app: Express) {
 
   app.post("/api/payments/stripe/webhook", async (req: any, res) => {
     try {
-      const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
       const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-      if (!stripeSecretKey || !webhookSecret) {
+      if (!webhookSecret) {
         return res.status(503).send("Stripe webhook not configured");
       }
 
-      const Stripe = (await import("stripe")).default;
-      const stripe = new Stripe(stripeSecretKey);
+      let stripe;
+      try {
+        stripe = await getUncachableStripeClient();
+      } catch {
+        return res.status(503).send("Stripe not configured");
+      }
 
-      let event;
       const sig = req.headers["stripe-signature"];
       if (!sig) return res.status(400).send("Missing stripe-signature header");
-      event = stripe.webhooks.constructEvent(req.rawBody || req.body, sig, webhookSecret);
+      const event = stripe.webhooks.constructEvent(req.rawBody || req.body, sig, webhookSecret);
 
       if (event.type === "checkout.session.completed") {
         const session = event.data.object;
@@ -331,12 +340,19 @@ export async function registerPaymentRoutes(app: Express) {
     }
   });
 
-  app.get("/api/payments/config", (_req: any, res) => {
+  app.get("/api/payments/config", async (_req: any, res) => {
+    let stripeEnabled = false;
+    let stripePublishableKey: string | null = null;
+    try {
+      stripePublishableKey = await getStripePublishableKey();
+      stripeEnabled = !!stripePublishableKey;
+    } catch {}
+
     res.json({
       paypalClientId: process.env.PAYPAL_CLIENT_ID || null,
-      stripePublishableKey: process.env.VITE_STRIPE_PUBLISHABLE_KEY || process.env.STRIPE_PUBLISHABLE_KEY || null,
+      stripePublishableKey,
       paypalEnabled: !!process.env.PAYPAL_CLIENT_ID,
-      stripeEnabled: !!process.env.STRIPE_SECRET_KEY,
+      stripeEnabled,
     });
   });
 }
