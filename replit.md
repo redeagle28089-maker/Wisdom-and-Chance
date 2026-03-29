@@ -47,7 +47,7 @@ Key features include:
 ### Economy & Collection System (v2.3.0)
 - **Currencies:** Gold (earned from matches), Gems (premium, reserved), Dust (from disenchanting, used for crafting).
 - **Rarity System:** Derived from card power — Common (1-3), Rare (4-6), Epic (7-8), Legendary (9-10). Affects craft costs, disenchant values, and pack pull rates.
-- **Starter Rewards:** 500 gold + 2 copies of every Common card (power 1-3).
+- **Starter Rewards:** 500 gold + 2 copies of every Common+Rare card (power 1-5).
 - **Pack Opening:** 100 gold per pack, 5 cards each with rarity-weighted pulls (60/25/10/5%).
 - **Crafting/Disenchanting:** Craft any card with dust (40/100/400/1600 by rarity). Disenchant owned copies for dust (5/20/100/400 by rarity).
 - **Match Rewards:** Win=30 gold, Loss=10, Draw=15, Forfeit win=15. Auto-granted after multiplayer matches.
