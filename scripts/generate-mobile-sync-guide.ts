@@ -304,18 +304,22 @@ doc.moveDown(0.2);
 code(
 `GET /api/config → response.features
 {
-  "economy_enabled": false,    // Shop, currencies, collection
-  "practice_mode": true,       // Practice vs AI
-  "multiplayer": true,         // PvP, rooms, matchmaking
-  "friends_system": true,      // Friend requests, status
-  "daily_challenges": true,    // Daily goals
-  "achievements": true,        // Achievement tracking
-  "leaderboard": true,         // ELO rankings
-  "spectator_mode": true,      // Watch live games
-  "ranked_seasons": false,     // Seasonal ranking
-  "battle_pass": false,        // Season pass rewards
-  "shop_enabled": false,       // In-game shop
-  "emotes": false              // In-game reactions
+  "economy_enabled": false,       // Currencies, collection, rewards
+  "collection_enabled": false,    // Card ownership system
+  "shop_enabled": false,          // In-game shop
+  "pack_opening_enabled": false,  // Pack purchase/opening
+  "crafting_enabled": false,      // Card crafting/disenchanting
+  "ranked_seasons": false,        // Seasonal ranking
+  "battle_pass": false,           // Season pass rewards
+  "weekly_challenges": false,     // Weekly challenge goals
+  "emotes": false,                // In-game reactions
+  "spectator_mode": true,         // Watch live games
+  "practice_mode": true,          // Practice vs AI
+  "multiplayer": true,            // PvP, rooms, matchmaking
+  "friends_system": true,         // Friend requests, status
+  "daily_challenges": true,       // Daily goals
+  "achievements": true,           // Achievement tracking
+  "leaderboard": true             // ELO rankings
 }`
 );
 
@@ -629,17 +633,21 @@ bullet("error — { message } — server error notification");
 
 h2("7.4 Game Action Types");
 code(
-`game_action payload:
-{ gameId: "uuid", action: {
-  type: "draw" | "deploy" | "end_turn" | "use_ability" | "forfeit",
-  ...action-specific fields
-}}
+`game_action message format:
+{
+  type: "game_action",
+  payload: {
+    gameId: "uuid",
+    action: "draw" | "deploy" | "end_turn" | "use_ability" | "forfeit",
+    data: { ...action-specific fields }  // optional
+  }
+}
 
-draw:        { type: "draw" }
-deploy:      { type: "deploy", cardId: "card-fire-3-2", slot: 0-3 }
-use_ability: { type: "use_ability" }
-end_turn:    { type: "end_turn" }
-forfeit:     { type: "forfeit" }`
+draw:        { gameId, action: "draw" }
+deploy:      { gameId, action: "deploy", data: { cardIds: ["card-fire-3-2"] } }
+use_ability: { gameId, action: "use_ability", data: { abilityId: "..." } }
+end_turn:    { gameId, action: "end_turn" }
+forfeit:     { gameId, action: "forfeit" }`
 );
 
 h2("7.5 Reconnection Handling");
