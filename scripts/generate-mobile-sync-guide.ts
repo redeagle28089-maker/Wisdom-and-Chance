@@ -223,7 +223,7 @@ table(
     ["Mobile Auth", "Live", "POST /api/mobile/auth/login with JWT (7-day)"],
     ["Feature Flags", "Live", "Server-controlled, 15+ flags"],
     ["API Docs", "Live", "GET /api/docs — full JSON reference"],
-    ["Admin Sync", "Live", "GET /api/admin/sync?code=4838"],
+    ["Admin Sync", "Live", "GET /api/admin/sync (code-protected)"],
     ["PWA Support", "Live", "Manifest, service worker, icons"],
     ["Database Backups", "Live", "Admin export + pg_dump"],
     ["Health Check", "Live", "GET /api/health"],
@@ -413,21 +413,32 @@ table(
   ]
 );
 
-h2("4.5 Multiplayer & Social Endpoints");
+h2("4.5 Multiplayer & Room Endpoints");
 table(
   ["Method", "Path", "Description"],
   [
     ["POST", "/api/rooms", "Create game room"],
     ["POST", "/api/rooms/:id/join", "Join a room"],
-    ["DELETE", "/api/rooms/:id", "Leave/close room"],
+    ["POST", "/api/rooms/:id/leave", "Leave a room"],
     ["POST", "/api/rooms/:id/ready", "Toggle ready status"],
-    ["GET", "/api/friends", "List friends + requests"],
-    ["POST", "/api/friends/request", "Send friend request"],
-    ["POST", "/api/friends/accept/:id", "Accept request"],
-    ["DELETE", "/api/friends/:id", "Remove friend"],
-    ["POST", "/api/matchmaking/join", "Join matchmaking queue"],
-    ["DELETE", "/api/matchmaking/leave", "Leave queue"],
+    ["POST", "/api/rooms/:id/start", "Start game (host only)"],
+    ["POST", "/api/rooms/:id/spectate", "Join as spectator"],
+    ["DELETE", "/api/rooms/:id/spectate", "Leave spectating"],
+    ["GET", "/api/rooms/:id/messages", "Get room chat history"],
+    ["POST", "/api/rooms/:id/messages", "Send room chat message"],
     ["GET", "/api/live-matches", "Active matches for spectating"],
+  ]
+);
+
+h2("4.6 Friend System Endpoints");
+table(
+  ["Method", "Path", "Description"],
+  [
+    ["GET", "/api/friends", "List accepted friends"],
+    ["GET", "/api/friend-requests", "List pending requests"],
+    ["POST", "/api/friend-requests", "Send friend request"],
+    ["POST", "/api/friend-requests/:id/accept", "Accept request"],
+    ["POST", "/api/friend-requests/:id/decline", "Decline request"],
   ]
 );
 
@@ -571,16 +582,17 @@ h2("7.2 Client → Server Events");
 table(
   ["Event", "Payload", "Description"],
   [
-    ["join_room", "{ roomId }", "Join a game room"],
-    ["leave_room", "{ roomId }", "Leave a game room"],
-    ["room_message", "{ roomId, message }", "Send chat message"],
-    ["player_ready", "{ roomId, ready, deckId? }", "Toggle ready + select deck"],
+    ["join_room", "{ roomId }", "Subscribe to room updates"],
+    ["leave_room", "{ roomId }", "Unsubscribe from room"],
+    ["join_game", "{ gameId }", "Subscribe to game state"],
+    ["leave_game", "{ gameId }", "Unsubscribe from game"],
+    ["room_message", "{ roomId, message }", "Send chat in room"],
+    ["game_message", "{ gameId, message }", "Send chat in game"],
     ["game_action", "{ gameId, action }", "Send game action"],
-    ["join_matchmaking", "{ deckId }", "Enter ranked queue"],
-    ["cancel_matchmaking", "{}", "Leave ranked queue"],
-    ["spectate_game", "{ gameId }", "Watch a live game"],
-    ["leave_spectate", "{ gameId }", "Stop spectating"],
-    ["send_emote", "{ gameId, emoteId }", "Send in-game emote"],
+    ["player_ready", "{ roomId, ready, deckId? }", "Toggle ready + select deck"],
+    ["game_start", "{ roomId }", "Request game start (host)"],
+    ["room_update", "{ roomId }", "Request room state refresh"],
+    ["ping", "{}", "Heartbeat keepalive"],
   ]
 );
 
@@ -588,15 +600,23 @@ h2("7.3 Server → Client Events");
 table(
   ["Event", "Payload", "Description"],
   [
-    ["room_update", "{ room, players }", "Room state changed"],
-    ["game_start", "{ gameId, opponent }", "Game is starting"],
-    ["game_state", "{ ...sanitized state }", "Current game state (per-player)"],
-    ["game_over", "{ winner, loser, reason, goldReward? }", "Game ended + rewards"],
-    ["matchmaking_found", "{ gameId, opponent }", "Match found"],
-    ["friend_request", "{ from }", "Incoming friend request"],
-    ["presence_update", "{ userId, online }", "Friend online/offline"],
-    ["spectator_state", "{ ...game state }", "Spectated game update"],
-    ["emote_received", "{ from, emoteId }", "Opponent sent emote"],
+    ["auth_success", "{ userId, displayName }", "Auth confirmed, ready to send"],
+    ["auth_error", "{ message }", "Auth failed, will disconnect"],
+    ["room_update", "Room state object", "Room state changed"],
+    ["player_joined", "{ roomId, userId }", "Player joined room"],
+    ["player_left", "{ roomId, userId }", "Player left room"],
+    ["player_ready_update", "{ roomId, userId, ready, deckId }", "Ready status changed"],
+    ["game_start", "{ roomId, gameId }", "Game started — navigate to game"],
+    ["game_state", "{ ...sanitized state }", "Game state (per-player view)"],
+    ["game_action", "Game action object", "Game update from opponent"],
+    ["game_over", "{ winner, reason, goldReward? }", "Game ended + rewards"],
+    ["chat_message", "{ roomId, senderId, message }", "Room chat message"],
+    ["game_message", "{ userId, displayName, message }", "In-game chat message"],
+    ["friend_request", "{ requestId, senderId }", "Incoming friend request"],
+    ["friend_request_accepted", "{ requestId, friendId }", "Request accepted"],
+    ["presence_update", "{ userId, status }", "Friend online/offline"],
+    ["spectator_joined", "{ roomId, userId }", "Spectator joined"],
+    ["spectator_left", "{ roomId, userId }", "Spectator left"],
     ["error", "{ message }", "Server error"],
   ]
 );
@@ -605,14 +625,15 @@ h2("7.4 Game Action Types");
 code(
 `game_action payload:
 { gameId: "uuid", action: {
-  type: "draw_card" | "deploy_card" | "use_ability" | "end_turn",
+  type: "draw" | "deploy" | "end_turn" | "use_ability" | "forfeit",
   ...action-specific fields
 }}
 
-draw_card: { type: "draw_card" }
-deploy_card: { type: "deploy_card", cardId: "card-fire-3-2", slot: 0-3 }
+draw:        { type: "draw" }
+deploy:      { type: "deploy", cardId: "card-fire-3-2", slot: 0-3 }
 use_ability: { type: "use_ability" }
-end_turn: { type: "end_turn" }`
+end_turn:    { type: "end_turn" }
+forfeit:     { type: "forfeit" }`
 );
 
 h2("7.5 Reconnection Handling");
@@ -836,10 +857,11 @@ table(
 );
 
 h2("10.7 Admin Endpoints (For Debugging)");
+body("Note: Admin endpoints require admin authentication. Contact the project owner for access codes.");
 table(
   ["Method", "Path", "Description"],
   [
-    ["GET", "/api/admin/sync?code=4838", "Full data dump for mobile dev"],
+    ["GET", "/api/admin/sync", "Full data dump (code-protected)"],
     ["GET", "/api/admin/feature-flags", "View all feature flags"],
     ["PATCH", "/api/admin/feature-flags/:key", "Toggle a feature flag"],
     ["GET", "/api/admin/database-export", "Export all DB tables as JSON"],
