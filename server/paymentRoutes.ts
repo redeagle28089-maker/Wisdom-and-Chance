@@ -1,8 +1,30 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { z } from "zod";
 import { isAuthenticated } from "./replit_integrations/auth";
 import { getActiveProducts, getProduct, purchaseWithCurrency, fulfillPurchase, getPurchaseHistory, seedPurchaseProducts, hasAlreadyPurchased } from "./paymentService";
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
+
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+
+function paymentRateLimit(maxRequests: number, windowMs: number) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const userId = (req as Record<string, unknown>).user
+      ? ((req as Record<string, unknown>).user as Record<string, Record<string, string>>)?.claims?.sub
+      : req.ip;
+    const key = `${userId}:${req.path}`;
+    const now = Date.now();
+    const entry = rateLimitMap.get(key);
+    if (!entry || now > entry.resetAt) {
+      rateLimitMap.set(key, { count: 1, resetAt: now + windowMs });
+      return next();
+    }
+    if (entry.count >= maxRequests) {
+      return res.status(429).json({ message: "Too many requests. Please try again later." });
+    }
+    entry.count++;
+    next();
+  };
+}
 
 export async function registerPaymentRoutes(app: Express) {
   await seedPurchaseProducts();
@@ -29,7 +51,7 @@ export async function registerPaymentRoutes(app: Express) {
     }
   });
 
-  app.post("/api/payments/purchase-currency", isAuthenticated, async (req: any, res) => {
+  app.post("/api/payments/purchase-currency", isAuthenticated, paymentRateLimit(10, 60000), async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) return res.status(401).json({ message: "Unauthorized" });
@@ -65,7 +87,7 @@ export async function registerPaymentRoutes(app: Express) {
     }
   });
 
-  app.post("/api/payments/paypal/create-order", isAuthenticated, async (req: any, res) => {
+  app.post("/api/payments/paypal/create-order", isAuthenticated, paymentRateLimit(5, 60000), async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) return res.status(401).json({ message: "Unauthorized" });
@@ -124,14 +146,15 @@ export async function registerPaymentRoutes(app: Express) {
       const orderData = await orderResponse.json() as any;
       if (!orderData.id) return res.status(500).json({ message: "Failed to create PayPal order" });
 
-      res.json({ orderId: orderData.id });
+      const approveLink = orderData.links?.find((l: { rel: string; href: string }) => l.rel === "approve");
+      res.json({ orderId: orderData.id, approveUrl: approveLink?.href || null });
     } catch (error) {
       console.error("[payments] PayPal create order error:", error);
       res.status(500).json({ message: "Failed to create PayPal order" });
     }
   });
 
-  app.post("/api/payments/paypal/capture-order", isAuthenticated, async (req: any, res) => {
+  app.post("/api/payments/paypal/capture-order", isAuthenticated, paymentRateLimit(5, 60000), async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) return res.status(401).json({ message: "Unauthorized" });
@@ -195,7 +218,7 @@ export async function registerPaymentRoutes(app: Express) {
     }
   });
 
-  app.post("/api/payments/stripe/create-checkout", isAuthenticated, async (req: any, res) => {
+  app.post("/api/payments/stripe/create-checkout", isAuthenticated, paymentRateLimit(5, 60000), async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) return res.status(401).json({ message: "Unauthorized" });

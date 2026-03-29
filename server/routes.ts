@@ -963,7 +963,8 @@ IMPORTANT:
       const userId = req.user?.claims?.sub;
       if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
-      const { bundleId } = req.body || {};
+      const { bundleId, currency } = req.body || {};
+      const currencyType: "gold" | "gems" = currency === "gems" ? "gems" : "gold";
       const [bundle] = await db.select().from(shopBundles).where(and(eq(shopBundles.id, bundleId), eq(shopBundles.isActive, true))).limit(1);
       if (!bundle) return res.status(400).json({ message: "Invalid bundle" });
 
@@ -971,16 +972,17 @@ IMPORTANT:
       const packs: { type: string; count: number }[] = JSON.parse(bundle.packsJson);
 
       await ensureCurrencies(userId);
+      const currencyField = currencyType === "gems" ? playerCurrencies.gems : playerCurrencies.gold;
 
       const result = await db.transaction(async (tx) => {
         const deducted = await tx.update(playerCurrencies)
-          .set({ gold: sql`gold - ${cost}`, updatedAt: new Date() })
-          .where(and(eq(playerCurrencies.userId, userId), sql`gold >= ${cost}`))
-          .returning({ gold: playerCurrencies.gold });
+          .set({ [currencyType]: sql`${currencyField} - ${cost}`, updatedAt: new Date() })
+          .where(and(eq(playerCurrencies.userId, userId), sql`${currencyField} >= ${cost}`))
+          .returning();
 
         if (deducted.length === 0) {
           const cur = await tx.select().from(playerCurrencies).where(eq(playerCurrencies.userId, userId)).limit(1);
-          return { error: true, message: "Not enough gold", required: cost, current: cur[0]?.gold ?? 0 };
+          return { error: true, message: `Not enough ${currencyType}`, required: cost, current: currencyType === "gems" ? (cur[0]?.gems ?? 0) : (cur[0]?.gold ?? 0) };
         }
 
         const allCards = await storage.getCards();
@@ -1069,13 +1071,15 @@ IMPORTANT:
       const userId = req.user?.claims?.sub;
       if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
-      const { packTypeId, useDailyDeal } = req.body || {};
+      const { packTypeId, useDailyDeal, currency } = req.body || {};
+      const currencyType: "gold" | "gems" = currency === "gems" ? "gems" : "gold";
       const packDef = PACK_TYPES[packTypeId as keyof typeof PACK_TYPES];
       if (!packDef) return res.status(400).json({ message: "Invalid pack type" });
 
-      let cost = packDef.costGold;
+      let cost = currencyType === "gems" ? packDef.costGems : packDef.costGold;
+      if (cost <= 0) return res.status(400).json({ message: `This pack cannot be purchased with ${currencyType}` });
 
-      if (useDailyDeal) {
+      if (useDailyDeal && currencyType === "gold") {
         const today = new Date().toISOString().split("T")[0];
         const [deal] = await db.select().from(dailyDeals).where(eq(dailyDeals.dealDate, today)).limit(1);
         if (deal && deal.packTypeId === packTypeId) {
@@ -1084,16 +1088,17 @@ IMPORTANT:
       }
 
       await ensureCurrencies(userId);
+      const currencyField = currencyType === "gems" ? playerCurrencies.gems : playerCurrencies.gold;
 
       const result = await db.transaction(async (tx) => {
         const deducted = await tx.update(playerCurrencies)
-          .set({ gold: sql`gold - ${cost}`, updatedAt: new Date() })
-          .where(and(eq(playerCurrencies.userId, userId), sql`gold >= ${cost}`))
-          .returning({ gold: playerCurrencies.gold });
+          .set({ [currencyType]: sql`${currencyField} - ${cost}`, updatedAt: new Date() })
+          .where(and(eq(playerCurrencies.userId, userId), sql`${currencyField} >= ${cost}`))
+          .returning();
 
         if (deducted.length === 0) {
           const cur = await tx.select().from(playerCurrencies).where(eq(playerCurrencies.userId, userId)).limit(1);
-          return { error: true, message: "Not enough gold", required: cost, current: cur[0]?.gold ?? 0 };
+          return { error: true, message: `Not enough ${currencyType}`, required: cost, current: currencyType === "gems" ? (cur[0]?.gems ?? 0) : (cur[0]?.gold ?? 0) };
         }
 
         const allCards = await storage.getCards();
@@ -2509,6 +2514,7 @@ IMPORTANT:
           xpIntoCurrentLevel: Math.max(0, xpIntoCurrentLevel),
           xpForNextLevel,
           claimedLevels: claimed,
+          premiumUnlocked: progress.premiumUnlocked ?? false,
         },
         levels: sortedLevels.map(l => ({
           level: l.level,

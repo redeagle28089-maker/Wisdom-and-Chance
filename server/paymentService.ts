@@ -16,9 +16,9 @@ export async function seedPurchaseProducts() {
         priceGold: product.priceGold,
         priceGems: product.priceGems,
         gemsAmount: product.gemsAmount,
-        packsJson: (product as any).packsJson || "[]",
-        dustAmount: (product as any).dustAmount || 0,
-        isOneTimePurchase: (product as any).isOneTimePurchase || false,
+        packsJson: "packsJson" in product ? (product as Record<string, unknown>).packsJson as string : "[]",
+        dustAmount: "dustAmount" in product ? (product as Record<string, unknown>).dustAmount as number : 0,
+        isOneTimePurchase: "isOneTimePurchase" in product ? (product as Record<string, unknown>).isOneTimePurchase as boolean : false,
         isCurrencyPurchasable: product.isCurrencyPurchasable,
         isActive: true,
         badgeText: product.badgeText,
@@ -53,6 +53,22 @@ export async function hasAlreadyPurchased(userId: string, productId: string): Pr
   return !!existing;
 }
 
+interface PulledCard {
+  cardId: string;
+  rarity: CardRarity;
+  isNew: boolean;
+  cardName: string;
+  element: string;
+  power: number;
+}
+
+interface FulfillResult {
+  success: boolean;
+  error?: string;
+  transaction?: typeof purchaseTransactions.$inferSelect;
+  cards?: PulledCard[];
+}
+
 export async function fulfillPurchase(
   userId: string,
   product: PurchaseProduct,
@@ -60,7 +76,7 @@ export async function fulfillPurchase(
   paymentId: string | null,
   amountUsd: number,
   currencySpent: number,
-): Promise<{ success: boolean; error?: string; transaction?: any; cards?: any[] }> {
+): Promise<FulfillResult> {
   if (paymentId) {
     const [existing] = await db.select().from(purchaseTransactions)
       .where(and(eq(purchaseTransactions.paymentId, paymentId), eq(purchaseTransactions.status, "completed")))
@@ -98,7 +114,7 @@ export async function fulfillPurchase(
         .where(eq(playerCurrencies.userId, userId));
     }
 
-    let allPulledCards: any[] = [];
+    const allPulledCards: PulledCard[] = [];
     const packs: { type: string; count: number }[] = JSON.parse(product.packsJson || "[]");
     if (packs.length > 0) {
       const allCards = await storage.getCards();
@@ -189,7 +205,7 @@ export async function purchaseWithCurrency(
   userId: string,
   productId: string,
   currencyType: "gold" | "gems",
-): Promise<{ success: boolean; error?: string; transaction?: any; cards?: any[]; currencies?: any }> {
+): Promise<FulfillResult & { currencies?: { gold: number; gems: number; dust: number } }> {
   const product = await getProduct(productId);
   if (!product) return { success: false, error: "Product not found" };
   if (!product.isCurrencyPurchasable) return { success: false, error: "This product can only be purchased with real money" };

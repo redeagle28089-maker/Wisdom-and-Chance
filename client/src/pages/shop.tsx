@@ -539,14 +539,43 @@ export default function ShopPage() {
 
     if (method === "paypal") {
       try {
-        const res = await apiRequest("POST", "/api/payments/paypal/create-order", { productId: product.id });
-        const data = await res.json();
-        if (data.orderId) {
-          window.open(`https://www.sandbox.paypal.com/checkoutnow?token=${data.orderId}`, "_blank");
-          toast({ title: "PayPal Checkout", description: "Complete your payment in the PayPal window. Refresh this page after payment." });
+        const createRes = await apiRequest("POST", "/api/payments/paypal/create-order", { productId: product.id });
+        const createData = await createRes.json();
+        if (createData.orderId) {
+          const approveUrl = createData.approveUrl || `https://www.sandbox.paypal.com/checkoutnow?token=${createData.orderId}`;
+          const paypalWindow = window.open(approveUrl, "paypal_checkout", "width=500,height=700");
+          toast({ title: "PayPal Checkout", description: "Complete payment in the PayPal window. We'll capture it automatically." });
+
+          const pollTimer = setInterval(async () => {
+            try {
+              if (paypalWindow && paypalWindow.closed) {
+                clearInterval(pollTimer);
+                try {
+                  const captureRes = await apiRequest("POST", "/api/payments/paypal/capture-order", {
+                    orderId: createData.orderId,
+                    productId: product.id,
+                  });
+                  const captureData = await captureRes.json();
+                  toast({ title: "Purchase Complete!", description: captureData.message || "Your items have been delivered." });
+                  queryClient.invalidateQueries({ queryKey: ["/api/currencies"] });
+                  queryClient.invalidateQueries({ queryKey: ["/api/collection"] });
+                  queryClient.invalidateQueries({ queryKey: ["/api/battlepass"] });
+                  queryClient.invalidateQueries({ queryKey: ["/api/payments/history"] });
+                } catch (captureError: unknown) {
+                  const errMsg = captureError instanceof Error ? captureError.message : "Payment may not have been completed. Check your purchase history.";
+                  toast({ title: "Payment Capture Issue", description: errMsg, variant: "destructive" });
+                }
+              }
+            } catch {
+              clearInterval(pollTimer);
+            }
+          }, 1000);
+
+          setTimeout(() => clearInterval(pollTimer), 600000);
         }
-      } catch (error: any) {
-        toast({ title: "PayPal Error", description: error.message || "Failed to create PayPal order", variant: "destructive" });
+      } catch (error: unknown) {
+        const errMsg = error instanceof Error ? error.message : "Failed to create PayPal order";
+        toast({ title: "PayPal Error", description: errMsg, variant: "destructive" });
       }
       setPremiumConfirm(null);
       return;
