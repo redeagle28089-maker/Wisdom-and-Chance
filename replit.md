@@ -58,6 +58,19 @@ Key features include:
 - **Endpoints:** GET /api/currencies, GET /api/collection, POST /api/packs/open, POST /api/cards/craft, POST /api/cards/disenchant, POST /api/collection/starter, GET /api/shop/catalog, GET /api/shop/daily-deals, POST /api/shop/purchase.
 - **Key Files:** shared/models/economy.ts (DB schema + constants + pack types), server/economyService.ts (shared helpers), server/routes.ts (endpoints), server/websocket.ts (reward hooks), client/src/pages/shop.tsx, client/src/pages/pack-opening.tsx.
 
+### Ranked Seasons & Battle Pass (v2.4.0)
+- **Seasons:** Server-driven seasons with configurable duration (default 30 days). Auto-seeds Season 1 on startup if none exists.
+- **Ranked Tiers:** Bronze (0+), Silver (1100+), Gold (1300+), Platinum (1500+), Diamond (1700+), Master (2000+). Based on ELO rating from `player_ratings` table.
+- **Season Rewards:** End-of-season rewards based on peak tier achieved — Gold, Packs, and Dust scale with tier rank.
+- **Season History:** Stored per player with peak/final rating, tier, games played, wins.
+- **Battle Pass:** 50-level reward track per season. Rewards: gold, gems, dust, and card packs at milestone levels (10, 20, 30, 40, 50).
+- **Battle Pass XP:** Earned from match wins (+100), daily challenges (+150), weekly challenges (+300), achievements (+200).
+- **Weekly Challenges:** 3 per week per season (win_games, play_element, deal_damage). Refresh on server schedule. Grant gold + battle pass XP.
+- **Feature Flags:** Gated by `ranked_seasons`, `battle_pass`, `weekly_challenges` flags.
+- **DB Tables:** seasons, season_history, battle_pass_levels, player_battle_pass, weekly_challenges, player_weekly_challenges.
+- **Endpoints:** GET /api/season/current, GET /api/season/rewards, GET /api/season/player-rank, GET /api/season/history, GET /api/battlepass, POST /api/battlepass/claim, GET /api/weekly-challenges, POST /api/weekly-challenges/:id/claim.
+- **Key Files:** shared/models/economy.ts (schema + constants), server/routes.ts (endpoints + seeding), client/src/pages/season.tsx, client/src/pages/battle-pass.tsx.
+
 ### Database Backup
 - **Admin Export Endpoint:** GET /api/admin/database-export — Admin-only endpoint that exports all database tables as JSON. Add `?save=true` to also save a backup file to `backups/` directory. Image data is included in file backups.
 - **SQL Backups:** Full SQL dumps can be created via `pg_dump` and are stored in the `backups/` directory. These include all data including card images.

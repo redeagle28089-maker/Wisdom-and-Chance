@@ -244,3 +244,107 @@ export const dailyDealSchema = z.object({
 });
 
 export type DailyDeal = z.infer<typeof dailyDealSchema>;
+
+export const seasons = pgTable("seasons", {
+  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 100 }).notNull(),
+  seasonNumber: integer("season_number").notNull().unique(),
+  startsAt: timestamp("starts_at").notNull(),
+  endsAt: timestamp("ends_at").notNull(),
+  isActive: boolean("is_active").notNull().default(false),
+  ratingBaseline: integer("rating_baseline").notNull().default(1000),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type Season = typeof seasons.$inferSelect;
+
+export const seasonHistory = pgTable("season_history", {
+  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id", { length: 255 }).notNull(),
+  seasonId: varchar("season_id", { length: 255 }).notNull(),
+  peakRating: integer("peak_rating").notNull().default(1000),
+  finalRating: integer("final_rating").notNull().default(1000),
+  tier: varchar("tier", { length: 50 }).notNull().default("Bronze"),
+  gamesPlayed: integer("games_played").notNull().default(0),
+  wins: integer("wins").notNull().default(0),
+  rewardsClaimed: boolean("rewards_claimed").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type SeasonHistory = typeof seasonHistory.$inferSelect;
+
+export const battlePassLevels = pgTable("battle_pass_levels", {
+  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
+  seasonId: varchar("season_id", { length: 255 }).notNull(),
+  level: integer("level").notNull(),
+  xpRequired: integer("xp_required").notNull(),
+  rewardType: varchar("reward_type", { length: 50 }).notNull(),
+  rewardAmount: integer("reward_amount").notNull().default(1),
+  rewardDescription: varchar("reward_description", { length: 255 }).notNull(),
+});
+
+export type BattlePassLevel = typeof battlePassLevels.$inferSelect;
+
+export const playerBattlePass = pgTable("player_battle_pass", {
+  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id", { length: 255 }).notNull(),
+  seasonId: varchar("season_id", { length: 255 }).notNull(),
+  currentXp: integer("current_xp").notNull().default(0),
+  currentLevel: integer("current_level").notNull().default(0),
+  claimedLevels: varchar("claimed_levels", { length: 2000 }).notNull().default("[]"),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type PlayerBattlePass = typeof playerBattlePass.$inferSelect;
+
+export const weeklyChallenges = pgTable("weekly_challenges", {
+  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
+  seasonId: varchar("season_id", { length: 255 }).notNull(),
+  weekNumber: integer("week_number").notNull(),
+  challengeType: varchar("challenge_type", { length: 50 }).notNull(),
+  description: varchar("description", { length: 255 }).notNull(),
+  requirement: integer("requirement").notNull(),
+  xpReward: integer("xp_reward").notNull().default(200),
+  goldReward: integer("gold_reward").notNull().default(50),
+  activeFrom: timestamp("active_from").notNull(),
+  activeUntil: timestamp("active_until").notNull(),
+});
+
+export type WeeklyChallenge = typeof weeklyChallenges.$inferSelect;
+
+export const playerWeeklyChallenges = pgTable("player_weekly_challenges", {
+  id: varchar("id", { length: 255 }).primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id", { length: 255 }).notNull(),
+  challengeId: varchar("challenge_id", { length: 255 }).notNull(),
+  progress: integer("progress").notNull().default(0),
+  completedAt: timestamp("completed_at"),
+  claimedAt: timestamp("claimed_at"),
+});
+
+export type PlayerWeeklyChallenge = typeof playerWeeklyChallenges.$inferSelect;
+
+export const RANKED_TIERS = [
+  { name: "Bronze", minRating: 0, icon: "shield" },
+  { name: "Silver", minRating: 1100, icon: "shield" },
+  { name: "Gold", minRating: 1300, icon: "shield" },
+  { name: "Platinum", minRating: 1500, icon: "crown" },
+  { name: "Diamond", minRating: 1700, icon: "gem" },
+  { name: "Master", minRating: 2000, icon: "star" },
+] as const;
+
+export const SEASON_REWARDS: Record<string, { gold: number; packs: number; dust: number }> = {
+  Bronze: { gold: 100, packs: 1, dust: 50 },
+  Silver: { gold: 200, packs: 2, dust: 100 },
+  Gold: { gold: 400, packs: 3, dust: 200 },
+  Platinum: { gold: 600, packs: 5, dust: 400 },
+  Diamond: { gold: 1000, packs: 8, dust: 600 },
+  Master: { gold: 1500, packs: 12, dust: 1000 },
+};
+
+export const BATTLE_PASS_XP = {
+  MATCH_WIN: 100,
+  MATCH_LOSS: 30,
+  DAILY_CHALLENGE: 150,
+  WEEKLY_CHALLENGE: 300,
+  ACHIEVEMENT: 200,
+} as const;

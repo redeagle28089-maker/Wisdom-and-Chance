@@ -15,7 +15,8 @@ import { useQuery } from "@tanstack/react-query";
 import { 
   Home, BookOpen, Database, Layers, Swords, Trophy, User, GraduationCap, 
   LogIn, LogOut, Users, Gamepad2, Medal, Calendar, BarChart3, Eye, 
-  BookMarked, Palette, ImageIcon, ChevronDown, X, UserCircle, Package, ShoppingBag
+  BookMarked, Palette, ImageIcon, ChevronDown, X, UserCircle, Package, ShoppingBag,
+  Shield, Star
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -43,6 +44,8 @@ const playItems: NavItem[] = [
 ];
 
 const progressItems: NavItem[] = [
+  { title: "Ranked Season", url: "/season", icon: Shield, featureFlag: "ranked_seasons" },
+  { title: "Battle Pass", url: "/battle-pass", icon: Star, featureFlag: "battle_pass" },
   { title: "Achievements", url: "/achievements", icon: Trophy, featureFlag: "achievements" },
   { title: "Leaderboard", url: "/leaderboard", icon: Medal, featureFlag: "leaderboard" },
   { title: "Daily Challenges", url: "/challenges", icon: Calendar, featureFlag: "daily_challenges" },

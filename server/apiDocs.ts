@@ -1021,6 +1021,135 @@ const API_DOCS = {
         },
       },
     },
+    seasons: {
+      seasonCurrent: {
+        method: "GET",
+        path: "/api/season/current",
+        requiresAuth: false,
+        description: "Get current active season info including tiers and days remaining.",
+        response: {
+          id: { type: "string" },
+          name: { type: "string" },
+          seasonNumber: { type: "number" },
+          startsAt: { type: "string" },
+          endsAt: { type: "string" },
+          daysRemaining: { type: "number" },
+          isActive: { type: "boolean" },
+          tiers: { type: "array", description: "Ranked tiers with name, minRating, icon" },
+        },
+      },
+      seasonRewards: {
+        method: "GET",
+        path: "/api/season/rewards",
+        requiresAuth: false,
+        description: "Get reward tables for all ranked tiers.",
+        response: {
+          tiers: { type: "array", description: "Tiers with rewards (gold, packs, dust)" },
+        },
+      },
+      seasonPlayerRank: {
+        method: "GET",
+        path: "/api/season/player-rank",
+        requiresAuth: true,
+        description: "Get current player's ranked standing including rating, tier, and projected season rewards.",
+        response: {
+          currentRating: { type: "number" },
+          highestRating: { type: "number" },
+          tier: { type: "string" },
+          peakTier: { type: "string" },
+          nextTier: { type: "object|null", description: "{ name, ratingNeeded }" },
+          seasonRewards: { type: "object", description: "{ gold, packs, dust }" },
+        },
+      },
+      seasonHistory: {
+        method: "GET",
+        path: "/api/season/history",
+        requiresAuth: true,
+        description: "Get player's past season records.",
+        response: {
+          type: "array",
+          items: {
+            peakRating: { type: "number" },
+            finalRating: { type: "number" },
+            tier: { type: "string" },
+            gamesPlayed: { type: "number" },
+            wins: { type: "number" },
+            rewardsClaimed: { type: "boolean" },
+          },
+        },
+      },
+    },
+    battlePass: {
+      battlePassProgress: {
+        method: "GET",
+        path: "/api/battlepass",
+        requiresAuth: true,
+        description: "Get player's battle pass progress including current level, XP, and all 50 reward levels with claim status.",
+        response: {
+          season: { type: "object", description: "{ id, name, endsAt, daysRemaining }" },
+          progress: { type: "object", description: "{ currentXp, currentLevel, xpIntoCurrentLevel, xpForNextLevel, claimedLevels }" },
+          levels: { type: "array", description: "50 levels with xpRequired, rewardType, rewardAmount, claimed, unlocked" },
+        },
+      },
+      battlePassClaim: {
+        method: "POST",
+        path: "/api/battlepass/claim",
+        requiresAuth: true,
+        description: "Claim a battle pass level reward. Level must be unlocked and not yet claimed.",
+        body: {
+          level: { type: "number", required: true, description: "Level number to claim (1-50)" },
+        },
+        response: {
+          claimed: { type: "boolean" },
+          level: { type: "number" },
+          rewardType: { type: "string" },
+          rewardAmount: { type: "number" },
+          rewardDescription: { type: "string" },
+          currencies: { type: "object", description: "Updated currency balances" },
+        },
+        errors: {
+          400: "Level not unlocked / Already claimed / No active season",
+        },
+      },
+    },
+    weeklyChallenges: {
+      weeklyChallengesList: {
+        method: "GET",
+        path: "/api/weekly-challenges",
+        requiresAuth: true,
+        description: "Get currently active weekly challenges with player progress.",
+        response: {
+          type: "array",
+          items: {
+            id: { type: "string" },
+            challengeType: { type: "string" },
+            description: { type: "string" },
+            requirement: { type: "number" },
+            xpReward: { type: "number" },
+            goldReward: { type: "number" },
+            progress: { type: "number" },
+            completed: { type: "boolean" },
+            claimed: { type: "boolean" },
+          },
+        },
+      },
+      weeklyChallengeClaim: {
+        method: "POST",
+        path: "/api/weekly-challenges/:id/claim",
+        requiresAuth: true,
+        description: "Claim reward for a completed weekly challenge. Grants gold and battle pass XP.",
+        response: {
+          claimed: { type: "boolean" },
+          goldReward: { type: "number" },
+          xpReward: { type: "number" },
+          currencies: { type: "object", description: "Updated currency balances" },
+        },
+        errors: {
+          400: "Not completed / Already claimed",
+          404: "Challenge not found",
+        },
+      },
+    },
   },
 };
 

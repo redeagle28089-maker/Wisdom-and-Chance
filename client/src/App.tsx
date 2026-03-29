@@ -41,6 +41,8 @@ import AboutCreatorPage from "@/pages/about-creator";
 import CollectionPage from "@/pages/collection";
 import ShopPage from "@/pages/shop";
 import PackOpeningPage from "@/pages/pack-opening";
+import SeasonPage from "@/pages/season";
+import BattlePassPage from "@/pages/battle-pass";
 import NotFound from "@/pages/not-found";
 
 /**
@@ -77,6 +79,8 @@ function AppContent() {
           <Route path="/live-matches" component={LiveMatchesPage} />
           <Route path="/lore" component={LoreArchivesPage} />
           <Route path="/about" component={AboutCreatorPage} />
+          <Route path="/season" component={SeasonPage} />
+          <Route path="/battle-pass" component={BattlePassPage} />
           <Route path="/admin/card-art" component={AdminCardArtPage} />
           <Route path="/admin/image-database" component={AdminImageDatabasePage} />
           <Route path="/admin/user-database" component={AdminUserDatabasePage} />
