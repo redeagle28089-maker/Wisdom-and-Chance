@@ -4,7 +4,7 @@ import { z } from "zod";
 import { eq, or, and, lt, desc, sql } from "drizzle-orm";
 import { storage } from "./storage";
 import { db } from "./db";
-import { insertCardSchema, insertDeckSchema, insertPlayerSchema, insertGameSchema, ELEMENTS, userDecks, insertUserDeckSchema, GAME_CONSTANTS, cardImages, insertCardImageSchema, TRAITS, BUFF_DEBUFF_COLORS, users, friendships, friendMessages, cardImageMappings, commanderImageMappings, GAME_PHASES, GAME_MODE_CONFIG, AI_DIFFICULTY, GAME_STATUS, featureFlags, serverConfig, DEFAULT_FEATURE_FLAGS } from "@shared/schema";
+import { insertCardSchema, insertDeckSchema, insertPlayerSchema, insertGameSchema, ELEMENTS, userDecks, insertUserDeckSchema, GAME_CONSTANTS, cardImages, insertCardImageSchema, TRAITS, BUFF_DEBUFF_COLORS, users, friendships, friendMessages, cardImageMappings, commanderImageMappings, GAME_PHASES, GAME_MODE_CONFIG, AI_DIFFICULTY, GAME_STATUS, featureFlags, serverConfig, DEFAULT_FEATURE_FLAGS, playerCurrencies, playerCollection, ECONOMY_CONSTANTS, getCardRarity, type CardRarity } from "@shared/schema";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import { registerMultiplayerRoutes } from "./multiplayerRoutes";
 import { registerMobileAuthRoutes } from "./mobileAuth";
@@ -15,6 +15,7 @@ import { generateImage, generateText } from "./replit_integrations/image/client"
 import { getWebSocketServer } from "./websocket";
 import { filterObscenity } from "./obscenity-filter";
 import { gameEngine } from "./gameEngine";
+import { ensureCurrencies, grantGold, grantStarterCollection } from "./economyService";
 
 const ADMIN_EMAIL = "redeagle28089@gmail.com";
 
@@ -736,6 +737,234 @@ IMPORTANT:
     } catch (error) {
       console.error("Error generating deck suggestion:", error);
       res.status(500).json({ error: "Failed to generate deck suggestion" });
+    }
+  });
+
+  async function isEconomyEnabled(): Promise<boolean> {
+    const flag = await db.select().from(featureFlags).where(eq(featureFlags.key, "economy_enabled")).limit(1);
+    return flag.length > 0 ? flag[0].enabled : false;
+  }
+
+  const requireEconomy = async (_req: any, res: any, next: any) => {
+    if (!(await isEconomyEnabled())) {
+      return res.status(403).json({ message: "Economy system is not enabled" });
+    }
+    next();
+  };
+
+  app.get("/api/currencies", isAuthenticated, requireEconomy, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+      const balances = await ensureCurrencies(userId);
+      res.json(balances);
+    } catch (error) {
+      console.error("[economy] Error fetching currencies:", error);
+      res.status(500).json({ message: "Failed to fetch currencies" });
+    }
+  });
+
+  app.get("/api/collection", isAuthenticated, requireEconomy, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+      const entries = await db.select().from(playerCollection).where(eq(playerCollection.userId, userId));
+      res.json(entries.map(e => ({ cardId: e.cardId, quantity: e.quantity })));
+    } catch (error) {
+      console.error("[economy] Error fetching collection:", error);
+      res.status(500).json({ message: "Failed to fetch collection" });
+    }
+  });
+
+  app.post("/api/packs/open", isAuthenticated, requireEconomy, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+      await ensureCurrencies(userId);
+      const packType = req.body?.packType || "standard";
+      const cost = ECONOMY_CONSTANTS.PACK_COST_GOLD;
+
+      const deducted = await db.update(playerCurrencies)
+        .set({ gold: sql`gold - ${cost}`, updatedAt: new Date() })
+        .where(and(eq(playerCurrencies.userId, userId), sql`gold >= ${cost}`))
+        .returning({ gold: playerCurrencies.gold });
+
+      if (deducted.length === 0) {
+        const cur = await db.select().from(playerCurrencies).where(eq(playerCurrencies.userId, userId)).limit(1);
+        return res.status(400).json({ message: "Not enough gold", required: cost, current: cur[0]?.gold ?? 0 });
+      }
+
+      const allCards = await storage.getCards();
+      const cardsByRarity: Record<CardRarity, typeof allCards> = {
+        Common: allCards.filter(c => getCardRarity(c.power) === "Common"),
+        Rare: allCards.filter(c => getCardRarity(c.power) === "Rare"),
+        Epic: allCards.filter(c => getCardRarity(c.power) === "Epic"),
+        Legendary: allCards.filter(c => getCardRarity(c.power) === "Legendary"),
+      };
+
+      const weights = ECONOMY_CONSTANTS.PACK_RARITY_WEIGHTS;
+      const totalWeight = Object.values(weights).reduce((a, b) => a + b, 0);
+      const pulledCards: { cardId: string; rarity: CardRarity; isNew: boolean }[] = [];
+
+      const existingCollection = await db.select().from(playerCollection).where(eq(playerCollection.userId, userId));
+      const ownedMap = new Map(existingCollection.map(e => [e.cardId, e.quantity]));
+
+      for (let i = 0; i < ECONOMY_CONSTANTS.PACK_CARDS; i++) {
+        let roll = Math.random() * totalWeight;
+        let selectedRarity: CardRarity = "Common";
+        for (const [rarity, weight] of Object.entries(weights) as [CardRarity, number][]) {
+          roll -= weight;
+          if (roll <= 0) {
+            selectedRarity = rarity;
+            break;
+          }
+        }
+
+        const pool = cardsByRarity[selectedRarity];
+        if (pool.length === 0) continue;
+        const card = pool[Math.floor(Math.random() * pool.length)];
+        const isNew = !ownedMap.has(card.id);
+
+        const currentQty = ownedMap.get(card.id) || 0;
+        ownedMap.set(card.id, currentQty + 1);
+
+        await db.insert(playerCollection)
+          .values({ userId, cardId: card.id, quantity: 1 })
+          .onConflictDoUpdate({
+            target: [playerCollection.userId, playerCollection.cardId],
+            set: { quantity: sql`${playerCollection.quantity} + 1` },
+          });
+
+        pulledCards.push({ cardId: card.id, rarity: selectedRarity, isNew });
+      }
+
+      const updated = await db.select().from(playerCurrencies).where(eq(playerCurrencies.userId, userId)).limit(1);
+      res.json({
+        cards: pulledCards,
+        costGold: cost,
+        remainingGold: updated[0]?.gold ?? 0,
+      });
+    } catch (error) {
+      console.error("[economy] Error opening pack:", error);
+      res.status(500).json({ message: "Failed to open pack" });
+    }
+  });
+
+  app.post("/api/cards/craft", isAuthenticated, requireEconomy, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+      const parsed = z.object({ cardId: z.string() }).safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ message: "cardId is required" });
+
+      const card = await storage.getCard(parsed.data.cardId);
+      if (!card) return res.status(404).json({ message: "Card not found" });
+
+      const rarity = getCardRarity(card.power);
+      const cost = ECONOMY_CONSTANTS.CRAFT_COST[rarity];
+
+      await ensureCurrencies(userId);
+      const deducted = await db.update(playerCurrencies)
+        .set({ dust: sql`dust - ${cost}`, updatedAt: new Date() })
+        .where(and(eq(playerCurrencies.userId, userId), sql`dust >= ${cost}`))
+        .returning({ dust: playerCurrencies.dust });
+
+      if (deducted.length === 0) {
+        const cur = await db.select().from(playerCurrencies).where(eq(playerCurrencies.userId, userId)).limit(1);
+        return res.status(400).json({ message: "Not enough dust", required: cost, current: cur[0]?.dust ?? 0 });
+      }
+
+      await db.insert(playerCollection)
+        .values({ userId, cardId: card.id, quantity: 1 })
+        .onConflictDoUpdate({
+          target: [playerCollection.userId, playerCollection.cardId],
+          set: { quantity: sql`${playerCollection.quantity} + 1` },
+        });
+
+      const updated = await db.select().from(playerCurrencies).where(eq(playerCurrencies.userId, userId)).limit(1);
+      res.json({
+        cardId: card.id,
+        rarity,
+        dustCost: cost,
+        remainingDust: updated[0]?.dust ?? 0,
+      });
+    } catch (error) {
+      console.error("[economy] Error crafting card:", error);
+      res.status(500).json({ message: "Failed to craft card" });
+    }
+  });
+
+  app.post("/api/cards/disenchant", isAuthenticated, requireEconomy, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+      const parsed = z.object({ cardId: z.string(), quantity: z.number().int().min(1).default(1) }).safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ message: "cardId and optional quantity required", errors: parsed.error.flatten() });
+
+      const card = await storage.getCard(parsed.data.cardId);
+      if (!card) return res.status(404).json({ message: "Card not found" });
+
+      const rarity = getCardRarity(card.power);
+      const dustGained = ECONOMY_CONSTANTS.DISENCHANT_VALUE[rarity] * parsed.data.quantity;
+
+      const deducted = await db.update(playerCollection)
+        .set({ quantity: sql`${playerCollection.quantity} - ${parsed.data.quantity}` })
+        .where(and(
+          eq(playerCollection.userId, userId),
+          eq(playerCollection.cardId, card.id),
+          sql`${playerCollection.quantity} >= ${parsed.data.quantity}`
+        ))
+        .returning({ quantity: playerCollection.quantity });
+
+      if (deducted.length === 0) {
+        const owned = await db.select().from(playerCollection)
+          .where(and(eq(playerCollection.userId, userId), eq(playerCollection.cardId, card.id)))
+          .limit(1);
+        return res.status(400).json({ message: "Not enough copies", owned: owned[0]?.quantity ?? 0, requested: parsed.data.quantity });
+      }
+
+      if (deducted[0].quantity <= 0) {
+        await db.delete(playerCollection)
+          .where(and(eq(playerCollection.userId, userId), eq(playerCollection.cardId, card.id)));
+      }
+
+      await ensureCurrencies(userId);
+      await db.update(playerCurrencies)
+        .set({ dust: sql`dust + ${dustGained}`, updatedAt: new Date() })
+        .where(eq(playerCurrencies.userId, userId));
+
+      const updatedCur = await db.select().from(playerCurrencies).where(eq(playerCurrencies.userId, userId)).limit(1);
+      res.json({
+        cardId: card.id,
+        quantity: parsed.data.quantity,
+        rarity,
+        dustGained,
+        remainingDust: updatedCur[0]?.dust ?? 0,
+      });
+    } catch (error) {
+      console.error("[economy] Error disenchanting:", error);
+      res.status(500).json({ message: "Failed to disenchant" });
+    }
+  });
+
+  app.post("/api/collection/starter", isAuthenticated, requireEconomy, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+      await ensureCurrencies(userId);
+      await grantStarterCollection(userId);
+      const entries = await db.select().from(playerCollection).where(eq(playerCollection.userId, userId));
+      const balances = await db.select().from(playerCurrencies).where(eq(playerCurrencies.userId, userId)).limit(1);
+      res.json({
+        collection: entries.map(e => ({ cardId: e.cardId, quantity: e.quantity })),
+        currencies: balances[0] ? { gold: balances[0].gold, gems: balances[0].gems, dust: balances[0].dust } : null,
+      });
+    } catch (error) {
+      console.error("[economy] Error granting starter collection:", error);
+      res.status(500).json({ message: "Failed to grant starter collection" });
     }
   });
 

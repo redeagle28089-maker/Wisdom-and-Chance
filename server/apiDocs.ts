@@ -2,7 +2,7 @@ import type { Express } from "express";
 
 const API_DOCS = {
   title: "Wisdom & Chance TCG - Mobile API Reference",
-  version: "2.2.0",
+  version: "2.3.0",
   baseUrl: "https://wisdom-and-chance.replit.app",
   apiPrefix: "/api",
   authentication: {
@@ -775,6 +775,130 @@ const API_DOCS = {
           maintenance: { value: { active: true, message: "Server maintenance in progress" } },
           current_season: { value: { id: "season-1", name: "Season 1: Dawn", start: "2026-04-01", end: "2026-04-30" } },
           min_client_version: { value: { version: "1.2.0" } },
+        },
+      },
+    },
+  },
+  economy: {
+    overview: "Card economy system with currencies (gold, gems, dust), card collection, pack opening, crafting, and disenchanting. Gated by the 'economy_enabled' feature flag.",
+    raritySystem: {
+      description: "Card rarity is derived from power level. Rarity determines pack pull rates, craft costs, and disenchant values.",
+      mapping: {
+        "Common (power 1-3)": { craftCost: 40, disenchantValue: 5, packWeight: "60%" },
+        "Rare (power 4-6)": { craftCost: 100, disenchantValue: 20, packWeight: "25%" },
+        "Epic (power 7-8)": { craftCost: 400, disenchantValue: 100, packWeight: "10%" },
+        "Legendary (power 9-10)": { craftCost: 1600, disenchantValue: 400, packWeight: "5%" },
+      },
+    },
+    starterRewards: {
+      gold: 500,
+      gems: 0,
+      dust: 0,
+      starterCollection: "2 copies of every power 1-5 (Common + Rare) card across all elements",
+    },
+    goldRewards: {
+      matchWin: 30,
+      matchLoss: 10,
+      matchDraw: 15,
+      forfeitWin: 15,
+      dailyChallenge: 25,
+      achievement: 50,
+    },
+    packInfo: {
+      costGold: 100,
+      cardsPerPack: 5,
+      rarityWeights: { Common: 60, Rare: 25, Epic: 10, Legendary: 5 },
+    },
+    endpoints: {
+      getCurrencies: {
+        method: "GET",
+        path: "/api/currencies",
+        requiresAuth: true,
+        description: "Get player's currency balances. Auto-creates starter balances on first call.",
+        response: {
+          gold: { type: "number", description: "Gold balance (earn from matches)" },
+          gems: { type: "number", description: "Gem balance (premium currency)" },
+          dust: { type: "number", description: "Dust balance (from disenchanting, used for crafting)" },
+        },
+      },
+      getCollection: {
+        method: "GET",
+        path: "/api/collection",
+        requiresAuth: true,
+        description: "Get all cards the player owns with quantities.",
+        response: {
+          type: "array",
+          items: {
+            cardId: { type: "string", description: "Card ID" },
+            quantity: { type: "number", description: "Number of copies owned" },
+          },
+        },
+      },
+      openPack: {
+        method: "POST",
+        path: "/api/packs/open",
+        requiresAuth: true,
+        description: "Purchase and open a card pack using gold. Returns 5 cards with rarity-weighted random selection.",
+        body: {
+          packType: { type: "string", required: false, default: "standard", description: "Pack type (currently only 'standard')" },
+        },
+        response: {
+          cards: { type: "array", description: "Array of { cardId, rarity, isNew }" },
+          costGold: { type: "number" },
+          remainingGold: { type: "number" },
+        },
+        errors: {
+          400: "Not enough gold",
+        },
+      },
+      craftCard: {
+        method: "POST",
+        path: "/api/cards/craft",
+        requiresAuth: true,
+        description: "Craft a specific card using dust. Cost depends on card rarity.",
+        body: {
+          cardId: { type: "string", required: true, description: "ID of the card to craft" },
+        },
+        response: {
+          cardId: { type: "string" },
+          rarity: { type: "string" },
+          dustCost: { type: "number" },
+          remainingDust: { type: "number" },
+        },
+        errors: {
+          400: "Not enough dust",
+          404: "Card not found",
+        },
+      },
+      disenchantCard: {
+        method: "POST",
+        path: "/api/cards/disenchant",
+        requiresAuth: true,
+        description: "Disenchant owned card copies for dust. Dust gained depends on card rarity.",
+        body: {
+          cardId: { type: "string", required: true, description: "ID of the card to disenchant" },
+          quantity: { type: "number", required: false, default: 1, description: "Number of copies to disenchant" },
+        },
+        response: {
+          cardId: { type: "string" },
+          quantity: { type: "number" },
+          rarity: { type: "string" },
+          dustGained: { type: "number" },
+          remainingDust: { type: "number" },
+        },
+        errors: {
+          400: "Not enough copies / invalid quantity",
+          404: "Card not found",
+        },
+      },
+      claimStarter: {
+        method: "POST",
+        path: "/api/collection/starter",
+        requiresAuth: true,
+        description: "Claim starter collection and currencies. Idempotent — safe to call multiple times.",
+        response: {
+          collection: { type: "array", description: "Full collection after claiming" },
+          currencies: { type: "object", description: "Currency balances after claiming" },
         },
       },
     },

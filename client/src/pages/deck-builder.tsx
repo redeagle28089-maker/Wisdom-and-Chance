@@ -13,9 +13,15 @@ import { elementConfig, CommanderWithPopup, CardWithPopup, DeckBuilderCard } fro
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Card as CardType, Commander, Element, UserDeck } from "@shared/schema";
-import { GAME_CONSTANTS } from "@shared/schema";
+import { GAME_CONSTANTS, getCardRarity } from "@shared/schema";
+import { useFeatureFlag } from "@/lib/config";
 
 type Playstyle = "aggressive" | "defensive" | "balanced";
+
+interface CollectionEntry {
+  cardId: string;
+  quantity: number;
+}
 
 interface DeckSuggestion {
   deckName: string;
@@ -50,6 +56,18 @@ export default function DeckBuilderPage() {
   });
 
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const economyEnabled = useFeatureFlag("economy_enabled");
+
+  const { data: collection = [] } = useQuery<CollectionEntry[]>({
+    queryKey: ["/api/collection"],
+    enabled: isAuthenticated && economyEnabled,
+  });
+
+  const ownedMap = useMemo(() => {
+    const map = new Map<string, number>();
+    collection.forEach(e => map.set(e.cardId, e.quantity));
+    return map;
+  }, [collection]);
 
   const { data: savedDecks = [], isLoading: decksLoading } = useQuery<UserDeck[]>({
     queryKey: ["/api/user-decks"],
@@ -130,14 +148,23 @@ export default function DeckBuilderPage() {
         seen.set(key, card);
       }
     });
-    return Array.from(seen.values())
+    let result = Array.from(seen.values())
       .filter((card) => selectedElement === "all" || card.element === selectedElement)
       .sort((a, b) => {
         if (a.element !== b.element) return a.element.localeCompare(b.element);
         if (a.power !== b.power) return a.power - b.power;
         return a.name.localeCompare(b.name);
       });
-  }, [cards, selectedElement]);
+
+    if (economyEnabled && isAuthenticated) {
+      result = result.map(card => ({
+        ...card,
+        _owned: ownedMap.get(card.id) ?? 0,
+      }));
+    }
+
+    return result;
+  }, [cards, selectedElement, economyEnabled, isAuthenticated, ownedMap]);
 
   const totalCards = Array.from(deckCards.values()).reduce((sum, count) => sum + count, 0);
   const powerCounts = useMemo(() => {
@@ -435,20 +462,35 @@ export default function DeckBuilderPage() {
                     {uniqueCards.map((card) => {
                       const count = deckCards.get(card.id) || 0;
                       const powerCount = powerCounts[card.power];
-                      const canAdd = count < GAME_CONSTANTS.MAX_COPIES_PER_CARD && 
+                      const owned = (card as any)._owned as number | undefined;
+                      const maxByOwnership = economyEnabled && isAuthenticated && owned !== undefined
+                        ? Math.min(GAME_CONSTANTS.MAX_COPIES_PER_CARD, owned)
+                        : GAME_CONSTANTS.MAX_COPIES_PER_CARD;
+                      const canAdd = count < maxByOwnership && 
                         powerCount < GAME_CONSTANTS.CARDS_PER_POWER_RANK &&
                         totalCards < GAME_CONSTANTS.DECK_SIZE;
 
                       return (
-                        <DeckBuilderCard
-                          key={card.id}
-                          card={card}
-                          count={count}
-                          maxCopies={GAME_CONSTANTS.MAX_COPIES_PER_CARD}
-                          canAdd={canAdd}
-                          onAdd={() => addCard(card.id)}
-                          onRemove={() => removeCard(card.id)}
-                        />
+                        <div key={card.id} className="relative">
+                          <DeckBuilderCard
+                            card={card}
+                            count={count}
+                            maxCopies={maxByOwnership}
+                            canAdd={canAdd}
+                            onAdd={() => addCard(card.id)}
+                            onRemove={() => removeCard(card.id)}
+                          />
+                          {economyEnabled && isAuthenticated && owned !== undefined && (
+                            <Badge
+                              data-testid={`badge-owned-${card.id}`}
+                              className={`absolute top-1 right-1 text-[10px] px-1 py-0 ${
+                                owned === 0 ? "bg-red-600/80" : "bg-emerald-600/80"
+                              }`}
+                            >
+                              {owned === 0 ? "Not Owned" : `x${owned}`}
+                            </Badge>
+                          )}
+                        </div>
                       );
                     })}
                   </div>

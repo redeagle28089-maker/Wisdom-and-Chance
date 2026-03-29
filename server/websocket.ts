@@ -11,6 +11,7 @@ import cookieSignature from "cookie-signature";
 import { filterObscenity } from "./obscenity-filter";
 import jwt from "jsonwebtoken";
 import { gameEngine } from "./gameEngine";
+import { handleGameEndRewards } from "./economyService";
 
 interface ConnectedUser {
   id: string;
@@ -353,6 +354,7 @@ class GameWebSocketServer {
                 type: "game_over",
                 payload: { gameId, winnerId, reason: "opponent_forfeit" },
               });
+              handleGameEndRewards(winnerId, activeGame.game.player1Id, activeGame.game.player2Id, "forfeit");
               this.sendGameStateToPlayers(gameId);
             });
             this.broadcastToGame(gameId, {
@@ -556,6 +558,7 @@ class GameWebSocketServer {
           type: "game_over",
           payload: { gameId, winnerId: result.combatResult.winnerId, reason: "hp_zero" },
         });
+        handleGameEndRewards(result.combatResult.winnerId, currentGame.game.player1Id, currentGame.game.player2Id, "hp_zero");
       }
     }
 
@@ -564,6 +567,7 @@ class GameWebSocketServer {
         type: "game_over",
         payload: { gameId, winnerId: result.winnerId, reason: result.reason },
       });
+      handleGameEndRewards(result.winnerId, currentGame.game.player1Id, currentGame.game.player2Id, result.reason);
     }
 
     if (result.type === "state_update" && result.broadcast) {

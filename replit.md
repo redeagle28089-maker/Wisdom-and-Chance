@@ -44,6 +44,17 @@ Key features include:
 - **Image Download Endpoints:** GET /api/cards/:id/image and GET /api/commanders/:id/image return binary image files for any authenticated user. GET /api/admin/card-images/:id/download returns a downloadable image file (admin only). GET /api/admin/card-images/bulk/download-manifest returns a JSON manifest of all images with download URLs (admin only).
 - **Key Files:** server/unifiedAuth.ts (JWT middleware), server/mobileAuth.ts (mobile auth endpoints), server/apiDocs.ts (API documentation).
 
+### Economy & Collection System (v2.3.0)
+- **Currencies:** Gold (earned from matches), Gems (premium, reserved), Dust (from disenchanting, used for crafting).
+- **Rarity System:** Derived from card power — Common (1-3), Rare (4-6), Epic (7-8), Legendary (9-10). Affects craft costs, disenchant values, and pack pull rates.
+- **Starter Rewards:** 500 gold + 2 copies of every Common card (power 1-3).
+- **Pack Opening:** 100 gold per pack, 5 cards each with rarity-weighted pulls (60/25/10/5%).
+- **Crafting/Disenchanting:** Craft any card with dust (40/100/400/1600 by rarity). Disenchant owned copies for dust (5/20/100/400 by rarity).
+- **Match Rewards:** Win=30 gold, Loss=10, Draw=15, Forfeit win=15. Auto-granted after multiplayer matches.
+- **Feature Flag:** Gated by `economy_enabled` feature flag. Deck builder shows ownership badges and limits when enabled.
+- **Endpoints:** GET /api/currencies, GET /api/collection, POST /api/packs/open, POST /api/cards/craft, POST /api/cards/disenchant, POST /api/collection/starter.
+- **Key Files:** shared/models/economy.ts (DB schema + constants), server/economyService.ts (shared helpers), server/routes.ts (endpoints), server/websocket.ts (reward hooks).
+
 ### Database Backup
 - **Admin Export Endpoint:** GET /api/admin/database-export — Admin-only endpoint that exports all database tables as JSON. Add `?save=true` to also save a backup file to `backups/` directory. Image data is included in file backups.
 - **SQL Backups:** Full SQL dumps can be created via `pg_dump` and are stored in the `backups/` directory. These include all data including card images.
