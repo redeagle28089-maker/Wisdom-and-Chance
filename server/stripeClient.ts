@@ -1,6 +1,15 @@
 import Stripe from 'stripe';
 
-let connectionSettings: any;
+interface ConnectorSettings {
+  publishable: string;
+  secret: string;
+}
+
+interface ConnectorConnection {
+  settings: ConnectorSettings;
+}
+
+let connectionSettings: ConnectorConnection | undefined;
 
 async function getCredentials() {
   const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
@@ -47,9 +56,7 @@ async function getCredentials() {
 export async function getUncachableStripeClient() {
   const { secretKey } = await getCredentials();
 
-  return new Stripe(secretKey, {
-    apiVersion: '2025-08-27.basil' as any,
-  });
+  return new Stripe(secretKey);
 }
 
 export async function getStripePublishableKey() {

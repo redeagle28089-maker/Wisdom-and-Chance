@@ -4,13 +4,42 @@ import { isAuthenticated } from "./replit_integrations/auth";
 import { getActiveProducts, getProduct, purchaseWithCurrency, fulfillPurchase, getPurchaseHistory, seedPurchaseProducts, hasAlreadyPurchased } from "./paymentService";
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
 
+interface AuthenticatedRequest extends Request {
+  user?: { claims: { sub: string } };
+}
+
+interface PayPalTokenResponse {
+  access_token: string;
+}
+
+interface PayPalOrderLink {
+  rel: string;
+  href: string;
+}
+
+interface PayPalOrderResponse {
+  id: string;
+  links?: PayPalOrderLink[];
+}
+
+interface PayPalCaptureResponse {
+  status: string;
+  purchase_units?: Array<{
+    custom_id?: string;
+    payments?: {
+      captures?: Array<{
+        custom_id?: string;
+        amount?: { value: string };
+      }>;
+    };
+  }>;
+}
+
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 
 function paymentRateLimit(maxRequests: number, windowMs: number) {
-  return (req: Request, res: Response, next: NextFunction) => {
-    const userId = (req as Record<string, unknown>).user
-      ? ((req as Record<string, unknown>).user as Record<string, Record<string, string>>)?.claims?.sub
-      : req.ip;
+  return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    const userId = req.user?.claims?.sub ?? req.ip;
     const key = `${userId}:${req.path}`;
     const now = Date.now();
     const entry = rateLimitMap.get(key);
@@ -118,7 +147,7 @@ export async function registerPaymentRoutes(app: Express) {
         body: "grant_type=client_credentials",
       });
       if (!authResponse.ok) return res.status(500).json({ message: "PayPal auth failed" });
-      const authData = await authResponse.json() as any;
+      const authData: PayPalTokenResponse = await authResponse.json();
       if (!authData.access_token) return res.status(500).json({ message: "PayPal auth failed" });
 
       const orderResponse = await fetch(`${baseUrl}/v2/checkout/orders`, {
@@ -143,10 +172,10 @@ export async function registerPaymentRoutes(app: Express) {
         }),
       });
       if (!orderResponse.ok) return res.status(500).json({ message: "Failed to create PayPal order" });
-      const orderData = await orderResponse.json() as any;
+      const orderData: PayPalOrderResponse = await orderResponse.json();
       if (!orderData.id) return res.status(500).json({ message: "Failed to create PayPal order" });
 
-      const approveLink = orderData.links?.find((l: { rel: string; href: string }) => l.rel === "approve");
+      const approveLink = orderData.links?.find((l) => l.rel === "approve");
       res.json({ orderId: orderData.id, approveUrl: approveLink?.href || null });
     } catch (error) {
       console.error("[payments] PayPal create order error:", error);
@@ -180,7 +209,7 @@ export async function registerPaymentRoutes(app: Express) {
         body: "grant_type=client_credentials",
       });
       if (!authResponse.ok) return res.status(500).json({ message: "PayPal auth failed" });
-      const authData = await authResponse.json() as any;
+      const authData: PayPalTokenResponse = await authResponse.json();
 
       const captureResponse = await fetch(`${baseUrl}/v2/checkout/orders/${orderId}/capture`, {
         method: "POST",
@@ -190,7 +219,7 @@ export async function registerPaymentRoutes(app: Express) {
         },
       });
       if (!captureResponse.ok) return res.status(500).json({ message: "PayPal capture failed" });
-      const captureData = await captureResponse.json() as any;
+      const captureData: PayPalCaptureResponse = await captureResponse.json();
 
       if (captureData.status !== "COMPLETED") {
         return res.status(400).json({ message: "Payment not completed", status: captureData.status });
