@@ -473,6 +473,17 @@ export default function ShopPage() {
     queryKey: ["/api/payments/config"],
   });
 
+  const oneTimeProductIds = premiumProducts.filter(p => p.isOneTimePurchase).map(p => p.id);
+  const { data: purchasedMap = {} } = useQuery<Record<string, boolean>>({
+    queryKey: ["/api/payments/check-purchased", oneTimeProductIds],
+    queryFn: async () => {
+      if (oneTimeProductIds.length === 0) return {};
+      const res = await apiRequest("POST", "/api/payments/check-purchased", { productIds: oneTimeProductIds });
+      return res.json();
+    },
+    enabled: isAuthenticated && oneTimeProductIds.length > 0,
+  });
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const payment = params.get("payment");
@@ -837,6 +848,7 @@ export default function ShopPage() {
                 {otherProducts.map((product) => {
                   const colorClass = PRODUCT_TYPE_COLORS[product.productType] || PRODUCT_TYPE_COLORS.bundle;
                   const Icon = PRODUCT_TYPE_ICONS[product.productType] || Gift;
+                  const alreadyPurchased = product.isOneTimePurchase && !!purchasedMap[product.id];
 
                   const contents: string[] = [];
                   if (product.gemsAmount > 0) contents.push(`${product.gemsAmount.toLocaleString()} Gems`);
@@ -861,7 +873,9 @@ export default function ShopPage() {
                       )}
                       {product.isOneTimePurchase && (
                         <div className="absolute top-2 left-2">
-                          <Badge className="bg-red-600 text-white border-0 text-xs">One-Time Only</Badge>
+                          <Badge className={alreadyPurchased ? "bg-emerald-600 text-white border-0 text-xs" : "bg-red-600 text-white border-0 text-xs"}>
+                            {alreadyPurchased ? "Purchased" : "One-Time Only"}
+                          </Badge>
                         </div>
                       )}
                       <CardHeader className="pb-2">
@@ -903,12 +917,22 @@ export default function ShopPage() {
                         </div>
 
                         <Button
-                          className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold"
-                          onClick={() => setPremiumConfirm({ product, paymentMethod: "stripe" })}
+                          className={alreadyPurchased ? "w-full bg-slate-700 text-slate-400 cursor-not-allowed" : "w-full bg-green-600 hover:bg-green-700 text-white font-semibold"}
+                          disabled={alreadyPurchased}
+                          onClick={() => !alreadyPurchased && setPremiumConfirm({ product, paymentMethod: "stripe" })}
                           data-testid={`button-buy-premium-${product.id}`}
                         >
-                          <ShoppingBag className="w-4 h-4 mr-1" />
-                          Purchase
+                          {alreadyPurchased ? (
+                            <>
+                              <ShieldCheck className="w-4 h-4 mr-1" />
+                              Already Owned
+                            </>
+                          ) : (
+                            <>
+                              <ShoppingBag className="w-4 h-4 mr-1" />
+                              Purchase
+                            </>
+                          )}
                         </Button>
                       </CardContent>
                     </Card>

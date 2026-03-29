@@ -103,12 +103,108 @@ export async function registerPaymentRoutes(app: Express) {
     }
   });
 
+  app.post("/api/payments/purchase", isAuthenticated, paymentRateLimit(10, 60000), async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+      const schema = z.object({
+        productId: z.string().min(1),
+        paymentMethod: z.enum(["gold", "gems", "stripe", "paypal"]),
+      });
+      const parsed = schema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ message: "Invalid request", errors: parsed.error.errors });
+
+      const { productId, paymentMethod } = parsed.data;
+      const product = await getProduct(productId);
+      if (!product) return res.status(400).json({ message: "Product not found" });
+
+      if (product.isOneTimePurchase) {
+        const already = await hasAlreadyPurchased(userId, productId);
+        if (already) return res.status(400).json({ message: "This one-time purchase has already been claimed" });
+      }
+
+      if (paymentMethod === "gold" || paymentMethod === "gems") {
+        const result = await purchaseWithCurrency(userId, productId, paymentMethod);
+        if (!result.success) {
+          return res.status(400).json({ message: result.error, currencies: result.currencies });
+        }
+        return res.json({ message: "Purchase successful", transaction: result.transaction, cards: result.cards, currencies: result.currencies });
+      }
+
+      if (paymentMethod === "stripe") {
+        let stripe;
+        try { stripe = await getUncachableStripeClient(); } catch { return res.status(503).json({ message: "Stripe is not configured yet" }); }
+
+        const protocol = req.headers["x-forwarded-proto"] || "https";
+        const host = req.headers.host;
+        const baseUrl = `${protocol}://${host}`;
+
+        const session = await stripe.checkout.sessions.create({
+          payment_method_types: ["card"],
+          line_items: [{ price_data: { currency: "usd", product_data: { name: product.name, description: product.description }, unit_amount: product.priceUsd * 100 }, quantity: 1 }],
+          mode: "payment",
+          success_url: `${baseUrl}/shop?payment=success&session_id={CHECKOUT_SESSION_ID}&product_id=${productId}`,
+          cancel_url: `${baseUrl}/shop?payment=cancelled`,
+          metadata: { userId, productId },
+          payment_intent_data: { metadata: { userId, productId } },
+        });
+        return res.json({ action: "redirect", url: session.url, sessionId: session.id });
+      }
+
+      if (paymentMethod === "paypal") {
+        const clientId = process.env.PAYPAL_CLIENT_ID;
+        const clientSecret = process.env.PAYPAL_CLIENT_SECRET;
+        if (!clientId || !clientSecret) return res.status(503).json({ message: "PayPal is not configured yet" });
+
+        const baseUrl = process.env.PAYPAL_API_URL || "https://api-m.sandbox.paypal.com";
+        const authResponse = await fetch(`${baseUrl}/v1/oauth2/token`, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded", Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}` },
+          body: "grant_type=client_credentials",
+        });
+        if (!authResponse.ok) return res.status(500).json({ message: "PayPal auth failed" });
+        const authData: PayPalTokenResponse = await authResponse.json();
+        if (!authData.access_token) return res.status(500).json({ message: "PayPal auth failed" });
+
+        const orderResponse = await fetch(`${baseUrl}/v2/checkout/orders`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${authData.access_token}` },
+          body: JSON.stringify({
+            intent: "CAPTURE",
+            purchase_units: [{ amount: { currency_code: "USD", value: product.priceUsd.toString() }, description: product.name, custom_id: `${userId}|${productId}`, payee: { email_address: "reagle2808@aol.com" } }],
+          }),
+        });
+        if (!orderResponse.ok) return res.status(500).json({ message: "Failed to create PayPal order" });
+        const orderData: PayPalOrderResponse = await orderResponse.json();
+        const approveLink = orderData.links?.find((l) => l.rel === "approve");
+        return res.json({ action: "paypal_approve", orderId: orderData.id, approveUrl: approveLink?.href || null });
+      }
+
+      return res.status(400).json({ message: "Invalid payment method" });
+    } catch (error) {
+      console.error("[payments] Unified purchase error:", error);
+      res.status(500).json({ message: "Failed to process purchase" });
+    }
+  });
+
   app.post("/api/payments/check-purchased", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) return res.status(401).json({ message: "Unauthorized" });
-      const { productId } = req.body || {};
-      if (!productId) return res.status(400).json({ message: "productId required" });
+      const { productId, productIds } = req.body || {};
+
+      if (productIds && Array.isArray(productIds)) {
+        const results: Record<string, boolean> = {};
+        for (const pid of productIds) {
+          if (typeof pid === "string") {
+            results[pid] = await hasAlreadyPurchased(userId, pid);
+          }
+        }
+        return res.json(results);
+      }
+
+      if (!productId) return res.status(400).json({ message: "productId or productIds required" });
       const purchased = await hasAlreadyPurchased(userId, productId);
       res.json({ purchased });
     } catch (error) {
