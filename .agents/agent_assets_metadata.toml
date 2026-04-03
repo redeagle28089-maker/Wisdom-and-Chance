@@ -60,3 +60,9 @@ id = "MMs9fG_ef5DmF9dmBDvUc"
 uri = "file://attached_assets/Wisdom_Chance_TCG_Complete_Mobile_Guide_v2.5.pdf"
 type = "pdf"
 title = "Wisdom & Chance TCG - Complete Mobile Agent Sync Guide v2.5.0"
+
+[[outputs]]
+id = "RnyNa87xhmyfn4bXk-JZv"
+uri = "file://attached_assets/Wisdom_Chance_TCG_Business_Plan.pdf"
+type = "pdf"
+title = "Wisdom & Chance TCG — Business Plan & Crowdfunding Strategy"
