@@ -82,6 +82,8 @@ interface PaymentConfig {
   stripePublishableKey: string | null;
   paypalEnabled: boolean;
   stripeEnabled: boolean;
+  betaMode?: boolean;
+  betaMessage?: string | null;
 }
 
 interface PremiumConfirmPurchase {
@@ -341,32 +343,43 @@ function PremiumPurchaseDialog({
 
         <p className="text-sm text-slate-400 mb-3">Choose payment method:</p>
 
-        <div className="space-y-2">
-          <Button
-            onClick={() => onConfirm("stripe")}
-            disabled={isPending || !paymentConfig?.stripeEnabled}
-            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold justify-between"
-            data-testid="button-pay-stripe"
-          >
-            <div className="flex items-center gap-2">
-              <CreditCard className="w-4 h-4" />
-              <span>Card / Google Pay</span>
-            </div>
-            <span>${product.priceUsd}</span>
-          </Button>
+        {paymentConfig?.betaMode && (
+          <div className="bg-amber-900/30 border border-amber-500/40 rounded-lg p-3 mb-3 flex items-start gap-2" data-testid="beta-payment-banner">
+            <AlertTriangle className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
+            <p className="text-sm text-amber-200">{paymentConfig.betaMessage}</p>
+          </div>
+        )}
 
-          <Button
-            onClick={() => onConfirm("paypal")}
-            disabled={isPending || !paymentConfig?.paypalEnabled}
-            className="w-full bg-[#0070ba] hover:bg-[#005ea6] text-white font-semibold justify-between"
-            data-testid="button-pay-paypal"
-          >
-            <div className="flex items-center gap-2">
-              <DollarSign className="w-4 h-4" />
-              <span>PayPal</span>
-            </div>
-            <span>${product.priceUsd}</span>
-          </Button>
+        <div className="space-y-2">
+          {!paymentConfig?.betaMode && (
+            <>
+              <Button
+                onClick={() => onConfirm("stripe")}
+                disabled={isPending || !paymentConfig?.stripeEnabled}
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold justify-between"
+                data-testid="button-pay-stripe"
+              >
+                <div className="flex items-center gap-2">
+                  <CreditCard className="w-4 h-4" />
+                  <span>Card / Google Pay</span>
+                </div>
+                <span>${product.priceUsd}</span>
+              </Button>
+
+              <Button
+                onClick={() => onConfirm("paypal")}
+                disabled={isPending || !paymentConfig?.paypalEnabled}
+                className="w-full bg-[#0070ba] hover:bg-[#005ea6] text-white font-semibold justify-between"
+                data-testid="button-pay-paypal"
+              >
+                <div className="flex items-center gap-2">
+                  <DollarSign className="w-4 h-4" />
+                  <span>PayPal</span>
+                </div>
+                <span>${product.priceUsd}</span>
+              </Button>
+            </>
+          )}
 
           {product.isCurrencyPurchasable && product.priceGold > 0 && (
             <Button
@@ -409,7 +422,7 @@ function PremiumPurchaseDialog({
           )}
         </div>
 
-        {!paymentConfig?.stripeEnabled && !paymentConfig?.paypalEnabled && (
+        {!paymentConfig?.betaMode && !paymentConfig?.stripeEnabled && !paymentConfig?.paypalEnabled && (
           <p className="text-xs text-slate-500 mt-3 text-center">
             Real-money payments are being set up. Use gold or gems in the meantime.
           </p>
