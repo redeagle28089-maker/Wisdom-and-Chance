@@ -1,7 +1,7 @@
 import { db } from "./db";
 import { eq, and, desc, sql } from "drizzle-orm";
 import type { PgTransaction } from "drizzle-orm/pg-core";
-import { purchaseProducts, purchaseTransactions, playerCurrencies, playerCollection, playerBattlePass, seasons, PACK_TYPES, PURCHASE_PRODUCTS_SEED, type PurchaseProduct, type CardRarity, getCardRarity } from "@shared/schema";
+import { purchaseProducts, purchaseTransactions, playerCurrencies, playerCollection, playerBattlePass, seasons, PACK_TYPES, PURCHASE_PRODUCTS_SEED, type PurchaseProduct, type CardRarity, getCardRarity, ECONOMY_CONSTANTS } from "@shared/schema";
 import { storage } from "./storage";
 import { ensureCurrencies } from "./economyService";
 
@@ -95,13 +95,13 @@ async function fulfillInTransaction(
 
   if (product.gemsAmount > 0) {
     await tx.update(playerCurrencies)
-      .set({ gems: sql`gems + ${product.gemsAmount}`, updatedAt: new Date() })
+      .set({ gems: sql`LEAST(gems + ${product.gemsAmount}, ${ECONOMY_CONSTANTS.MAX_CURRENCY})`, updatedAt: new Date() })
       .where(eq(playerCurrencies.userId, userId));
   }
 
   if (product.dustAmount > 0) {
     await tx.update(playerCurrencies)
-      .set({ dust: sql`dust + ${product.dustAmount}`, updatedAt: new Date() })
+      .set({ dust: sql`LEAST(dust + ${product.dustAmount}, ${ECONOMY_CONSTANTS.MAX_CURRENCY})`, updatedAt: new Date() })
       .where(eq(playerCurrencies.userId, userId));
   }
 

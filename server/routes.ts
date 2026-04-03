@@ -1346,7 +1346,7 @@ IMPORTANT:
 
       await ensureCurrencies(userId);
       await db.update(playerCurrencies)
-        .set({ dust: sql`dust + ${dustGained}`, updatedAt: new Date() })
+        .set({ dust: sql`LEAST(dust + ${dustGained}, ${ECONOMY_CONSTANTS.MAX_CURRENCY})`, updatedAt: new Date() })
         .where(eq(playerCurrencies.userId, userId));
 
       const updatedCur = await db.select().from(playerCurrencies).where(eq(playerCurrencies.userId, userId)).limit(1);
@@ -2592,15 +2592,15 @@ IMPORTANT:
 
         if (bpLevel.rewardType === "gold") {
           await tx.update(playerCurrencies)
-            .set({ gold: sql`gold + ${bpLevel.rewardAmount}`, updatedAt: new Date() })
+            .set({ gold: sql`LEAST(gold + ${bpLevel.rewardAmount}, ${ECONOMY_CONSTANTS.MAX_CURRENCY})`, updatedAt: new Date() })
             .where(eq(playerCurrencies.userId, userId));
         } else if (bpLevel.rewardType === "gems") {
           await tx.update(playerCurrencies)
-            .set({ gems: sql`gems + ${bpLevel.rewardAmount}`, updatedAt: new Date() })
+            .set({ gems: sql`LEAST(gems + ${bpLevel.rewardAmount}, ${ECONOMY_CONSTANTS.MAX_CURRENCY})`, updatedAt: new Date() })
             .where(eq(playerCurrencies.userId, userId));
         } else if (bpLevel.rewardType === "dust") {
           await tx.update(playerCurrencies)
-            .set({ dust: sql`dust + ${bpLevel.rewardAmount}`, updatedAt: new Date() })
+            .set({ dust: sql`LEAST(dust + ${bpLevel.rewardAmount}, ${ECONOMY_CONSTANTS.MAX_CURRENCY})`, updatedAt: new Date() })
             .where(eq(playerCurrencies.userId, userId));
         } else if (bpLevel.rewardType === "pack") {
           const packType = bpLevel.rewardAmount >= 3 ? "premium" : "standard";
@@ -2784,7 +2784,7 @@ IMPORTANT:
 
         if (challenge.goldReward > 0) {
           await tx.update(playerCurrencies)
-            .set({ gold: sql`gold + ${challenge.goldReward}`, updatedAt: new Date() })
+            .set({ gold: sql`LEAST(gold + ${challenge.goldReward}, ${ECONOMY_CONSTANTS.MAX_CURRENCY})`, updatedAt: new Date() })
             .where(eq(playerCurrencies.userId, userId));
         }
 

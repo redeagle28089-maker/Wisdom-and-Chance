@@ -38,6 +38,7 @@ export const RARITY_COLORS: Record<CardRarity, string> = {
 };
 
 export const ECONOMY_CONSTANTS = {
+  MAX_CURRENCY: 999999,
   STARTER_GOLD: 500,
   STARTER_GEMS: 0,
   STARTER_DUST: 0,

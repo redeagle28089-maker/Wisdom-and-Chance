@@ -3,7 +3,7 @@ import { eq, and, sql, ne, lt } from "drizzle-orm";
 import {
   seasons, seasonHistory, playerBattlePass, battlePassLevels,
   weeklyChallenges, playerWeeklyChallenges, playerRatings,
-  playerCurrencies,
+  playerCurrencies, ECONOMY_CONSTANTS,
   RANKED_TIERS, SEASON_REWARDS, BATTLE_PASS_XP,
 } from "@shared/schema";
 import { serverConfig } from "@shared/schema";
@@ -66,7 +66,7 @@ export async function checkAndTransitionSeason() {
         if (rewards.gold > 0) await grantGold(pr.userId, rewards.gold, `season_${activeSeason.seasonNumber}_reward`);
         if (rewards.dust > 0) {
           await db.update(playerCurrencies)
-            .set({ dust: sql`dust + ${rewards.dust}`, updatedAt: new Date() })
+            .set({ dust: sql`LEAST(dust + ${rewards.dust}, ${ECONOMY_CONSTANTS.MAX_CURRENCY})`, updatedAt: new Date() })
             .where(eq(playerCurrencies.userId, pr.userId));
         }
         if (rewards.packs > 0) {

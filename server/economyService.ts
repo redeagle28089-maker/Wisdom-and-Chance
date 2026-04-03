@@ -1,15 +1,38 @@
 import { db } from "./db";
 import { eq, and, sql, lte, gte } from "drizzle-orm";
-import { playerCurrencies, playerCollection, ECONOMY_CONSTANTS, featureFlags, seasons, playerBattlePass, battlePassLevels, BATTLE_PASS_XP, weeklyChallenges, playerWeeklyChallenges } from "@shared/schema";
+import { playerCurrencies, playerCollection, ECONOMY_CONSTANTS, featureFlags, seasons, playerBattlePass, battlePassLevels, BATTLE_PASS_XP, weeklyChallenges, playerWeeklyChallenges, users } from "@shared/schema";
 import { storage } from "./storage";
+
+const ADMIN_EMAIL = "redeagle28089@gmail.com";
+const MAX = ECONOMY_CONSTANTS.MAX_CURRENCY;
 
 async function isEconomyEnabled(): Promise<boolean> {
   const flag = await db.select().from(featureFlags).where(eq(featureFlags.key, "economy_enabled")).limit(1);
   return flag.length > 0 ? flag[0].enabled : false;
 }
 
+async function isAdminUser(userId: string): Promise<boolean> {
+  const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+  return user?.email === ADMIN_EMAIL;
+}
+
 export async function ensureCurrencies(userId: string) {
+  const admin = await isAdminUser(userId);
   const existing = await db.select().from(playerCurrencies).where(eq(playerCurrencies.userId, userId)).limit(1);
+
+  if (admin) {
+    if (existing.length === 0) {
+      await db.insert(playerCurrencies).values({
+        userId, gold: MAX, gems: MAX, dust: MAX, updatedAt: new Date(),
+      });
+    } else if (existing[0].gold < MAX || existing[0].gems < MAX || existing[0].dust < MAX) {
+      await db.update(playerCurrencies)
+        .set({ gold: MAX, gems: MAX, dust: MAX, updatedAt: new Date() })
+        .where(eq(playerCurrencies.userId, userId));
+    }
+    return { gold: MAX, gems: MAX, dust: MAX };
+  }
+
   if (existing.length === 0) {
     await db.insert(playerCurrencies).values({
       userId,
@@ -26,7 +49,7 @@ export async function ensureCurrencies(userId: string) {
 export async function grantGold(userId: string, amount: number, reason: string) {
   await ensureCurrencies(userId);
   await db.update(playerCurrencies)
-    .set({ gold: sql`gold + ${amount}`, updatedAt: new Date() })
+    .set({ gold: sql`LEAST(gold + ${amount}, ${MAX})`, updatedAt: new Date() })
     .where(eq(playerCurrencies.userId, userId));
   console.log(`[economy] Granted ${amount} gold to ${userId}: ${reason}`);
 }
