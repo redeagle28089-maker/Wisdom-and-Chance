@@ -60,7 +60,7 @@ BT
 10.3499999999999996 TL
 0.118 g
 55. 480. Td
-(Version: 2.0) Tj
+(Version: 3.0) Tj
 ET
 BT
 /F1 9 Tf
@@ -236,7 +236,7 @@ endobj
 endobj
 8 0 obj
 <<
-/Length 3443
+/Length 4074
 >>
 stream
 0.5 w
@@ -398,27 +398,55 @@ BT
 10.3499999999999996 TL
 0.118 g
 55. 512. Td
-(We are seeking $50,000-$150,000 in initial funding through a crowdfunding campaign \(Kickstarter/BackerKit\) to fund mobile) Tj
+(The project is backed by Legraphics, a family-owned design studio providing an in-house creative team of two graphic) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
 55. 499. Td
-(app development, server infrastructure scaling, art production, and community building. The digital TCG market is projected to) Tj
+(designers and a video editor. One designer also serves as the game designer and balance lead. All development is built on the) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
 55. 486. Td
-(exceed $25 billion by 2028, and Wisdom & Chance is positioned to capture the growing segment of players who want strategic) Tj
+(Replit platform, and the only planned post-campaign hire is a single AI coding specialist to accelerate mobile and feature) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
 55. 473. Td
+(development.) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+55. 454. Td
+(We are seeking $50,000-$150,000 in initial funding through a crowdfunding campaign \(Kickstarter/BackerKit\) to fund mobile) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+55. 441. Td
+(app development, server infrastructure scaling, art production, and community building. The digital TCG market is projected to) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+55. 428. Td
+(exceed $25 billion by 2028, and Wisdom & Chance is positioned to capture the growing segment of players who want strategic) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+55. 415. Td
 (depth without pay-to-win mechanics.) Tj
 ET
 BT
@@ -447,7 +475,7 @@ endobj
 endobj
 10 0 obj
 <<
-/Length 2710
+/Length 3892
 >>
 stream
 0.5 w
@@ -518,90 +546,153 @@ BT
 10.3499999999999996 TL
 0.118 g
 55. 564. Td
-(To be incorporated as an LLC \(recommended: Delaware LLC for investor flexibility\). Currently operating as an independent) Tj
+(To be incorporated as an LLC \(recommended: Delaware LLC for investor flexibility\). Currently operating under Legraphics, a) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
 55. 551. Td
-(game development project.) Tj
+(family-owned design business.) Tj
 ET
 BT
 /F2 11 Tf
 12.6499999999999986 TL
 0.216 0.255 0.318 rg
 55. 524. Td
+(Legraphics — In-House Creative Studio) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+55. 509. Td
+(Legraphics is the family design business that provides the creative backbone for Wisdom & Chance TCG. The studio brings) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+55. 496. Td
+(professional design, video, and game design capabilities in-house — eliminating the need to outsource creative work and) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+55. 483. Td
+(significantly reducing costs compared to competitors who contract these roles.) Tj
+ET
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0.216 0.255 0.318 rg
+55. 456. Td
 (Key Differentiators) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-67. 509. Td
+67. 441. Td
 (•) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-77. 509. Td
+77. 441. Td
+(In-House Design Team: Legraphics provides card art, UI design, marketing assets, and video content at zero outsourcing) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+77. 428. Td
+(cost.) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+67. 415. Td
+(•) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+77. 415. Td
 (Fair F2P: All gameplay-relevant cards are earnable through play. No pay-to-win card packs.) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-67. 496. Td
+67. 402. Td
 (•) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-77. 496. Td
+77. 402. Td
 (Server-Authoritative: Anti-cheat by design — the server resolves all combat, preventing client manipulation.) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-67. 483. Td
+67. 389. Td
 (•) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-77. 483. Td
+77. 389. Td
 (Cross-Platform: Same account, same progress on web and mobile \(iOS/Android\).) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-67. 470. Td
+67. 376. Td
 (•) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-77. 470. Td
+77. 376. Td
 (AI-Enhanced: Gemini AI powers deck suggestions and card art generation.) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-67. 457. Td
+67. 363. Td
 (•) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-77. 457. Td
+77. 363. Td
+(Lean Operation: AI-assisted development on Replit keeps engineering costs minimal while maintaining quality.) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+67. 350. Td
+(•) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+77. 350. Td
 (Community-First: Open competitive seasons, public leaderboards, friend systems, spectator mode.) Tj
 ET
 BT
@@ -2120,7 +2211,7 @@ endobj
 endobj
 18 0 obj
 <<
-/Length 9778
+/Length 9756
 >>
 stream
 0.3 w
@@ -2694,7 +2785,7 @@ BT
 9.1999999999999993 TL
 0. g
 358. 149. Td
-(Loss aversion: reward is earned but locked) Tj
+(Loss aversion: reward earned but locked) Tj
 ET
 0.82 0.84 0.86 RG
 0.3 w
@@ -2772,7 +2863,7 @@ BT
 9.1999999999999993 TL
 0. g
 358. 107. Td
-(Celebration + "treat yourself" moment) Tj
+(Celebration moment) Tj
 ET
 0.82 0.84 0.86 RG
 0.3 w
@@ -2940,7 +3031,7 @@ endobj
 endobj
 22 0 obj
 <<
-/Length 10120
+/Length 10029
 >>
 stream
 0.3 w
@@ -3652,42 +3743,49 @@ BT
 10.3499999999999996 TL
 0.118 g
 77. 246. Td
-(Referral Rewards: Players who invite friends earn 200 gems per referral — encouraging organic growth that feeds the) Tj
+(Referral Rewards: Players who invite friends earn 200 gems per referral — encouraging organic growth.) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-77. 233. Td
-(sales funnel.) Tj
-ET
-BT
-/F1 9 Tf
-10.3499999999999996 TL
-0.118 g
-67. 220. Td
+67. 233. Td
 (•) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-77. 220. Td
+77. 233. Td
 (Loyalty Tiers \(Future\): Cumulative spending unlocks exclusive cosmetics, creating a reason to keep purchasing.) Tj
 ET
 BT
 /F2 11 Tf
 12.6499999999999986 TL
 0.216 0.255 0.318 rg
-55. 191. Td
+55. 204. Td
 (6.9 Anti-Churn Sales Tactics) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-55. 176. Td
+55. 189. Td
 (Keeping paying players engaged and spending is more cost-effective than acquiring new ones:) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+67. 172. Td
+(•) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+77. 172. Td
+(Win-Back Offers: Players inactive for 7+ days receive a "Welcome Back" bundle at 50% discount.) Tj
 ET
 BT
 /F1 9 Tf
@@ -3701,7 +3799,7 @@ BT
 10.3499999999999996 TL
 0.118 g
 77. 159. Td
-(Win-Back Offers: Players inactive for 7+ days receive a "Welcome Back" bundle at 50% discount.) Tj
+(Streak Protection: "Don't lose your 7-day login streak! Log in today for bonus gems.") Tj
 ET
 BT
 /F1 9 Tf
@@ -3715,7 +3813,7 @@ BT
 10.3499999999999996 TL
 0.118 g
 77. 146. Td
-(Streak Protection: "Don't lose your 7-day login streak! Log in today for bonus gems.") Tj
+(Season FOMO: "Only 5 days left to claim your battle pass rewards — upgrade now!") Tj
 ET
 BT
 /F1 9 Tf
@@ -3729,7 +3827,7 @@ BT
 10.3499999999999996 TL
 0.118 g
 77. 133. Td
-(Season FOMO: "Only 5 days left to claim your battle pass rewards — upgrade now!") Tj
+(New Content Drops: Card expansions and new commanders create reasons to buy more packs.) Tj
 ET
 BT
 /F1 9 Tf
@@ -3743,20 +3841,6 @@ BT
 10.3499999999999996 TL
 0.118 g
 77. 120. Td
-(New Content Drops: Card expansions and new commanders create reasons to buy more packs.) Tj
-ET
-BT
-/F1 9 Tf
-10.3499999999999996 TL
-0.118 g
-67. 107. Td
-(•) Tj
-ET
-BT
-/F1 9 Tf
-10.3499999999999996 TL
-0.118 g
-77. 107. Td
 (Social Pressure: Friends list shows tier badges and premium BP status, motivating competitive purchases.) Tj
 ET
 BT
@@ -3785,7 +3869,7 @@ endobj
 endobj
 24 0 obj
 <<
-/Length 4838
+/Length 4923
 >>
 stream
 0.3 w
@@ -3858,349 +3942,356 @@ BT
 10.3499999999999996 TL
 0.118 g
 77. 658. Td
-(Merchandise: Physical card sets, playmats, and apparel sold through the website and at gaming conventions.) Tj
-ET
-BT
-/F1 9 Tf
-10.3499999999999996 TL
-0.118 g
-67. 645. Td
-(•) Tj
+(Merchandise: Physical card sets, playmats, and apparel — designed in-house by Legraphics, sold online and at gaming) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
 77. 645. Td
+(conventions.) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+67. 632. Td
+(•) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+77. 632. Td
 (Educational Licensing: Simplified version for schools teaching strategy, probability, and resource management.) Tj
 ET
 BT
 /F2 11 Tf
 12.6499999999999986 TL
 0.216 0.255 0.318 rg
-55. 616. Td
+55. 603. Td
 (6.11 Sales Forecast Summary) Tj
 ET
 0.94 0.96 1. rg
-55. 603. 502. -14. re
+55. 590. 502. -14. re
 f
 BT
 /F2 8 Tf
 9.1999999999999993 TL
 0. g
-58. 593. Td
+58. 580. Td
 (Quarter) Tj
 ET
 BT
 /F2 8 Tf
 9.1999999999999993 TL
 0. g
-153. 593. Td
+153. 580. Td
 (Users) Tj
 ET
 BT
 /F2 8 Tf
 9.1999999999999993 TL
 0. g
-233. 593. Td
+233. 580. Td
 (Payers) Tj
 ET
 BT
 /F2 8 Tf
 9.1999999999999993 TL
 0. g
-308. 593. Td
+308. 580. Td
 (Avg Rev/Payer) Tj
 ET
 BT
 /F2 8 Tf
 9.1999999999999993 TL
 0. g
-408. 593. Td
+408. 580. Td
 (Quarterly Rev) Tj
 ET
 0.82 0.84 0.86 RG
 0.3 w
-55. 589. m
-557. 589. l
+55. 576. m
+557. 576. l
 S
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-58. 579. Td
+58. 566. Td
 (Q3 2026 \(Launch\)) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-153. 579. Td
+153. 566. Td
 (5,000) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-233. 579. Td
+233. 566. Td
 (200) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-308. 579. Td
+308. 566. Td
 ($8) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-408. 579. Td
+408. 566. Td
 ($4,800) Tj
 ET
 0.82 0.84 0.86 RG
 0.3 w
-55. 575. m
-557. 575. l
+55. 562. m
+557. 562. l
 S
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-58. 565. Td
+58. 552. Td
 (Q4 2026) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-153. 565. Td
+153. 552. Td
 (25,000) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-233. 565. Td
+233. 552. Td
 (1,000) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-308. 565. Td
+308. 552. Td
 ($10) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-408. 565. Td
+408. 552. Td
 ($30,000) Tj
 ET
 0.82 0.84 0.86 RG
 0.3 w
-55. 561. m
-557. 561. l
+55. 548. m
+557. 548. l
 S
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-58. 551. Td
+58. 538. Td
 (Q1 2027) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-153. 551. Td
+153. 538. Td
 (60,000) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-233. 551. Td
+233. 538. Td
 (2,400) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-308. 551. Td
+308. 538. Td
 ($12) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-408. 551. Td
+408. 538. Td
 ($86,400) Tj
 ET
 0.82 0.84 0.86 RG
 0.3 w
-55. 547. m
-557. 547. l
+55. 534. m
+557. 534. l
 S
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-58. 537. Td
+58. 524. Td
 (Q2 2027) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-153. 537. Td
+153. 524. Td
 (100,000) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-233. 537. Td
+233. 524. Td
 (4,000) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-308. 537. Td
+308. 524. Td
 ($13) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-408. 537. Td
+408. 524. Td
 ($156,000) Tj
 ET
 0.82 0.84 0.86 RG
 0.3 w
-55. 533. m
-557. 533. l
+55. 520. m
+557. 520. l
 S
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-58. 523. Td
+58. 510. Td
 (Q3 2027) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-153. 523. Td
+153. 510. Td
 (150,000) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-233. 523. Td
+233. 510. Td
 (6,000) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-308. 523. Td
+308. 510. Td
 ($14) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-408. 523. Td
+408. 510. Td
 ($252,000) Tj
 ET
 0.82 0.84 0.86 RG
 0.3 w
-55. 519. m
-557. 519. l
+55. 506. m
+557. 506. l
 S
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-58. 509. Td
+58. 496. Td
 (Q4 2027) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-153. 509. Td
+153. 496. Td
 (200,000) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-233. 509. Td
+233. 496. Td
 (8,000) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-308. 509. Td
+308. 496. Td
 ($14) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-408. 509. Td
+408. 496. Td
 ($336,000) Tj
 ET
 0.82 0.84 0.86 RG
 0.3 w
-55. 505. m
-557. 505. l
+55. 492. m
+557. 492. l
 S
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-58. 495. Td
+58. 482. Td
 (Year 1 Total) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-408. 495. Td
+408. 482. Td
 ($277,200) Tj
 ET
 0.82 0.84 0.86 RG
 0.3 w
-55. 491. m
-557. 491. l
+55. 478. m
+557. 478. l
 S
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-58. 481. Td
+58. 468. Td
 (Year 2 Total) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-408. 481. Td
+408. 468. Td
 ($865,200) Tj
 ET
 0.82 0.84 0.86 RG
 0.3 w
-55. 477. m
-557. 477. l
+55. 464. m
+557. 464. l
 S
 BT
 /F1 7 Tf
@@ -4228,7 +4319,7 @@ endobj
 endobj
 26 0 obj
 <<
-/Length 5365
+/Length 5658
 >>
 stream
 0.3 w
@@ -4278,7 +4369,7 @@ BT
 10.3499999999999996 TL
 0.118 g
 77. 661. Td
-(Content marketing: YouTube gameplay trailers, dev diaries, card lore reveals) Tj
+(Content marketing: YouTube gameplay trailers \(produced by Legraphics video editor\), dev diaries, card lore reveals) Tj
 ET
 BT
 /F1 9 Tf
@@ -4323,25 +4414,25 @@ BT
 (Launch crowdfunding campaign \(see Section 8\)) Tj
 ET
 BT
-/F2 11 Tf
-12.6499999999999986 TL
-0.216 0.255 0.318 rg
-55. 595. Td
-(7.2 Launch Phase \(Months 4-6\)) Tj
-ET
-BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-67. 580. Td
+67. 609. Td
 (•) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-77. 580. Td
-(Mobile app launch on iOS App Store and Google Play Store) Tj
+77. 609. Td
+(Legraphics produces all campaign visuals, promotional graphics, and video content in-house) Tj
+ET
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0.216 0.255 0.318 rg
+55. 582. Td
+(7.2 Launch Phase \(Months 4-6\)) Tj
 ET
 BT
 /F1 9 Tf
@@ -4355,7 +4446,7 @@ BT
 10.3499999999999996 TL
 0.118 g
 77. 567. Td
-(Press kit distribution to gaming media \(TouchArcade, Pocket Gamer, GameRant\)) Tj
+(Mobile app launch on iOS App Store and Google Play Store) Tj
 ET
 BT
 /F1 9 Tf
@@ -4369,7 +4460,7 @@ BT
 10.3499999999999996 TL
 0.118 g
 77. 554. Td
-(Launch tournament with prize pool \($500-$2,000\) to drive competitive interest) Tj
+(Press kit distribution to gaming media \(TouchArcade, Pocket Gamer, GameRant\)) Tj
 ET
 BT
 /F1 9 Tf
@@ -4383,7 +4474,7 @@ BT
 10.3499999999999996 TL
 0.118 g
 77. 541. Td
-(Referral program: Invite friends, earn gems \(200 gems per referral\)) Tj
+(Launch tournament with prize pool \($500-$2,000\) to drive competitive interest) Tj
 ET
 BT
 /F1 9 Tf
@@ -4397,28 +4488,28 @@ BT
 10.3499999999999996 TL
 0.118 g
 77. 528. Td
-(App Store Optimization \(ASO\): screenshots, keywords, localized descriptions) Tj
-ET
-BT
-/F2 11 Tf
-12.6499999999999986 TL
-0.216 0.255 0.318 rg
-55. 501. Td
-(7.3 Growth Phase \(Months 7-12\)) Tj
+(Referral program: Invite friends, earn gems \(200 gems per referral\)) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-67. 486. Td
+67. 515. Td
 (•) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-77. 486. Td
-(Seasonal content drops every 30 days to maintain engagement) Tj
+77. 515. Td
+(App Store Optimization \(ASO\): screenshots, keywords, localized descriptions — all visual assets by Legraphics) Tj
+ET
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0.216 0.255 0.318 rg
+55. 488. Td
+(7.3 Growth Phase \(Months 7-12\)) Tj
 ET
 BT
 /F1 9 Tf
@@ -4432,7 +4523,7 @@ BT
 10.3499999999999996 TL
 0.118 g
 77. 473. Td
-(Community tournaments with leaderboard integration) Tj
+(Seasonal content drops every 30 days to maintain engagement) Tj
 ET
 BT
 /F1 9 Tf
@@ -4446,7 +4537,7 @@ BT
 10.3499999999999996 TL
 0.118 g
 77. 460. Td
-(Influencer partnerships with performance-based compensation) Tj
+(Community tournaments with leaderboard integration) Tj
 ET
 BT
 /F1 9 Tf
@@ -4460,7 +4551,7 @@ BT
 10.3499999999999996 TL
 0.118 g
 77. 447. Td
-(Cross-promotion with other indie games) Tj
+(Influencer partnerships with performance-based compensation) Tj
 ET
 BT
 /F1 9 Tf
@@ -4474,182 +4565,196 @@ BT
 10.3499999999999996 TL
 0.118 g
 77. 434. Td
+(Cross-promotion with other indie games) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+67. 421. Td
+(•) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+77. 421. Td
 (Localization: Spanish, Portuguese, French, German, Japanese, Korean) Tj
 ET
 BT
 /F2 11 Tf
 12.6499999999999986 TL
 0.216 0.255 0.318 rg
-55. 407. Td
+55. 394. Td
 (7.4 User Acquisition Targets) Tj
 ET
 0.94 0.96 1. rg
-55. 394. 502. -14. re
+55. 381. 502. -14. re
 f
 BT
 /F2 8 Tf
 9.1999999999999993 TL
 0. g
-58. 384. Td
+58. 371. Td
 (Milestone) Tj
 ET
 BT
 /F2 8 Tf
 9.1999999999999993 TL
 0. g
-178. 384. Td
+178. 371. Td
 (Timeline) Tj
 ET
 BT
 /F2 8 Tf
 9.1999999999999993 TL
 0. g
-278. 384. Td
+278. 371. Td
 (Users) Tj
 ET
 BT
 /F2 8 Tf
 9.1999999999999993 TL
 0. g
-378. 384. Td
+378. 371. Td
 (Revenue Target) Tj
 ET
 0.82 0.84 0.86 RG
 0.3 w
-55. 380. m
-557. 380. l
+55. 367. m
+557. 367. l
 S
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-58. 370. Td
+58. 357. Td
 (Soft Launch) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-178. 370. Td
+178. 357. Td
 (Month 4) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-278. 370. Td
+278. 357. Td
 (1,000) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-378. 370. Td
+378. 357. Td
 ($500/mo) Tj
 ET
 0.82 0.84 0.86 RG
 0.3 w
-55. 366. m
-557. 366. l
+55. 353. m
+557. 353. l
 S
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-58. 356. Td
+58. 343. Td
 (Public Launch) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-178. 356. Td
+178. 343. Td
 (Month 6) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-278. 356. Td
+278. 343. Td
 (10,000) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-378. 356. Td
+378. 343. Td
 ($3,000/mo) Tj
 ET
 0.82 0.84 0.86 RG
 0.3 w
-55. 352. m
-557. 352. l
+55. 339. m
+557. 339. l
 S
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-58. 342. Td
+58. 329. Td
 (Growth Phase) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-178. 342. Td
+178. 329. Td
 (Month 9) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-278. 342. Td
+278. 329. Td
 (50,000) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-378. 342. Td
+378. 329. Td
 ($15,000/mo) Tj
 ET
 0.82 0.84 0.86 RG
 0.3 w
-55. 338. m
-557. 338. l
+55. 325. m
+557. 325. l
 S
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-58. 328. Td
+58. 315. Td
 (Maturity) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-178. 328. Td
+178. 315. Td
 (Month 12) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-278. 328. Td
+278. 315. Td
 (100,000+) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-378. 328. Td
+378. 315. Td
 ($35,000/mo) Tj
 ET
 0.82 0.84 0.86 RG
 0.3 w
-55. 324. m
-557. 324. l
+55. 311. m
+557. 311. l
 S
 BT
 /F1 7 Tf
@@ -4677,7 +4782,7 @@ endobj
 endobj
 28 0 obj
 <<
-/Length 7852
+/Length 7863
 >>
 stream
 0.3 w
@@ -5193,7 +5298,7 @@ BT
 10.3499999999999996 TL
 0.118 g
 77. 197. Td
-(Week -2: Release gameplay trailer, send press kits to gaming media) Tj
+(Week -2: Release gameplay trailer \(produced by Legraphics\), send press kits) Tj
 ET
 BT
 /F1 9 Tf
@@ -5305,7 +5410,7 @@ endobj
 endobj
 30 0 obj
 <<
-/Length 6094
+/Length 7200
 >>
 stream
 0.3 w
@@ -5693,132 +5798,202 @@ BT
 12.6499999999999986 TL
 0.216 0.255 0.318 rg
 55. 525. Td
-(Current Technical Completion) Tj
+(Development Approach) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
 55. 510. Td
-(The web application is fully operational with 8 completed development tasks:) Tj
+(All current and future development is done on the Replit platform, which provides cloud-based IDE, hosting, database, and) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-67. 497. Td
+55. 497. Td
+(deployment in a single environment. This approach:) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+67. 480. Td
 (•) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-77. 497. Td
+77. 480. Td
+(Eliminates DevOps overhead — no separate hosting, CI/CD, or server management needed) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+67. 467. Td
+(•) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+77. 467. Td
+(Enables rapid AI-assisted development using Replit Agent and AI coding tools) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+67. 454. Td
+(•) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+77. 454. Td
+(Allows the founder and future AI coding specialist to collaborate in real-time on the same codebase) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+67. 441. Td
+(•) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+77. 441. Td
+(Provides instant deployment — every code change can go live in seconds) Tj
+ET
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0.216 0.255 0.318 rg
+55. 414. Td
+(Technical Completion \(8 Tasks\)) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+67. 399. Td
+(•) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+77. 399. Td
 (Task 1: Combat engine with Guardian & Quick Strike mechanics) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-67. 484. Td
+67. 386. Td
 (•) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-77. 484. Td
+77. 386. Td
 (Task 2: API documentation and rules page) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-67. 471. Td
+67. 373. Td
 (•) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-77. 471. Td
+77. 373. Td
 (Task 3: Server configuration and feature flags) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-67. 458. Td
+67. 360. Td
 (•) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-77. 458. Td
+77. 360. Td
 (Task 4: Three-currency economy with crafting and collection) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-67. 445. Td
+67. 347. Td
 (•) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-77. 445. Td
+77. 347. Td
 (Task 5: Mobile sync guide and development roadmap) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-67. 432. Td
+67. 334. Td
 (•) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-77. 432. Td
+77. 334. Td
 (Task 6: Shop system with 7 pack types and daily deals) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-67. 419. Td
+67. 321. Td
 (•) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-77. 419. Td
+77. 321. Td
 (Task 7: Ranked seasons, 50-level battle pass, weekly challenges) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-67. 406. Td
+67. 308. Td
 (•) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-77. 406. Td
+77. 308. Td
 (Task 8: Full payment integration \(Stripe + PayPal + in-game currency\)) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-55. 389. Td
+55. 291. Td
 (Total codebase: 70+ API endpoints, WebSocket multiplayer, PostgreSQL database, React 18 frontend.) Tj
 ET
 BT
@@ -5847,7 +6022,7 @@ endobj
 endobj
 32 0 obj
 <<
-/Length 4099
+/Length 7012
 >>
 stream
 0.3 w
@@ -5869,310 +6044,447 @@ BT
 12.6499999999999986 TL
 0.216 0.255 0.318 rg
 55. 689. Td
-(10.1 Current Team) Tj
+(10.1 Legraphics — Creative & Design Team \(In-House\)) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
 55. 674. Td
-(Wisdom & Chance TCG is currently developed by a solo founder/developer leveraging AI-assisted development tools. This) Tj
+(Legraphics is a family-owned design business that serves as the creative arm of the Wisdom & Chance TCG project. Having) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
 55. 661. Td
-(lean approach has enabled rapid iteration and a fully functional product at minimal cost.) Tj
+(an in-house design team is a significant competitive advantage — most indie game studios outsource art and design at) Tj
 ET
 BT
-/F2 11 Tf
-12.6499999999999986 TL
-0.216 0.255 0.318 rg
-55. 634. Td
-(10.2 Hiring Plan \(Post-Funding\)) Tj
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+55. 648. Td
+($50-$150/hour, while Legraphics provides these capabilities at no additional cost.) Tj
 ET
 0.94 0.96 1. rg
-55. 621. 502. -14. re
+55. 631. 502. -14. re
 f
 BT
 /F2 8 Tf
 9.1999999999999993 TL
 0. g
-58. 611. Td
+58. 621. Td
 (Role) Tj
 ET
 BT
 /F2 8 Tf
 9.1999999999999993 TL
 0. g
-213. 611. Td
-(Priority) Tj
+223. 621. Td
+(Person) Tj
 ET
 BT
 /F2 8 Tf
 9.1999999999999993 TL
 0. g
-278. 611. Td
-(Timeline) Tj
-ET
-BT
-/F2 8 Tf
-9.1999999999999993 TL
-0. g
-353. 611. Td
-(Est. Annual Cost) Tj
+298. 621. Td
+(Responsibilities) Tj
 ET
 0.82 0.84 0.86 RG
 0.3 w
-55. 607. m
-557. 607. l
+55. 617. m
+557. 617. l
 S
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-58. 597. Td
-(Mobile Developer \(React Native\)) Tj
+58. 607. Td
+(Founder / Lead Developer) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-213. 597. Td
-(Critical) Tj
+223. 607. Td
+(Owner) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-278. 597. Td
-(Month 1) Tj
-ET
-BT
-/F1 8 Tf
-9.1999999999999993 TL
-0. g
-353. 597. Td
-($80,000 - $120,000) Tj
+298. 607. Td
+(Product vision, game design, AI-assisted development on) Tj
 ET
 0.82 0.84 0.86 RG
 0.3 w
-55. 593. m
-557. 593. l
+55. 603. m
+557. 603. l
 S
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-58. 583. Td
-(Game Designer / Balance Lead) Tj
+58. 593. Td
+(Graphic Designer #1 / Game Designer) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-213. 583. Td
-(High) Tj
+223. 593. Td
+(Legraphics) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-278. 583. Td
-(Month 2) Tj
-ET
-BT
-/F1 8 Tf
-9.1999999999999993 TL
-0. g
-353. 583. Td
-($60,000 - $90,000) Tj
+298. 593. Td
+(Card art, UI design, game balance, card mechanics desig) Tj
 ET
 0.82 0.84 0.86 RG
 0.3 w
-55. 579. m
-557. 579. l
+55. 589. m
+557. 589. l
 S
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-58. 569. Td
-(2D Artist \(Card Art\)) Tj
+58. 579. Td
+(Graphic Designer #2) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-213. 569. Td
-(High) Tj
+223. 579. Td
+(Legraphics) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-278. 569. Td
-(Month 2) Tj
-ET
-BT
-/F1 8 Tf
-9.1999999999999993 TL
-0. g
-353. 569. Td
-($50,000 - $75,000) Tj
+298. 579. Td
+(Marketing graphics, app store assets, social media cont) Tj
 ET
 0.82 0.84 0.86 RG
 0.3 w
-55. 565. m
-557. 565. l
+55. 575. m
+557. 575. l
 S
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-58. 555. Td
-(Community Manager) Tj
+58. 565. Td
+(Video Editor) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-213. 555. Td
-(Medium) Tj
+223. 565. Td
+(Legraphics) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-278. 555. Td
-(Month 3) Tj
-ET
-BT
-/F1 8 Tf
-9.1999999999999993 TL
-0. g
-353. 555. Td
-($40,000 - $55,000) Tj
+298. 565. Td
+(Gameplay trailers, dev diaries, crowdfunding video, soc) Tj
 ET
 0.82 0.84 0.86 RG
 0.3 w
-55. 551. m
-557. 551. l
-S
-BT
-/F1 8 Tf
-9.1999999999999993 TL
-0. g
-58. 541. Td
-(QA Tester \(Contract\)) Tj
-ET
-BT
-/F1 8 Tf
-9.1999999999999993 TL
-0. g
-213. 541. Td
-(Medium) Tj
-ET
-BT
-/F1 8 Tf
-9.1999999999999993 TL
-0. g
-278. 541. Td
-(Month 3) Tj
-ET
-BT
-/F1 8 Tf
-9.1999999999999993 TL
-0. g
-353. 541. Td
-($25,000 - $40,000) Tj
-ET
-0.82 0.84 0.86 RG
-0.3 w
-55. 537. m
-557. 537. l
-S
-BT
-/F1 8 Tf
-9.1999999999999993 TL
-0. g
-58. 527. Td
-(Marketing / Sales Specialist) Tj
-ET
-BT
-/F1 8 Tf
-9.1999999999999993 TL
-0. g
-213. 527. Td
-(Medium) Tj
-ET
-BT
-/F1 8 Tf
-9.1999999999999993 TL
-0. g
-278. 527. Td
-(Month 4) Tj
-ET
-BT
-/F1 8 Tf
-9.1999999999999993 TL
-0. g
-353. 527. Td
-($45,000 - $65,000) Tj
-ET
-0.82 0.84 0.86 RG
-0.3 w
-55. 523. m
-557. 523. l
+55. 561. m
+557. 561. l
 S
 BT
 /F2 11 Tf
 12.6499999999999986 TL
 0.216 0.255 0.318 rg
-55. 505. Td
-(10.3 Advisory Board \(To Be Recruited\)) Tj
+55. 543. Td
+(10.2 Post-Campaign Hire: AI Coding Specialist) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-67. 490. Td
+55. 528. Td
+(After a successful crowdfunding campaign, the single planned hire is an AI Coding Specialist / Developer. This person will:) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+67. 511. Td
 (•) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-77. 490. Td
+77. 511. Td
+(Work alongside the founder on the Replit platform — the same environment used for all current development) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+67. 498. Td
+(•) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+77. 498. Td
+(Focus on mobile app development \(React Native or Flutter\) consuming the existing 70+ endpoint API) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+67. 485. Td
+(•) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+77. 485. Td
+(Leverage AI coding tools \(Replit Agent, GitHub Copilot, Claude\) to maximize output) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+67. 472. Td
+(•) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+77. 472. Td
+(Build planned features: tournament system, guild/clan system, and card expansion framework) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+67. 459. Td
+(•) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+77. 459. Td
+(Estimated cost: $60,000-$90,000/year \(full-time\) or $40-$60/hour \(contract\)) Tj
+ET
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0.216 0.255 0.318 rg
+55. 432. Td
+(10.3 Why Only One Hire) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+55. 417. Td
+(The lean team strategy is intentional and sustainable:) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+67. 400. Td
+(•) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+77. 400. Td
+(AI-assisted development on Replit means one skilled developer can produce output comparable to a team of 3-4) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+77. 387. Td
+(traditional developers) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+67. 374. Td
+(•) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+77. 374. Td
+(The existing server backend is complete — the new hire focuses purely on mobile and new features, not rebuilding) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+77. 361. Td
+(infrastructure) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+67. 348. Td
+(•) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+77. 348. Td
+(Legraphics handles all design, art, and video work — no need to hire creatives) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+67. 335. Td
+(•) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+77. 335. Td
+(The founder continues as lead developer and product owner, maintaining product vision) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+67. 322. Td
+(•) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+77. 322. Td
+(As revenue grows, additional hires can be made from operating profits rather than requiring more fundraising) Tj
+ET
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0.216 0.255 0.318 rg
+55. 293. Td
+(10.4 Organizational Chart) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+55. 278. Td
+(Founder / CEO) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+75. 265. Td
+(    |-- Legraphics Creative Team) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+75. 252. Td
+(    |       |-- Graphic Designer #1 / Game Designer) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+75. 239. Td
+(    |       |-- Graphic Designer #2) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+75. 226. Td
+(    |       |-- Video Editor) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+75. 213. Td
+(    |) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+75. 200. Td
+(    |-- AI Coding Specialist \(Post-Campaign Hire\)) Tj
+ET
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0.216 0.255 0.318 rg
+55. 171. Td
+(10.5 Advisory Board \(To Be Recruited\)) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+67. 156. Td
+(•) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+77. 156. Td
 (TCG Industry Veteran: Former designer or producer from Blizzard, Wizards of the Coast, or similar) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-67. 477. Td
+67. 143. Td
 (•) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-77. 477. Td
+77. 143. Td
 (Mobile Gaming Advisor: Executive with F2P mobile game launch experience) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-67. 464. Td
+67. 130. Td
 (•) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-77. 464. Td
+77. 130. Td
 (Esports Consultant: Experience building competitive gaming communities) Tj
 ET
 BT
@@ -6201,7 +6513,7 @@ endobj
 endobj
 34 0 obj
 <<
-/Length 7269
+/Length 10269
 >>
 stream
 0.3 w
@@ -6552,301 +6864,563 @@ BT
 55. 480. Td
 (11.3 Cost Structure \(Monthly at Scale\)) Tj
 ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+55. 465. Td
+(Our cost structure is significantly leaner than competitors thanks to Legraphics providing in-house design and the Replit) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+55. 452. Td
+(platform eliminating DevOps costs:) Tj
+ET
 0.94 0.96 1. rg
-55. 467. 502. -14. re
+55. 437. 502. -14. re
 f
 BT
 /F2 8 Tf
 9.1999999999999993 TL
 0. g
-58. 457. Td
+58. 427. Td
 (Category) Tj
 ET
 BT
 /F2 8 Tf
 9.1999999999999993 TL
 0. g
-218. 457. Td
+218. 427. Td
 (Month 6) Tj
 ET
 BT
 /F2 8 Tf
 9.1999999999999993 TL
 0. g
-318. 457. Td
+318. 427. Td
 (Month 12) Tj
 ET
 BT
 /F2 8 Tf
 9.1999999999999993 TL
 0. g
-428. 457. Td
+428. 427. Td
 (Month 24) Tj
 ET
 0.82 0.84 0.86 RG
 0.3 w
-55. 453. m
-557. 453. l
+55. 423. m
+557. 423. l
 S
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-58. 443. Td
-(Server/Infrastructure) Tj
+58. 413. Td
+(Replit Pro + Server Hosting) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-218. 443. Td
+218. 413. Td
 ($200) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-318. 443. Td
-($1,000) Tj
+318. 413. Td
+($500) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-428. 443. Td
-($3,000) Tj
+428. 413. Td
+($1,500) Tj
 ET
 0.82 0.84 0.86 RG
 0.3 w
-55. 439. m
-557. 439. l
+55. 409. m
+557. 409. l
 S
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-58. 429. Td
+58. 399. Td
 (Payment Processing \(3%\)) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-218. 429. Td
+218. 399. Td
 ($120) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-318. 429. Td
+318. 399. Td
 ($900) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-428. 429. Td
+428. 399. Td
 ($3,000) Tj
 ET
 0.82 0.84 0.86 RG
 0.3 w
-55. 425. m
-557. 425. l
+55. 395. m
+557. 395. l
 S
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-58. 415. Td
-(Staff \(if funded\)) Tj
+58. 385. Td
+(AI Coding Specialist) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-218. 415. Td
+218. 385. Td
 ($0) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-318. 415. Td
-($15,000) Tj
+318. 385. Td
+($6,000) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-428. 415. Td
-($25,000) Tj
+428. 385. Td
+($7,500) Tj
 ET
 0.82 0.84 0.86 RG
 0.3 w
-55. 411. m
-557. 411. l
+55. 381. m
+557. 381. l
 S
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-58. 401. Td
+58. 371. Td
 (Marketing) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-218. 401. Td
+218. 371. Td
 ($500) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-318. 401. Td
-($3,000) Tj
-ET
-BT
-/F1 8 Tf
-9.1999999999999993 TL
-0. g
-428. 401. Td
-($8,000) Tj
-ET
-0.82 0.84 0.86 RG
-0.3 w
-55. 397. m
-557. 397. l
-S
-BT
-/F1 8 Tf
-9.1999999999999993 TL
-0. g
-58. 387. Td
-(Art/Content) Tj
-ET
-BT
-/F1 8 Tf
-9.1999999999999993 TL
-0. g
-218. 387. Td
-($500) Tj
-ET
-BT
-/F1 8 Tf
-9.1999999999999993 TL
-0. g
-318. 387. Td
+318. 371. Td
 ($2,000) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-428. 387. Td
-($3,000) Tj
+428. 371. Td
+($5,000) Tj
 ET
 0.82 0.84 0.86 RG
 0.3 w
-55. 383. m
-557. 383. l
+55. 367. m
+557. 367. l
 S
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-58. 373. Td
+58. 357. Td
+(Legraphics \(in-house\)) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0. g
+218. 357. Td
+($0) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0. g
+318. 357. Td
+($0) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0. g
+428. 357. Td
+($0) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+55. 353. m
+557. 353. l
+S
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0. g
+58. 343. Td
+(Misc \(legal, tools\)) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0. g
+218. 343. Td
+($200) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0. g
+318. 343. Td
+($500) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0. g
+428. 343. Td
+($1,000) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+55. 339. m
+557. 339. l
+S
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0. g
+58. 329. Td
 (Total Monthly Costs) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-218. 373. Td
-($1,320) Tj
+218. 329. Td
+($1,020) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-318. 373. Td
-($21,900) Tj
+318. 329. Td
+($9,900) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-428. 373. Td
-($42,000) Tj
+428. 329. Td
+($18,000) Tj
 ET
 0.82 0.84 0.86 RG
 0.3 w
-55. 369. m
-557. 369. l
+55. 325. m
+557. 325. l
 S
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-58. 359. Td
+58. 315. Td
 (Net Monthly Profit) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-218. 359. Td
-($2,680) Tj
+218. 315. Td
+($2,980) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-318. 359. Td
-($8,100) Tj
+318. 315. Td
+($20,100) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-428. 359. Td
-($58,000) Tj
+428. 315. Td
+($82,000) Tj
 ET
 0.82 0.84 0.86 RG
 0.3 w
-55. 355. m
-557. 355. l
+55. 311. m
+557. 311. l
 S
 BT
 /F2 11 Tf
 12.6499999999999986 TL
 0.216 0.255 0.318 rg
-55. 339. Td
+55. 295. Td
 (11.4 Break-Even Analysis) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-55. 324. Td
-(With crowdfunding of $50,000-$75,000 and conservative growth, the project reaches break-even by Month 10-12 \(post mobile) Tj
+55. 280. Td
+(With the lean cost structure \(no outsourced design, Replit hosting, single developer hire\), the project reaches break-even by) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-55. 311. Td
-(launch\). With stretch goal funding of $150,000, break-even extends to Month 14-16 due to higher initial spending, but revenue) Tj
+55. 267. Td
+(Month 8-10 post mobile launch. This is 2-4 months earlier than traditional indie game studios due to the Legraphics in-house) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-55. 298. Td
-(ceiling is significantly higher.) Tj
+55. 254. Td
+(advantage and AI-assisted development.) Tj
 ET
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0.216 0.255 0.318 rg
+55. 227. Td
+(11.5 Cost Advantage vs Traditional Studio) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+55. 212. Td
+(A comparable indie TCG studio would spend approximately:) Tj
+ET
+0.94 0.96 1. rg
+55. 197. 502. -14. re
+f
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0. g
+58. 187. Td
+(Cost Category) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0. g
+188. 187. Td
+(Traditional Studio) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0. g
+318. 187. Td
+(Wisdom & Chance) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0. g
+438. 187. Td
+(Savings) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+55. 183. m
+557. 183. l
+S
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0. g
+58. 173. Td
+(Art/Design \(annual\)) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0. g
+188. 173. Td
+($60,000 - $120,000) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0. g
+318. 173. Td
+($0 \(Legraphics\)) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0. g
+438. 173. Td
+(100%) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+55. 169. m
+557. 169. l
+S
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0. g
+58. 159. Td
+(Video Production) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0. g
+188. 159. Td
+($15,000 - $30,000) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0. g
+318. 159. Td
+($0 \(Legraphics\)) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0. g
+438. 159. Td
+(100%) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+55. 155. m
+557. 155. l
+S
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0. g
+58. 145. Td
+(Development Team \(3-4 devs\)) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0. g
+188. 145. Td
+($240,000 - $400,000) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0. g
+318. 145. Td
+($60,000 - $90,000) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0. g
+438. 145. Td
+(75-85%) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+55. 141. m
+557. 141. l
+S
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0. g
+58. 131. Td
+(DevOps / Hosting) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0. g
+188. 131. Td
+($12,000 - $24,000) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0. g
+318. 131. Td
+($2,400 - $6,000) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0. g
+438. 131. Td
+(75-80%) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+55. 127. m
+557. 127. l
+S
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0. g
+58. 117. Td
+(Total Year 1) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0. g
+188. 117. Td
+($327,000 - $574,000) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0. g
+318. 117. Td
+($62,400 - $96,000) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0. g
+438. 117. Td
+(~80%) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+55. 113. m
+557. 113. l
+S
 BT
 /F1 7 Tf
 8.0499999999999989 TL
@@ -6873,7 +7447,7 @@ endobj
 endobj
 36 0 obj
 <<
-/Length 5847
+/Length 5910
 >>
 stream
 0.3 w
@@ -6911,14 +7485,14 @@ BT
 /F2 8 Tf
 9.1999999999999993 TL
 0. g
-258. 666. Td
+278. 666. Td
 (Amount) Tj
 ET
 BT
 /F2 8 Tf
 9.1999999999999993 TL
 0. g
-378. 666. Td
+398. 666. Td
 (% of Funds) Tj
 ET
 0.82 0.84 0.86 RG
@@ -6931,21 +7505,21 @@ BT
 9.1999999999999993 TL
 0. g
 58. 652. Td
-(Mobile App Development) Tj
+(AI Coding Specialist \(6 mo contract\)) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-258. 652. Td
-($20,000) Tj
+278. 652. Td
+($25,000) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-378. 652. Td
-(40%) Tj
+398. 652. Td
+(50%) Tj
 ET
 0.82 0.84 0.86 RG
 0.3 w
@@ -6963,15 +7537,15 @@ BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-258. 638. Td
-($5,000) Tj
+278. 638. Td
+($3,000) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-378. 638. Td
-(10%) Tj
+398. 638. Td
+(6%) Tj
 ET
 0.82 0.84 0.86 RG
 0.3 w
@@ -6983,21 +7557,21 @@ BT
 9.1999999999999993 TL
 0. g
 58. 624. Td
-(Card Art & Visual Assets) Tj
+(Marketing & User Acquisition) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-258. 624. Td
-($8,000) Tj
+278. 624. Td
+($10,000) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-378. 624. Td
-(16%) Tj
+398. 624. Td
+(20%) Tj
 ET
 0.82 0.84 0.86 RG
 0.3 w
@@ -7009,21 +7583,21 @@ BT
 9.1999999999999993 TL
 0. g
 58. 610. Td
-(Marketing & User Acquisition) Tj
+(Legal \(LLC, Terms, Privacy\)) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-258. 610. Td
-($7,000) Tj
+278. 610. Td
+($3,000) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-378. 610. Td
-(14%) Tj
+398. 610. Td
+(6%) Tj
 ET
 0.82 0.84 0.86 RG
 0.3 w
@@ -7035,21 +7609,21 @@ BT
 9.1999999999999993 TL
 0. g
 58. 596. Td
-(Legal \(LLC, Terms, Privacy\)) Tj
+(Tournament Prize Pools) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-258. 596. Td
-($3,000) Tj
+278. 596. Td
+($2,000) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-378. 596. Td
-(6%) Tj
+398. 596. Td
+(4%) Tj
 ET
 0.82 0.84 0.86 RG
 0.3 w
@@ -7067,14 +7641,14 @@ BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-258. 582. Td
+278. 582. Td
 ($4,000) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-378. 582. Td
+398. 582. Td
 (8%) Tj
 ET
 0.82 0.84 0.86 RG
@@ -7093,14 +7667,14 @@ BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-258. 568. Td
+278. 568. Td
 ($3,000) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-378. 568. Td
+398. 568. Td
 (6%) Tj
 ET
 0.82 0.84 0.86 RG
@@ -7109,295 +7683,283 @@ ET
 557. 564. l
 S
 BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+55. 558. Td
+(Note: Card art and visual asset production is handled in-house by Legraphics at no additional cost.) Tj
+ET
+BT
 /F2 11 Tf
 12.6499999999999986 TL
 0.216 0.255 0.318 rg
-55. 546. Td
+55. 529. Td
 (12.2 Target Funding: $100,000) Tj
 ET
 0.94 0.96 1. rg
-55. 533. 502. -14. re
+55. 516. 502. -14. re
 f
 BT
 /F2 8 Tf
 9.1999999999999993 TL
 0. g
-58. 523. Td
+58. 506. Td
 (Category) Tj
 ET
 BT
 /F2 8 Tf
 9.1999999999999993 TL
 0. g
-258. 523. Td
+278. 506. Td
 (Amount) Tj
 ET
 BT
 /F2 8 Tf
 9.1999999999999993 TL
 0. g
-378. 523. Td
+398. 506. Td
 (% of Funds) Tj
 ET
 0.82 0.84 0.86 RG
 0.3 w
-55. 519. m
-557. 519. l
+55. 502. m
+557. 502. l
 S
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-58. 509. Td
-(Mobile App Development) Tj
+58. 492. Td
+(AI Coding Specialist \(12 mo\)) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-258. 509. Td
-($35,000) Tj
+278. 492. Td
+($50,000) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-378. 509. Td
-(35%) Tj
+398. 492. Td
+(50%) Tj
 ET
 0.82 0.84 0.86 RG
 0.3 w
-55. 505. m
-557. 505. l
+55. 488. m
+557. 488. l
 S
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-58. 495. Td
+58. 478. Td
 (Server Infrastructure \(18 mo\)) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-258. 495. Td
-($8,000) Tj
+278. 478. Td
+($5,000) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-378. 495. Td
-(8%) Tj
+398. 478. Td
+(5%) Tj
 ET
 0.82 0.84 0.86 RG
 0.3 w
-55. 491. m
-557. 491. l
+55. 474. m
+557. 474. l
 S
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-58. 481. Td
-(Card Art & Visual Assets \(pro\)) Tj
-ET
-BT
-/F1 8 Tf
-9.1999999999999993 TL
-0. g
-258. 481. Td
-($15,000) Tj
-ET
-BT
-/F1 8 Tf
-9.1999999999999993 TL
-0. g
-378. 481. Td
-(15%) Tj
-ET
-0.82 0.84 0.86 RG
-0.3 w
-55. 477. m
-557. 477. l
-S
-BT
-/F1 8 Tf
-9.1999999999999993 TL
-0. g
-58. 467. Td
+58. 464. Td
 (Marketing & UA) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-258. 467. Td
-($15,000) Tj
+278. 464. Td
+($18,000) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-378. 467. Td
-(15%) Tj
+398. 464. Td
+(18%) Tj
 ET
 0.82 0.84 0.86 RG
 0.3 w
-55. 463. m
-557. 463. l
+55. 460. m
+557. 460. l
 S
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-58. 453. Td
+58. 450. Td
 (Tournament Prize Pools) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-258. 453. Td
-($5,000) Tj
-ET
-BT
-/F1 8 Tf
-9.1999999999999993 TL
-0. g
-378. 453. Td
-(5%) Tj
-ET
-0.82 0.84 0.86 RG
-0.3 w
-55. 449. m
-557. 449. l
-S
-BT
-/F1 8 Tf
-9.1999999999999993 TL
-0. g
-58. 439. Td
-(Legal & Business Setup) Tj
-ET
-BT
-/F1 8 Tf
-9.1999999999999993 TL
-0. g
-258. 439. Td
-($5,000) Tj
-ET
-BT
-/F1 8 Tf
-9.1999999999999993 TL
-0. g
-378. 439. Td
-(5%) Tj
-ET
-0.82 0.84 0.86 RG
-0.3 w
-55. 435. m
-557. 435. l
-S
-BT
-/F1 8 Tf
-9.1999999999999993 TL
-0. g
-58. 425. Td
-(Part-Time Community Manager) Tj
-ET
-BT
-/F1 8 Tf
-9.1999999999999993 TL
-0. g
-258. 425. Td
+278. 450. Td
 ($8,000) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-378. 425. Td
+398. 450. Td
 (8%) Tj
 ET
 0.82 0.84 0.86 RG
 0.3 w
-55. 421. m
-557. 421. l
+55. 446. m
+557. 446. l
 S
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-58. 411. Td
-(Crowdfunding Fees & Fulfillment) Tj
+58. 436. Td
+(Legal & Business Setup) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-258. 411. Td
+278. 436. Td
 ($5,000) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-378. 411. Td
+398. 436. Td
 (5%) Tj
 ET
 0.82 0.84 0.86 RG
 0.3 w
-55. 407. m
-557. 407. l
+55. 432. m
+557. 432. l
 S
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-58. 397. Td
+58. 422. Td
+(Community Growth \(events, merch\)) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0. g
+278. 422. Td
+($5,000) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0. g
+398. 422. Td
+(5%) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+55. 418. m
+557. 418. l
+S
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0. g
+58. 408. Td
+(Crowdfunding Fees & Fulfillment) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0. g
+278. 408. Td
+($5,000) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0. g
+398. 408. Td
+(5%) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+55. 404. m
+557. 404. l
+S
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0. g
+58. 394. Td
 (Contingency) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-258. 397. Td
+278. 394. Td
 ($4,000) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-378. 397. Td
+398. 394. Td
 (4%) Tj
 ET
 0.82 0.84 0.86 RG
 0.3 w
-55. 393. m
-557. 393. l
+55. 390. m
+557. 390. l
 S
 BT
 /F2 11 Tf
 12.6499999999999986 TL
 0.216 0.255 0.318 rg
-55. 375. Td
+55. 372. Td
 (12.3 Stretch Funding: $150,000) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-55. 360. Td
-(Additional $50,000 allocated to: full-time mobile developer hire \($30,000 for 6 months\), animated card effects \($8,000\), voice) Tj
+55. 357. Td
+(Additional $50,000 allocated to: AI coding specialist salary increase to retain top talent \($15,000\), animated card effects and) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-55. 347. Td
-(acting for commanders \($7,000\), and expanded marketing budget \($5,000\).) Tj
+55. 344. Td
+(premium VFX \($10,000\), voice acting for commanders \($8,000\), expanded marketing \($12,000\), and merchandise production) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+55. 331. Td
+(designed by Legraphics \($5,000\).) Tj
 ET
 BT
 /F1 7 Tf
@@ -7425,7 +7987,7 @@ endobj
 endobj
 38 0 obj
 <<
-/Length 4715
+/Length 5073
 >>
 stream
 0.3 w
@@ -7456,14 +8018,14 @@ BT
 /F2 8 Tf
 9.1999999999999993 TL
 0. g
-173. 689. Td
+178. 689. Td
 (Likelihood) Tj
 ET
 BT
 /F2 8 Tf
 9.1999999999999993 TL
 0. g
-243. 689. Td
+248. 689. Td
 (Impact) Tj
 ET
 BT
@@ -7489,14 +8051,14 @@ BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-173. 675. Td
+178. 675. Td
 (Medium) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-243. 675. Td
+248. 675. Td
 (High) Tj
 ET
 BT
@@ -7522,14 +8084,14 @@ BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-173. 661. Td
+178. 661. Td
 (Medium) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-243. 661. Td
+248. 661. Td
 (Medium) Tj
 ET
 BT
@@ -7555,14 +8117,14 @@ BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-173. 647. Td
+178. 647. Td
 (Low) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-243. 647. Td
+248. 647. Td
 (Medium) Tj
 ET
 BT
@@ -7570,7 +8132,7 @@ BT
 9.1999999999999993 TL
 0. g
 303. 647. Td
-(Auto-scaling; cost monitoring; usage-based pricing) Tj
+(Auto-scaling; Replit cost monitoring) Tj
 ET
 0.82 0.84 0.86 RG
 0.3 w
@@ -7588,14 +8150,14 @@ BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-173. 633. Td
+178. 633. Td
 (Low) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-243. 633. Td
+248. 633. Td
 (Medium) Tj
 ET
 BT
@@ -7621,14 +8183,14 @@ BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-173. 619. Td
+178. 619. Td
 (Medium) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-243. 619. Td
+248. 619. Td
 (High) Tj
 ET
 BT
@@ -7636,7 +8198,7 @@ BT
 9.1999999999999993 TL
 0. g
 303. 619. Td
-(Document everything; hire early; AI tools) Tj
+(Document everything; Legraphics continuity) Tj
 ET
 0.82 0.84 0.86 RG
 0.3 w
@@ -7654,14 +8216,14 @@ BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-173. 605. Td
+178. 605. Td
 (Low) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-243. 605. Td
+248. 605. Td
 (High) Tj
 ET
 BT
@@ -7687,14 +8249,14 @@ BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-173. 591. Td
+178. 591. Td
 (Medium) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-243. 591. Td
+248. 591. Td
 (Medium) Tj
 ET
 BT
@@ -7720,14 +8282,14 @@ BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-173. 577. Td
+178. 577. Td
 (High) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
 0. g
-243. 577. Td
+248. 577. Td
 (Medium) Tj
 ET
 BT
@@ -7743,73 +8305,106 @@ ET
 557. 573. l
 S
 BT
+/F1 8 Tf
+9.1999999999999993 TL
+0. g
+58. 563. Td
+(Coding hire doesn't work out) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0. g
+178. 563. Td
+(Low) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0. g
+248. 563. Td
+(Medium) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0. g
+303. 563. Td
+(AI tools reduce dependency; contract first) Tj
+ET
+0.82 0.84 0.86 RG
+0.3 w
+55. 559. m
+557. 559. l
+S
+BT
 /F2 11 Tf
 12.6499999999999986 TL
 0.216 0.255 0.318 rg
-55. 555. Td
+55. 541. Td
 (13.1 Regulatory Considerations) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-67. 540. Td
+67. 526. Td
 (•) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-77. 540. Td
+77. 526. Td
 (Loot Box Compliance: Pack purchases show exact odds \(Common 60%, Rare 25%, Epic 10%, Legendary 5%\). No) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-77. 527. Td
+77. 513. Td
 (hidden mechanics. Compliant with EU requirements.) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-67. 514. Td
+67. 500. Td
 (•) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-77. 514. Td
+77. 500. Td
 (Age Rating: No real gambling. In-app purchases clearly labeled. Target PEGI 7 / ESRB E10+.) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-67. 501. Td
+67. 487. Td
 (•) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-77. 501. Td
+77. 487. Td
 (Privacy: GDPR and CCPA compliant. Minimal data collection. No third-party data sales.) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-67. 488. Td
+67. 474. Td
 (•) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.118 g
-77. 488. Td
+77. 474. Td
 (Payment Processing: PCI compliance handled by Stripe and PayPal — no card data touches our servers.) Tj
 ET
 BT
@@ -7838,7 +8433,7 @@ endobj
 endobj
 40 0 obj
 <<
-/Length 4430
+/Length 4451
 >>
 stream
 0.3 w
@@ -7902,7 +8497,7 @@ BT
 10.3499999999999996 TL
 0.118 g
 77. 648. Td
-(Payments: Stripe Checkout + PayPal REST API) Tj
+(Platform: Replit \(development, hosting, database, deployment — all-in-one\)) Tj
 ET
 BT
 /F1 9 Tf
@@ -7916,7 +8511,7 @@ BT
 10.3499999999999996 TL
 0.118 g
 77. 635. Td
-(AI: Google Gemini 2.5 Flash \(deck suggestions + card art generation\)) Tj
+(Payments: Stripe Checkout + PayPal REST API) Tj
 ET
 BT
 /F1 9 Tf
@@ -7930,7 +8525,7 @@ BT
 10.3499999999999996 TL
 0.118 g
 77. 622. Td
-(Auth: Replit Auth \(OIDC\) + JWT for mobile) Tj
+(AI: Google Gemini 2.5 Flash \(deck suggestions + card art generation\)) Tj
 ET
 BT
 /F1 9 Tf
@@ -7944,7 +8539,7 @@ BT
 10.3499999999999996 TL
 0.118 g
 77. 609. Td
-(Hosting: Replit \(current\), scalable to AWS/GCP/Vercel) Tj
+(Auth: Replit Auth \(OIDC\) + JWT for mobile) Tj
 ET
 BT
 /F2 11 Tf
@@ -8333,7 +8928,7 @@ endobj
 55 0 obj
 <<
 /Producer (jsPDF 4.2.1)
-/CreationDate (D:20260403025117-00'00')
+/CreationDate (D:20260403030844-00'00')
 >>
 endobj
 56 0 obj
@@ -8347,69 +8942,69 @@ endobj
 xref
 0 57
 0000000000 65535 f 
-0000100727 00000 n 
-0000102673 00000 n 
+0000110278 00000 n 
+0000112224 00000 n 
 0000000015 00000 n 
 0000000120 00000 n 
 0000001121 00000 n 
 0000001226 00000 n 
 0000002927 00000 n 
 0000003032 00000 n 
-0000006527 00000 n 
-0000006633 00000 n 
-0000009396 00000 n 
-0000009503 00000 n 
-0000015115 00000 n 
-0000015222 00000 n 
-0000020220 00000 n 
-0000020327 00000 n 
-0000027883 00000 n 
-0000027990 00000 n 
-0000037821 00000 n 
-0000037928 00000 n 
-0000038497 00000 n 
-0000038604 00000 n 
-0000048778 00000 n 
-0000048885 00000 n 
-0000053776 00000 n 
-0000053883 00000 n 
-0000059301 00000 n 
-0000059408 00000 n 
-0000067313 00000 n 
-0000067420 00000 n 
-0000073567 00000 n 
-0000073674 00000 n 
-0000077826 00000 n 
-0000077933 00000 n 
-0000085255 00000 n 
-0000085362 00000 n 
-0000091262 00000 n 
-0000091369 00000 n 
-0000096137 00000 n 
-0000096244 00000 n 
-0000100908 00000 n 
-0000101034 00000 n 
-0000101165 00000 n 
-0000101299 00000 n 
-0000101437 00000 n 
-0000101561 00000 n 
-0000101690 00000 n 
-0000101822 00000 n 
-0000101958 00000 n 
-0000102086 00000 n 
-0000102213 00000 n 
-0000102342 00000 n 
-0000102475 00000 n 
-0000102577 00000 n 
-0000102926 00000 n 
-0000103012 00000 n 
+0000007158 00000 n 
+0000007264 00000 n 
+0000011209 00000 n 
+0000011316 00000 n 
+0000016928 00000 n 
+0000017035 00000 n 
+0000022033 00000 n 
+0000022140 00000 n 
+0000029696 00000 n 
+0000029803 00000 n 
+0000039612 00000 n 
+0000039719 00000 n 
+0000040288 00000 n 
+0000040395 00000 n 
+0000050478 00000 n 
+0000050585 00000 n 
+0000055561 00000 n 
+0000055668 00000 n 
+0000061379 00000 n 
+0000061486 00000 n 
+0000069402 00000 n 
+0000069509 00000 n 
+0000076762 00000 n 
+0000076869 00000 n 
+0000083934 00000 n 
+0000084041 00000 n 
+0000094364 00000 n 
+0000094471 00000 n 
+0000100434 00000 n 
+0000100541 00000 n 
+0000105667 00000 n 
+0000105774 00000 n 
+0000110459 00000 n 
+0000110585 00000 n 
+0000110716 00000 n 
+0000110850 00000 n 
+0000110988 00000 n 
+0000111112 00000 n 
+0000111241 00000 n 
+0000111373 00000 n 
+0000111509 00000 n 
+0000111637 00000 n 
+0000111764 00000 n 
+0000111893 00000 n 
+0000112026 00000 n 
+0000112128 00000 n 
+0000112477 00000 n 
+0000112563 00000 n 
 trailer
 <<
 /Size 57
 /Root 56 0 R
 /Info 55 0 R
-/ID [ <46E9A76B853543A45687E13C2183ACAC> <46E9A76B853543A45687E13C2183ACAC> ]
+/ID [ <26C7D2995D1A7F0390A0E1826CC89CC5> <26C7D2995D1A7F0390A0E1826CC89CC5> ]
 >>
 startxref
-103116
+112667
 %%EOF
