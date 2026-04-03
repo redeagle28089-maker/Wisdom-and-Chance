@@ -1,0 +1,831 @@
+%PDF-1.3
+%ºß¬à
+3 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/MediaBox [0 0 612. 792.]
+/Contents 4 0 R
+>>
+endobj
+4 0 obj
+<<
+/Length 645
+>>
+stream
+0.200025 w
+0 G
+BT
+/F2 22 Tf
+25.2999999999999972 TL
+0.118 0.227 0.373 rg
+55. 612. Td
+(Wisdom & Chance TCG) Tj
+ET
+BT
+/F1 16 Tf
+18.3999999999999986 TL
+0.145 0.388 0.922 rg
+55. 578. Td
+(Mobile AI Agent Data Request) Tj
+ET
+0.15 0.39 0.92 RG
+2. w
+55. 538. m
+557. 538. l
+S
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+55. 518. Td
+(Questions for the Mobile App AI Agent) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+55. 505. Td
+(Answers needed for the Business Plan cost estimate) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+55. 482. Td
+(Date: April 2026) Tj
+ET
+BT
+/F1 7 Tf
+8.0499999999999989 TL
+0.588 g
+295.0099999999999909 25. Td
+(Page 1) Tj
+ET
+endstream
+endobj
+5 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/MediaBox [0 0 612. 792.]
+/Contents 6 0 R
+>>
+endobj
+6 0 obj
+<<
+/Length 4392
+>>
+stream
+2. w
+0.15 0.39 0.92 RG
+BT
+/F2 14 Tf
+16.0999999999999979 TL
+0.145 0.388 0.922 rg
+55. 723. Td
+(Instructions) Tj
+ET
+0.82 0.84 0.86 RG
+0.5 w
+55. 705. m
+557. 705. l
+S
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+55. 697. Td
+(Copy and paste the following message to the mobile app AI agent. The answers will be used to create accurate cost estimates) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+55. 684. Td
+(for the business plan covering both the web and mobile app.) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+55. 661. Td
+(--- BEGIN MESSAGE TO MOBILE AI AGENT ---) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+60. 638. Td
+(I need the following information about the Wisdom & Chance TCG mobile app for our business plan. Please answer each) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+60. 625. Td
+(question as specifically as possible with numbers, percentages, and details.) Tj
+ET
+BT
+/F2 14 Tf
+16.0999999999999979 TL
+0.145 0.388 0.922 rg
+55. 588. Td
+(Section 1: Current Progress) Tj
+ET
+0.82 0.84 0.86 RG
+0.5 w
+55. 570. m
+557. 570. l
+S
+BT
+/F2 9 Tf
+10.3499999999999996 TL
+0.145 0.388 0.922 rg
+63. 562. Td
+(Q1.) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+90. 562. Td
+(What is the overall completion percentage of the mobile app?) Tj
+ET
+BT
+/F3 8 Tf
+9.1999999999999993 TL
+0.392 g
+90. 545. Td
+(\(e.g., "65% complete" or "4 of 7 phases done"\)) Tj
+ET
+BT
+/F2 9 Tf
+10.3499999999999996 TL
+0.145 0.388 0.922 rg
+63. 528. Td
+(Q2.) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+90. 528. Td
+(Which screens/features are fully built and functional right now? List them.) Tj
+ET
+BT
+/F3 8 Tf
+9.1999999999999993 TL
+0.392 g
+90. 511. Td
+(\(e.g., "Login, Card Browser, Deck Builder, Shop, Collection are done"\)) Tj
+ET
+BT
+/F2 9 Tf
+10.3499999999999996 TL
+0.145 0.388 0.922 rg
+63. 494. Td
+(Q3.) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+90. 494. Td
+(Which screens/features are partially built? What remains on each?) Tj
+ET
+BT
+/F3 8 Tf
+9.1999999999999993 TL
+0.392 g
+90. 477. Td
+(\(e.g., "Battle Pass screen is 80% done, missing premium track UI"\)) Tj
+ET
+BT
+/F2 9 Tf
+10.3499999999999996 TL
+0.145 0.388 0.922 rg
+63. 460. Td
+(Q4.) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+90. 460. Td
+(Which screens/features have NOT been started yet? List them.) Tj
+ET
+BT
+/F3 8 Tf
+9.1999999999999993 TL
+0.392 g
+90. 443. Td
+(\(e.g., "Multiplayer game board, Spectator mode, Friend messaging"\)) Tj
+ET
+BT
+/F2 14 Tf
+16.0999999999999979 TL
+0.145 0.388 0.922 rg
+55. 412. Td
+(Section 2: Technical Details) Tj
+ET
+0.82 0.84 0.86 RG
+0.5 w
+55. 394. m
+557. 394. l
+S
+BT
+/F2 9 Tf
+10.3499999999999996 TL
+0.145 0.388 0.922 rg
+63. 386. Td
+(Q5.) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+90. 386. Td
+(What framework/language is the mobile app built with?) Tj
+ET
+BT
+/F3 8 Tf
+9.1999999999999993 TL
+0.392 g
+90. 369. Td
+(\(e.g., "React Native + TypeScript" or "Flutter + Dart" or "Expo"\)) Tj
+ET
+BT
+/F2 9 Tf
+10.3499999999999996 TL
+0.145 0.388 0.922 rg
+63. 352. Td
+(Q6.) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+90. 352. Td
+(Is the mobile app being developed on Replit? If not, what platform?) Tj
+ET
+BT
+/F3 8 Tf
+9.1999999999999993 TL
+0.392 g
+90. 335. Td
+(We need to know if all development can stay on Replit as planned.) Tj
+ET
+BT
+/F2 9 Tf
+10.3499999999999996 TL
+0.145 0.388 0.922 rg
+63. 318. Td
+(Q7.) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+90. 318. Td
+(How many total screens/pages exist in the app currently?) Tj
+ET
+BT
+/F3 8 Tf
+9.1999999999999993 TL
+0.392 g
+90. 301. Td
+(\(e.g., "12 screens built, 8 more planned"\)) Tj
+ET
+BT
+/F2 9 Tf
+10.3499999999999996 TL
+0.145 0.388 0.922 rg
+63. 284. Td
+(Q8.) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+90. 284. Td
+(How many of the server's 70+ API endpoints does the mobile app currently consume?) Tj
+ET
+BT
+/F3 8 Tf
+9.1999999999999993 TL
+0.392 g
+90. 267. Td
+(\(e.g., "35 of 75 endpoints are wired up"\)) Tj
+ET
+BT
+/F2 9 Tf
+10.3499999999999996 TL
+0.145 0.388 0.922 rg
+63. 250. Td
+(Q9.) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+90. 250. Td
+(Are there any third-party SDKs, services, or paid dependencies the mobile app uses beyond what the server) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+90. 237. Td
+(provides?) Tj
+ET
+BT
+/F3 8 Tf
+9.1999999999999993 TL
+0.392 g
+90. 220. Td
+(\(e.g., "Firebase for push notifications", "RevenueCat for IAP", etc.\)) Tj
+ET
+BT
+/F1 7 Tf
+8.0499999999999989 TL
+0.588 g
+295.0099999999999909 25. Td
+(Page 2) Tj
+ET
+endstream
+endobj
+7 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/MediaBox [0 0 612. 792.]
+/Contents 8 0 R
+>>
+endobj
+8 0 obj
+<<
+/Length 3986
+>>
+stream
+0.5 w
+0.82 0.84 0.86 RG
+BT
+/F2 14 Tf
+16.0999999999999979 TL
+0.145 0.388 0.922 rg
+55. 723. Td
+(Section 3: Remaining Work Estimate) Tj
+ET
+0.82 0.84 0.86 RG
+0.5 w
+55. 705. m
+557. 705. l
+S
+BT
+/F2 9 Tf
+10.3499999999999996 TL
+0.145 0.388 0.922 rg
+63. 697. Td
+(Q10.) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+90. 697. Td
+(How many estimated development hours remain to reach a fully functional v1.0 mobile app? Break it down by major) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+90. 684. Td
+(feature area if possible.) Tj
+ET
+BT
+/F3 8 Tf
+9.1999999999999993 TL
+0.392 g
+90. 667. Td
+(\(e.g., "Multiplayer: 40hrs, Social: 20hrs, Polish: 30hrs = ~90hrs total"\)) Tj
+ET
+BT
+/F2 9 Tf
+10.3499999999999996 TL
+0.145 0.388 0.922 rg
+63. 650. Td
+(Q11.) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+90. 650. Td
+(What are the hardest/riskiest remaining features to build?) Tj
+ET
+BT
+/F3 8 Tf
+9.1999999999999993 TL
+0.392 g
+90. 633. Td
+(\(e.g., "WebSocket multiplayer game board is the biggest challenge"\)) Tj
+ET
+BT
+/F2 9 Tf
+10.3499999999999996 TL
+0.145 0.388 0.922 rg
+63. 616. Td
+(Q12.) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+90. 616. Td
+(Are there any known bugs, technical debt, or architectural issues that need to be addressed before launch?) Tj
+ET
+BT
+/F2 14 Tf
+16.0999999999999979 TL
+0.145 0.388 0.922 rg
+55. 585. Td
+(Section 4: Deployment & Costs) Tj
+ET
+0.82 0.84 0.86 RG
+0.5 w
+55. 567. m
+557. 567. l
+S
+BT
+/F2 9 Tf
+10.3499999999999996 TL
+0.145 0.388 0.922 rg
+63. 559. Td
+(Q13.) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+90. 559. Td
+(What is the plan for app store deployment? \(Apple App Store, Google Play, or both?\)) Tj
+ET
+BT
+/F2 9 Tf
+10.3499999999999996 TL
+0.145 0.388 0.922 rg
+63. 542. Td
+(Q14.) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+90. 542. Td
+(Are there any annual costs for the mobile app specifically? \(Apple Developer $99/yr, Google Play $25 one-time, etc.\)) Tj
+ET
+BT
+/F2 9 Tf
+10.3499999999999996 TL
+0.145 0.388 0.922 rg
+63. 525. Td
+(Q15.) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+90. 525. Td
+(Does the mobile app require any separate hosting or backend beyond the existing web server?) Tj
+ET
+BT
+/F3 8 Tf
+9.1999999999999993 TL
+0.392 g
+90. 508. Td
+(The web server is on Replit. Does the mobile app need anything else?) Tj
+ET
+BT
+/F2 9 Tf
+10.3499999999999996 TL
+0.145 0.388 0.922 rg
+63. 491. Td
+(Q16.) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+90. 491. Td
+(What is the estimated app size \(MB\) and are there any large assets that need to be downloaded?) Tj
+ET
+BT
+/F2 14 Tf
+16.0999999999999979 TL
+0.145 0.388 0.922 rg
+55. 460. Td
+(Section 5: Post-Launch Maintenance) Tj
+ET
+0.82 0.84 0.86 RG
+0.5 w
+55. 442. m
+557. 442. l
+S
+BT
+/F2 9 Tf
+10.3499999999999996 TL
+0.145 0.388 0.922 rg
+63. 434. Td
+(Q17.) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+90. 434. Td
+(After v1.0 launch, what is the estimated monthly maintenance effort in hours?) Tj
+ET
+BT
+/F3 8 Tf
+9.1999999999999993 TL
+0.392 g
+90. 417. Td
+(\(e.g., "~10 hrs/month for bug fixes, OS updates, and minor features"\)) Tj
+ET
+BT
+/F2 9 Tf
+10.3499999999999996 TL
+0.145 0.388 0.922 rg
+63. 400. Td
+(Q18.) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+90. 400. Td
+(How often will the app need updates for iOS/Android OS compatibility?) Tj
+ET
+BT
+/F2 9 Tf
+10.3499999999999996 TL
+0.145 0.388 0.922 rg
+63. 383. Td
+(Q19.) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+90. 383. Td
+(Are there any recurring costs specific to the mobile app \(push notification service, analytics, crash reporting\)?) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+55. 351. Td
+(--- END MESSAGE TO MOBILE AI AGENT ---) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+55. 323. Td
+(Once you have the answers, bring them back to the web app agent \(me\) and I will incorporate them into the final business plan) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.118 g
+55. 310. Td
+(with accurate cost estimates for both apps.) Tj
+ET
+BT
+/F1 7 Tf
+8.0499999999999989 TL
+0.588 g
+295.0099999999999909 25. Td
+(Page 3) Tj
+ET
+endstream
+endobj
+1 0 obj
+<</Type /Pages
+/Kids [3 0 R 5 0 R 7 0 R ]
+/Count 3
+>>
+endobj
+9 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+10 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+11 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica-Oblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+12 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica-BoldOblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+13 0 obj
+<<
+/Type /Font
+/BaseFont /Courier
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+14 0 obj
+<<
+/Type /Font
+/BaseFont /Courier-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+15 0 obj
+<<
+/Type /Font
+/BaseFont /Courier-Oblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+16 0 obj
+<<
+/Type /Font
+/BaseFont /Courier-BoldOblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+17 0 obj
+<<
+/Type /Font
+/BaseFont /Times-Roman
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+18 0 obj
+<<
+/Type /Font
+/BaseFont /Times-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+19 0 obj
+<<
+/Type /Font
+/BaseFont /Times-Italic
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+20 0 obj
+<<
+/Type /Font
+/BaseFont /Times-BoldItalic
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+21 0 obj
+<<
+/Type /Font
+/BaseFont /ZapfDingbats
+/Subtype /Type1
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+22 0 obj
+<<
+/Type /Font
+/BaseFont /Symbol
+/Subtype /Type1
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+2 0 obj
+<<
+/ProcSet [/PDF /Text /ImageB /ImageC /ImageI]
+/Font <<
+/F1 9 0 R
+/F2 10 0 R
+/F3 11 0 R
+/F4 12 0 R
+/F5 13 0 R
+/F6 14 0 R
+/F7 15 0 R
+/F8 16 0 R
+/F9 17 0 R
+/F10 18 0 R
+/F11 19 0 R
+/F12 20 0 R
+/F13 21 0 R
+/F14 22 0 R
+>>
+/XObject <<
+>>
+>>
+endobj
+23 0 obj
+<<
+/Producer (jsPDF 4.2.1)
+/CreationDate (D:20260403133507-00'00')
+>>
+endobj
+24 0 obj
+<<
+/Type /Catalog
+/Pages 1 0 R
+/OpenAction [3 0 R /FitH null]
+/PageLayout /OneColumn
+>>
+endobj
+xref
+0 25
+0000000000 65535 f 
+0000009508 00000 n 
+0000011341 00000 n 
+0000000015 00000 n 
+0000000120 00000 n 
+0000000816 00000 n 
+0000000921 00000 n 
+0000005365 00000 n 
+0000005470 00000 n 
+0000009577 00000 n 
+0000009702 00000 n 
+0000009833 00000 n 
+0000009967 00000 n 
+0000010105 00000 n 
+0000010229 00000 n 
+0000010358 00000 n 
+0000010490 00000 n 
+0000010626 00000 n 
+0000010754 00000 n 
+0000010881 00000 n 
+0000011010 00000 n 
+0000011143 00000 n 
+0000011245 00000 n 
+0000011593 00000 n 
+0000011679 00000 n 
+trailer
+<<
+/Size 25
+/Root 24 0 R
+/Info 23 0 R
+/ID [ <D17AB99E9F713BFADE40162950271CC6> <D17AB99E9F713BFADE40162950271CC6> ]
+>>
+startxref
+11783
+%%EOF
