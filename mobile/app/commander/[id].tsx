@@ -7,6 +7,7 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import type { IoniconsName } from '@/lib/icon-types';
 import Colors, { getElementColor, getElementBg } from '@/constants/colors';
 import { api, CommanderAbility } from '@/lib/api';
 import CommanderFrame from '@/components/CommanderFrame';
@@ -94,7 +95,7 @@ export default function CommanderDetailScreen() {
           <Text style={styles.commanderName}>{commander.name}</Text>
           <Text style={styles.commanderTitle}>{commander.title}</Text>
           <View style={[styles.elementTag, { backgroundColor: elBg }]}>
-            <Ionicons name={getElementIcon(commander.element) as any} size={16} color={elColor} />
+            <Ionicons name={getElementIcon(commander.element) as IoniconsName} size={16} color={elColor} />
             <Text style={[styles.elementTagText, { color: elColor }]}>{commander.element}</Text>
           </View>
         </LinearGradient>

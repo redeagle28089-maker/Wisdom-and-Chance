@@ -6,14 +6,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import type { IoniconsName } from '@/lib/icon-types';
 import Colors, { getElementColor } from '@/constants/colors';
 import { api } from '@/lib/api';
+import type { PlayerStats, PlayerRating, PlayerAchievement } from '@/lib/api';
 
 function StatRow({ label, value, icon, color }: { label: string; value: string; icon: string; color: string }) {
   return (
     <View style={styles.statRow}>
       <View style={[styles.statIcon, { backgroundColor: color + '18' }]}>
-        <Ionicons name={icon as any} size={18} color={color} />
+        <Ionicons name={icon as IoniconsName} size={18} color={color} />
       </View>
       <Text style={styles.statLabel}>{label}</Text>
       <Text style={[styles.statValue, { color }]}>{value}</Text>
@@ -44,12 +46,12 @@ export default function AnalyticsScreen() {
   const achievementsQuery = useQuery({ queryKey: ['achievements'], queryFn: () => api.getAchievements() });
   const playerAchQuery = useQuery({ queryKey: ['player-achievements'], queryFn: () => api.getPlayerAchievements(), retry: false });
 
-  const stats = statsQuery.data as any;
-  const rating = (ratingQuery.data as any)?.rating ?? 1000;
+  const stats = statsQuery.data;
+  const rating = ratingQuery.data?.rating ?? 1000;
   const games = gamesQuery.data ?? [];
   const achievements = achievementsQuery.data ?? [];
   const playerAch = playerAchQuery.data ?? [];
-  const completedAch = playerAch.filter((a: any) => a.completed).length;
+  const completedAch = playerAch.filter((a) => a.completed).length;
 
   const totalGames = stats?.totalGames ?? 0;
   const wins = stats?.wins ?? 0;

@@ -8,8 +8,10 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
+import type { IoniconsName } from '@/lib/icon-types';
 import Colors, { getElementColor } from '@/constants/colors';
 import { api } from '@/lib/api';
+import type { GameRecord, PlayerAchievement, Achievement } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 
 function getTierColor(rating: number) {
@@ -42,15 +44,15 @@ export default function ProfileScreen() {
   const playerAchQuery = useQuery({ queryKey: ['player-achievements'], queryFn: () => api.getPlayerAchievements(), retry: false });
   const gamesQuery = useQuery({ queryKey: ['games'], queryFn: () => api.getGames(), retry: false });
 
-  const stats = statsQuery.data as any;
-  const rating = (ratingQuery.data as any)?.rating ?? 1000;
+  const stats = statsQuery.data;
+  const rating = ratingQuery.data?.rating ?? 1000;
   const decks = decksQuery.data ?? [];
   const achievements = achievementsQuery.data ?? [];
   const playerAch = playerAchQuery.data ?? [];
   const games = gamesQuery.data ?? [];
-  const completedAch = playerAch.filter((a: any) => a.completed).length;
-  const totalXP = playerAch.filter((a: any) => a.completed).reduce((sum: number, pa: any) => {
-    const ach = achievements.find((a: any) => a.id === pa.achievementId);
+  const completedAch = playerAch.filter((a) => a.completed).length;
+  const totalXP = playerAch.filter((a) => a.completed).reduce((sum: number, pa) => {
+    const ach = achievements.find((a) => a.id === pa.achievementId);
     return sum + (ach?.xpReward ?? 0);
   }, 0);
   const level = Math.max(1, Math.floor(totalXP / 100) + 1);
@@ -68,7 +70,7 @@ export default function ProfileScreen() {
   const streak = (() => {
     let s = 0;
     for (const g of games.slice(0, 20)) {
-      if ((g as any).result === 'win' || (g as any).winner === 'player') s++;
+      if (g.result === 'win' || g.winner === 'player') s++;
       else break;
     }
     return s;
@@ -129,7 +131,7 @@ export default function ProfileScreen() {
             { label: 'Streak', value: streak, icon: 'flame', color: Colors.fire },
           ].map((s, i) => (
             <View key={i} style={styles.statCard}>
-              <Ionicons name={s.icon as any} size={20} color={s.color} />
+              <Ionicons name={s.icon as IoniconsName} size={20} color={s.color} />
               <Text style={styles.statValue}>{s.value}</Text>
               <Text style={styles.statLabel}>{s.label}</Text>
             </View>

@@ -177,3 +177,12 @@ export interface PlayerChallenge {
   completed: boolean;
   claimed: boolean;
 }
+
+export interface GameRecord {
+  id: string;
+  result?: string;
+  winner?: string;
+  createdAt?: string;
+  mode?: string;
+  opponent?: string;
+}

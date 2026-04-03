@@ -7,6 +7,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import type { IoniconsName } from '@/lib/icon-types';
 import Colors, { getElementColor, getElementBg } from '@/constants/colors';
 import { api, Card, Commander, DeckSuggestion } from '@/lib/api';
 
@@ -100,7 +101,7 @@ export default function SuggestScreen() {
                     }}
                   >
                     <Ionicons
-                      name={el === 'fire' ? 'flame' : el === 'water' ? 'water' : el === 'earth' ? 'earth' : el === 'air' ? 'cloud' : 'leaf' as any}
+                      name={(el === 'fire' ? 'flame' : el === 'water' ? 'water' : el === 'earth' ? 'earth' : el === 'air' ? 'cloud' : 'leaf') as IoniconsName}
                       size={22}
                       color={isActive ? elColor : Colors.textMuted}
                     />

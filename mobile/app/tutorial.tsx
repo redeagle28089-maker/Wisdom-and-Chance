@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import type { IoniconsName } from '@/lib/icon-types';
 import Colors from '@/constants/colors';
 
 const STEPS = [
@@ -98,7 +99,7 @@ export default function TutorialScreen() {
       <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 100 + (Platform.OS === 'web' ? 34 : 0) }} showsVerticalScrollIndicator={false}>
         <View style={[styles.stepCard, { borderColor: STEPS[currentStep].color + '40' }]}>
           <View style={[styles.stepIconBg, { backgroundColor: STEPS[currentStep].color + '20' }]}>
-            <Ionicons name={STEPS[currentStep].icon as any} size={32} color={STEPS[currentStep].color} />
+            <Ionicons name={STEPS[currentStep].icon as IoniconsName} size={32} color={STEPS[currentStep].color} />
           </View>
           <Text style={styles.stepNum}>Step {currentStep + 1} of {STEPS.length}</Text>
           <Text style={styles.stepTitle}>{STEPS[currentStep].title}</Text>

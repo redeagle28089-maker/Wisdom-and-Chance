@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
+import type { IoniconsName } from '@/lib/icon-types';
 import Colors, { getElementColor, getElementBg } from '@/constants/colors';
 import { api } from '@/lib/api';
 import CardFrame from '@/components/CardFrame';
@@ -83,7 +84,7 @@ export default function CardDetailScreen() {
           <Text style={styles.cardName}>{card.name}</Text>
 
           <View style={[styles.elementBadge, { backgroundColor: elBg }]}>
-            <Ionicons name={getElementIcon(card.element) as any} size={16} color={elColor} />
+            <Ionicons name={getElementIcon(card.element) as IoniconsName} size={16} color={elColor} />
             <Text style={[styles.elementBadgeText, { color: elColor }]}>{card.element}</Text>
           </View>
 

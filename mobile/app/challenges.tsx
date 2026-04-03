@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
+import type { IoniconsName } from '@/lib/icon-types';
 import Colors from '@/constants/colors';
 import { api, DailyChallenge, PlayerChallenge } from '@/lib/api';
 
@@ -51,7 +52,7 @@ function ChallengeItem({ challenge, playerChallenge }: {
         backgroundColor: isClaimed ? Colors.success + '15' : isComplete ? '#F59E0B15' : Colors.primary + '15',
       }]}>
         <Ionicons
-          name={isClaimed ? 'checkmark-circle' : isComplete ? 'gift' : getChallengeIcon(challenge.type) as any}
+          name={(isClaimed ? 'checkmark-circle' : isComplete ? 'gift' : getChallengeIcon(challenge.type)) as IoniconsName}
           size={24}
           color={isClaimed ? Colors.success : isComplete ? '#F59E0B' : Colors.primary}
         />

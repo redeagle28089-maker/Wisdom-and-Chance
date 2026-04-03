@@ -8,6 +8,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
+import type { IoniconsName } from '@/lib/icon-types';
 import Colors, { getElementColor, getElementBg } from '@/constants/colors';
 import { api } from '@/lib/api';
 import { AIDifficulty } from '@/lib/ai-player';
@@ -80,7 +81,7 @@ export default function PracticeScreen() {
               style={[styles.diffCard, difficulty === d.id && { borderColor: d.color, backgroundColor: d.color + '12' }]}
               onPress={() => { Haptics.selectionAsync(); setDifficulty(d.id); }}
             >
-              <Ionicons name={d.icon as any} size={28} color={difficulty === d.id ? d.color : Colors.textMuted} />
+              <Ionicons name={d.icon as IoniconsName} size={28} color={difficulty === d.id ? d.color : Colors.textMuted} />
               <Text style={[styles.diffLabel, difficulty === d.id && { color: d.color }]}>{d.label}</Text>
               <Text style={styles.diffDesc}>{d.desc}</Text>
             </Pressable>
@@ -95,7 +96,7 @@ export default function PracticeScreen() {
               style={[styles.diffCard, gameMode === m.id && { borderColor: m.color, backgroundColor: m.color + '12' }]}
               onPress={() => { Haptics.selectionAsync(); setGameMode(m.id); }}
             >
-              <Ionicons name={m.icon as any} size={28} color={gameMode === m.id ? m.color : Colors.textMuted} />
+              <Ionicons name={m.icon as IoniconsName} size={28} color={gameMode === m.id ? m.color : Colors.textMuted} />
               <Text style={[styles.diffLabel, gameMode === m.id && { color: m.color }]}>{m.label}</Text>
               <Text style={styles.diffDesc}>{m.desc}</Text>
             </Pressable>

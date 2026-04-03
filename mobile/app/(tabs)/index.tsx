@@ -8,6 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import type { IoniconsName } from '@/lib/icon-types';
 import Colors from '@/constants/colors';
 import { ELEMENT_CARD_ART } from '@/constants/card-art';
 import { useAuth } from '@/lib/auth-context';
@@ -15,7 +16,7 @@ import { api, Commander } from '@/lib/api';
 import CardFrame from '@/components/CardFrame';
 import CommanderFrame from '@/components/CommanderFrame';
 
-function ChallengeCard({ challenge }: { challenge: any }) {
+function ChallengeCard({ challenge }: { challenge: { progress?: number; requirement?: number; target?: number; completed?: boolean; name?: string; description?: string } }) {
   const progress = challenge.progress ?? 0;
   const target = challenge.requirement ?? challenge.target ?? 1;
   const pct = Math.min((progress / target) * 100, 100);
@@ -25,7 +26,7 @@ function ChallengeCard({ challenge }: { challenge: any }) {
     <View style={styles.challengeCard}>
       <View style={[styles.challengeIcon, isComplete && { backgroundColor: Colors.success + '20' }]}>
         <Ionicons
-          name={isComplete ? 'checkmark-circle' : 'flash' as any}
+          name={(isComplete ? 'checkmark-circle' : 'flash') as IoniconsName}
           size={20}
           color={isComplete ? Colors.success : Colors.warning}
         />
@@ -45,7 +46,7 @@ function StatCard({ label, value, icon, color }: { label: string; value: string;
   return (
     <View style={styles.statCard}>
       <View style={[styles.statIconBg, { backgroundColor: color + '20' }]}>
-        <Ionicons name={icon as any} size={20} color={color} />
+        <Ionicons name={icon as IoniconsName} size={20} color={color} />
       </View>
       <Text style={styles.statValue}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
@@ -60,7 +61,7 @@ function QuickAction({ icon, label, onPress, color }: { icon: string; label: str
       onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onPress(); }}
     >
       <View style={[styles.quickActionIcon, { backgroundColor: color + '18' }]}>
-        <Ionicons name={icon as any} size={24} color={color} />
+        <Ionicons name={icon as IoniconsName} size={24} color={color} />
       </View>
       <Text style={styles.quickActionLabel}>{label}</Text>
       <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
@@ -133,10 +134,10 @@ export default function HomeScreen() {
     return 'Bronze';
   }
 
-  const rating = (ratingQuery.data as any)?.rating ?? 1000;
+  const rating = ratingQuery.data?.rating ?? 1000;
   const stats = statsQuery.data;
-  const totalGames = (stats as any)?.totalGames ?? 0;
-  const wins = (stats as any)?.wins ?? 0;
+  const totalGames = stats?.totalGames ?? 0;
+  const wins = stats?.wins ?? 0;
   const winRate = totalGames > 0 ? Math.round((wins / totalGames) * 100) : 0;
   const deckCount = decksQuery.data?.length ?? 0;
   const commanders: Commander[] = commandersQuery.data ?? [];
@@ -146,8 +147,8 @@ export default function HomeScreen() {
 
   const challenges = challengesQuery.data ?? [];
   const playerChallenges = playerChallengesQuery.data ?? [];
-  const dailyChallenges = challenges.map((c: any) => {
-    const pc = playerChallenges.find((p: any) => p.challengeId === c.id);
+  const dailyChallenges = challenges.map((c) => {
+    const pc = playerChallenges.find((p) => p.challengeId === c.id);
     return { ...c, progress: pc?.progress ?? 0, completed: pc?.completed ?? false };
   });
 
@@ -332,7 +333,7 @@ export default function HomeScreen() {
                     resizeMode="cover"
                   />
                   <View style={[styles.elementArtOverlay, { backgroundColor: el.color + '40' }]}>
-                    <Ionicons name={el.icon as any} size={20} color="#fff" />
+                    <Ionicons name={el.icon as IoniconsName} size={20} color="#fff" />
                   </View>
                 </View>
                 <Text style={styles.elementCardName}>{el.name}</Text>
@@ -375,8 +376,8 @@ const styles = StyleSheet.create({
   elementsGrid: { flexDirection: 'row', gap: 10, flexWrap: 'wrap' },
   elementCard: { width: '18%', minWidth: 60, alignItems: 'center', gap: 6 },
   elementCardIcon: { width: 50, height: 50, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  elementArtImage: { position: 'absolute', width: '100%', height: '100%', resizeMode: 'cover' } as any,
-  elementArtOverlay: { position: 'absolute', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' } as any,
+  elementArtImage: { position: 'absolute' as const, width: '100%' as const, height: '100%' as const, resizeMode: 'cover' as const },
+  elementArtOverlay: { position: 'absolute' as const, width: '100%' as const, height: '100%' as const, alignItems: 'center' as const, justifyContent: 'center' as const },
   elementCardName: { fontFamily: 'Inter_500Medium', fontSize: 12, color: Colors.textSecondary },
   deckPreviewRow: { gap: 12, paddingRight: 20 },
   deckPreviewItem: { alignItems: 'center', gap: 6, width: 96 },

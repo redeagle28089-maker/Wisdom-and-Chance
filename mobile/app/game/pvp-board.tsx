@@ -9,6 +9,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import { LinearGradient } from 'expo-linear-gradient';
+import type { IoniconsName } from '@/lib/icon-types';
 import Colors, { getElementColor, getElementBg } from '@/constants/colors';
 import { Card, Commander, CommanderAbility } from '@/lib/api';
 import { GameState, GamePhase, DeployedCard, RoundResult, AbilityEffect, PlayerState, GAME_CONSTANTS } from '@/lib/game-engine';
@@ -113,7 +114,7 @@ function PhaseIndicator({ phase }: { phase: GamePhase }) {
         const active = p.id.includes(phase);
         return (
           <View key={i} style={[styles.phaseDot, active && { backgroundColor: p.color + '30', borderColor: p.color }]}>
-            <Ionicons name={p.icon as any} size={8} color={active ? p.color : '#475569'} />
+            <Ionicons name={p.icon as IoniconsName} size={8} color={active ? p.color : '#475569'} />
           </View>
         );
       })}
@@ -700,7 +701,7 @@ export default function PvPGameBoardScreen() {
           <View style={styles.combatStepsRow}>
             {combatSteps.map((step, i) => (
               <View key={i} style={[styles.combatStep, i < combatPhase && { backgroundColor: step.color + '20', borderColor: step.color + '40' }]}>
-                <Ionicons name={step.icon as any} size={8} color={i < combatPhase ? step.color : '#475569'} />
+                <Ionicons name={step.icon as IoniconsName} size={8} color={i < combatPhase ? step.color : '#475569'} />
                 <Text style={[styles.combatStepText, i < combatPhase && { color: step.color }]} numberOfLines={1}>
                   {step.label}
                 </Text>
@@ -1022,7 +1023,7 @@ export default function PvPGameBoardScreen() {
               )}
               <View style={styles.cardPopupOverlay}>
                 <View style={styles.cardPopupPower}>
-                  <Text style={styles.cardPopupPowerText}>{(popupCard as any).currentPower ?? popupCard.power}</Text>
+                  <Text style={styles.cardPopupPowerText}>{(popupCard as Card & { currentPower?: number }).currentPower ?? popupCard.power}</Text>
                   <Text style={styles.cardPopupPowerLabel}>PWR</Text>
                 </View>
                 {popupCard.trait && (

@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import type { MciName } from '@/lib/icon-types';
 import { Card } from '@/lib/api';
 import { getCardArt, getCardImageUrl } from '@/constants/card-art';
 import AuthImage from '@/components/AuthImage';
@@ -154,7 +155,7 @@ export default function CardFrame({
           <View style={[styles.traitBadge, { paddingHorizontal: badgePad, paddingVertical: 1, borderRadius: 3 }]}>
             {!isSmall && TRAIT_ICONS[card.trait] && (
               <MaterialCommunityIcons
-                name={TRAIT_ICONS[card.trait] as any}
+                name={TRAIT_ICONS[card.trait] as MciName}
                 size={traitFontSize + 2}
                 color="#fff"
                 style={{ marginRight: 1 }}

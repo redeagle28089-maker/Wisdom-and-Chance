@@ -8,6 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import type { IoniconsName, MciName } from '@/lib/icon-types';
 import Colors from '@/constants/colors';
 import { api, Achievement, PlayerAchievement, LeaderboardEntry } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
@@ -72,9 +73,9 @@ function AchievementItem({ achievement, playerAchievement }: {
         {isCompleted ? (
           <Ionicons name="checkmark-circle" size={22} color={Colors.success} />
         ) : isMciIcon(achievement.icon) ? (
-          <MaterialCommunityIcons name={getMciIconName(achievement.icon) as any} size={22} color={Colors.textMuted} />
+          <MaterialCommunityIcons name={getMciIconName(achievement.icon) as MciName} size={22} color={Colors.textMuted} />
         ) : (
-          <Ionicons name={getIconName(achievement.icon) as any} size={22} color={Colors.textMuted} />
+          <Ionicons name={getIconName(achievement.icon) as IoniconsName} size={22} color={Colors.textMuted} />
         )}
       </View>
       <View style={styles.achieveInfo}>
@@ -160,7 +161,7 @@ export default function MoreScreen() {
   const leaderboard = leaderboardQuery.data ?? [];
   const completedCount = playerAchievements.filter(pa => pa.completed).length;
   const stats = statsQuery.data;
-  const rating = (ratingQuery.data as any)?.rating ?? 1000;
+  const rating = ratingQuery.data?.rating ?? 1000;
 
   return (
     <View style={[styles.container, { backgroundColor: Colors.background }]}>
@@ -280,17 +281,17 @@ export default function MoreScreen() {
 
           <View style={styles.profileStats}>
             <View style={styles.profileStatItem}>
-              <Text style={styles.profileStatValue}>{(stats as any)?.totalGames ?? 0}</Text>
+              <Text style={styles.profileStatValue}>{stats?.totalGames ?? 0}</Text>
               <Text style={styles.profileStatLabel}>Games</Text>
             </View>
             <View style={styles.profileStatDivider} />
             <View style={styles.profileStatItem}>
-              <Text style={styles.profileStatValue}>{(stats as any)?.wins ?? 0}</Text>
+              <Text style={styles.profileStatValue}>{stats?.wins ?? 0}</Text>
               <Text style={styles.profileStatLabel}>Wins</Text>
             </View>
             <View style={styles.profileStatDivider} />
             <View style={styles.profileStatItem}>
-              <Text style={styles.profileStatValue}>{(stats as any)?.losses ?? 0}</Text>
+              <Text style={styles.profileStatValue}>{stats?.losses ?? 0}</Text>
               <Text style={styles.profileStatLabel}>Losses</Text>
             </View>
             <View style={styles.profileStatDivider} />
@@ -313,9 +314,9 @@ export default function MoreScreen() {
               <Pressable
                 key={item.route}
                 style={({ pressed }) => [styles.quickLink, pressed && { opacity: 0.8 }]}
-                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push(item.route as any); }}
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push(item.route as `/${string}`); }}
               >
-                <Ionicons name={item.icon as any} size={20} color={item.color} />
+                <Ionicons name={item.icon as IoniconsName} size={20} color={item.color} />
                 <Text style={styles.quickLinkText}>{item.label}</Text>
                 <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
               </Pressable>

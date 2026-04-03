@@ -20,6 +20,7 @@ import type {
   DeckSuggestion,
   DailyChallenge,
   PlayerChallenge,
+  GameRecord,
 } from '@shared/mobile-types';
 
 export type {
@@ -41,6 +42,7 @@ export type {
   DeckSuggestion,
   DailyChallenge,
   PlayerChallenge,
+  GameRecord,
 };
 
 const REMOTE_URL = 'https://wisdom-and-chance.replit.app';
@@ -266,7 +268,7 @@ export const api = {
     apiRequest<void>(`/api/rooms/${id}/start`, { method: 'POST', auth: true }),
 
   getGames: () =>
-    apiRequest<any[]>('/api/games', { auth: true }),
+    apiRequest<GameRecord[]>('/api/games', { auth: true }),
 
   exportDeck: (id: string) =>
     apiRequest<{ code: string }>(`/api/user-decks/${id}/export`, { auth: true }),

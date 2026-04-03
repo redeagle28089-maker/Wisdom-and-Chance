@@ -5,6 +5,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import type { IoniconsName } from '@/lib/icon-types';
 import Colors from '@/constants/colors';
 
 function Section({ title, icon, children }: { title: string; icon: string; children: React.ReactNode }) {
@@ -12,7 +13,7 @@ function Section({ title, icon, children }: { title: string; icon: string; child
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
         <View style={styles.sectionIconBg}>
-          <Ionicons name={icon as any} size={18} color={Colors.primary} />
+          <Ionicons name={icon as IoniconsName} size={18} color={Colors.primary} />
         </View>
         <Text style={styles.sectionTitle}>{title}</Text>
       </View>
@@ -53,7 +54,7 @@ function ElementInfo({ name, color, icon, description }: { name: string; color: 
   return (
     <View style={styles.elementRow}>
       <View style={[styles.elementIcon, { backgroundColor: color + '20' }]}>
-        <Ionicons name={icon as any} size={20} color={color} />
+        <Ionicons name={icon as IoniconsName} size={20} color={color} />
       </View>
       <View style={styles.elementInfo}>
         <Text style={[styles.elementName, { color }]}>{name}</Text>
