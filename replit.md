@@ -94,6 +94,23 @@ Key features include:
 - **SQL Backups:** Full SQL dumps can be created via `pg_dump` and are stored in the `backups/` directory. These include all data including card images.
 - **GitHub Backup:** The project is connected to GitHub for code version control. Database backup files in `backups/` can be committed and pushed to GitHub for offsite storage.
 
+### Monorepo Structure (v2.6.0)
+This project is a monorepo containing both the web app and mobile app:
+- **`/client`** — React web frontend (live at wisdom-and-chance.replit.app)
+- **`/server`** — Shared Express.js backend serving both web and mobile apps
+- **`/shared`** — Shared TypeScript types and schemas (used by both apps)
+- **`/mobile`** — Expo/React Native mobile app (deploys to Google Play and Apple App Store via EAS Build)
+
+Both apps connect to the same server and database. The web app connects directly (same origin), the mobile app connects remotely to `https://wisdom-and-chance.replit.app/api/...` using JWT auth.
+
+- **Mobile Framework:** Expo SDK 54 with React Native 0.81, TypeScript, expo-router for navigation
+- **Mobile Auth:** JWT Bearer tokens via `/api/mobile/auth/login` and `/api/mobile/auth/refresh`
+- **Mobile API Client:** `mobile/lib/api.ts` — all API calls with auth token management
+- **Mobile Key Files:** `mobile/app/` (screens), `mobile/components/` (shared components), `mobile/lib/` (API, auth, game engine, WebSocket)
+- **App Store Deployment:** Use `eas build --platform ios/android` from `/mobile` folder, then `eas submit` to publish
+- **Workflows:** "Start application" runs the web server (port 5000). "Start mobile app" runs Expo dev server (port 8080).
+- **GitHub:** Single repo at `github.com/redeagle28089-maker/Wisdom-and-Chance`. Original mobile repo archived at `github.com/redeagle28089-maker/wisdom-and-chance-mobile`.
+
 ## External Dependencies
 
 - **PostgreSQL:** Primary database for persistent user data, saved decks, friend lists, and game statistics.
@@ -109,3 +126,6 @@ Key features include:
 - **Stripe:** Payment processing for credit/debit cards and Google Pay via Stripe Checkout.
 - **PayPal:** Payment processing via PayPal REST API. Payments route to reagle2808@aol.com.
 - **MemStorage:** In-memory storage solution used for active game state during a session.
+- **Expo SDK 54:** Mobile app framework for building iOS and Android apps.
+- **React Native 0.81:** Cross-platform mobile UI framework (used via Expo).
+- **Expo Router:** File-based routing for the mobile app.

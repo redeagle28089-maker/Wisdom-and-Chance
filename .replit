@@ -33,6 +33,10 @@ author = "agent"
 task = "workflow.run"
 args = "Start application"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Start mobile app"
+
 [[workflows.workflow]]
 name = "Start application"
 author = "agent"
@@ -41,6 +45,18 @@ author = "agent"
 task = "shell.exec"
 args = "npm run dev"
 waitForPort = 5000
+
+[[workflows.workflow]]
+name = "Start mobile app"
+author = "agent"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd mobile && npm run expo:dev"
+waitForPort = 8080
 
 [agent]
 integrations = ["javascript_log_in_with_replit:2.0.0", "javascript_gemini_ai_integrations:2.0.0", "stripe:1.0.0", "javascript_paypal:1.0.0"]
