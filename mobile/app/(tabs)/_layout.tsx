@@ -1,38 +1,13 @@
-import { isLiquidGlassAvailable } from "expo-glass-effect";
 import { Tabs } from "expo-router";
-import { NativeTabs, Icon, Label } from "expo-router/unstable-native-tabs";
-import { BlurView } from "expo-blur";
 import { Platform, StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import Colors from "@/constants/colors";
 
-function NativeTabLayout() {
-  return (
-    <NativeTabs>
-      <NativeTabs.Trigger name="index">
-        <Icon sf={{ default: "house", selected: "house.fill" }} />
-        <Label>Home</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="cards">
-        <Icon sf={{ default: "rectangle.stack", selected: "rectangle.stack.fill" }} />
-        <Label>Cards</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="decks">
-        <Icon sf={{ default: "square.stack.3d.up", selected: "square.stack.3d.up.fill" }} />
-        <Label>Decks</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="social">
-        <Icon sf={{ default: "person.2", selected: "person.2.fill" }} />
-        <Label>Social</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="more">
-        <Icon sf={{ default: "ellipsis.circle", selected: "ellipsis.circle.fill" }} />
-        <Label>More</Label>
-      </NativeTabs.Trigger>
-    </NativeTabs>
-  );
-}
+let BlurView: any = null;
+try {
+  BlurView = require("expo-blur").BlurView;
+} catch {}
 
 function ClassicTabLayout() {
   const isWeb = Platform.OS === "web";
@@ -70,7 +45,7 @@ function ClassicTabLayout() {
               }),
         },
         tabBarBackground: () =>
-          isIOS ? (
+          isIOS && BlurView ? (
             <BlurView intensity={100} tint="dark" style={StyleSheet.absoluteFill} />
           ) : isWeb ? (
             <View style={[StyleSheet.absoluteFill, {
@@ -142,8 +117,5 @@ function ClassicTabLayout() {
 }
 
 export default function TabLayout() {
-  if (isLiquidGlassAvailable()) {
-    return <NativeTabLayout />;
-  }
   return <ClassicTabLayout />;
 }

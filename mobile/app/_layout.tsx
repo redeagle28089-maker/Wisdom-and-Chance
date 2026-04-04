@@ -3,13 +3,21 @@ import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect, useState } from "react";
 import { View, Text, ActivityIndicator, Platform } from "react-native";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { KeyboardProvider } from "react-native-keyboard-controller";
 import { StatusBar } from "expo-status-bar";
 import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from "@expo-google-fonts/inter";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { queryClient } from "@/lib/query-client";
 import { AuthProvider } from "@/lib/auth-context";
+
+let GestureHandlerRootView: any = View;
+try {
+  GestureHandlerRootView = require("react-native-gesture-handler").GestureHandlerRootView;
+} catch {}
+
+let KeyboardProvider: any = null;
+try {
+  KeyboardProvider = require("react-native-keyboard-controller").KeyboardProvider;
+} catch {}
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -82,15 +90,23 @@ export default function RootLayout() {
     );
   }
 
+  const content = (
+    <>
+      <StatusBar style="light" />
+      <RootLayoutNav />
+    </>
+  );
+
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <GestureHandlerRootView style={{ flex: 1 }}>
-            <KeyboardProvider>
-              <StatusBar style="light" />
-              <RootLayoutNav />
-            </KeyboardProvider>
+            {KeyboardProvider && Platform.OS !== 'web' ? (
+              <KeyboardProvider>{content}</KeyboardProvider>
+            ) : (
+              content
+            )}
           </GestureHandlerRootView>
         </AuthProvider>
       </QueryClientProvider>
