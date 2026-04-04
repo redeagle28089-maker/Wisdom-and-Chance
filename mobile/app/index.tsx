@@ -7,10 +7,24 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
-import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/lib/auth-context';
 import { signInWithGoogle, GoogleAuthError } from '@/lib/google-auth';
+
+let Animated: any;
+let FadeInDown: any;
+let FadeInUp: any;
+try {
+  const Reanimated = require('react-native-reanimated');
+  Animated = Reanimated.default;
+  FadeInDown = Reanimated.FadeInDown;
+  FadeInUp = Reanimated.FadeInUp;
+} catch {
+  const RN = require('react-native');
+  Animated = { View: RN.View };
+  FadeInDown = undefined;
+  FadeInUp = undefined;
+}
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
@@ -104,7 +118,7 @@ export default function LoginScreen() {
       >
         <View style={[styles.content, { paddingTop: insets.top + webTopInset + 40, paddingBottom: insets.bottom + (Platform.OS === 'web' ? 34 : 0) + 20 }]}>
 
-          <Animated.View entering={FadeInUp.duration(800)} style={styles.headerSection}>
+          <Animated.View entering={FadeInUp?.duration?.(800)} style={styles.headerSection}>
             <View style={styles.iconContainer}>
               <LinearGradient
                 colors={[Colors.primaryLight, Colors.primaryDark]}
@@ -117,7 +131,7 @@ export default function LoginScreen() {
             <Text style={styles.subtitle}>Master the elements. Build your deck. Battle for glory.</Text>
           </Animated.View>
 
-          <Animated.View entering={FadeInDown.duration(800).delay(200)} style={styles.formSection}>
+          <Animated.View entering={FadeInDown?.duration?.(800)?.delay?.(200)} style={styles.formSection}>
             <View style={styles.elementRow}>
               <View style={[styles.elementDot, { backgroundColor: Colors.fire }]} />
               <View style={[styles.elementDot, { backgroundColor: Colors.water }]} />
