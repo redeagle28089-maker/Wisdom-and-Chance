@@ -42,6 +42,21 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {
+        "origin": "https://replit.com/"
+      },
+      "eas": {
+        "projectId": "5b6489bb-213d-4142-91aa-56f3ac338aaf"
+      }
+    },
+    "owner": "redeagle2808",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/5b6489bb-213d-4142-91aa-56f3ac338aaf"
     }
   }
 }
