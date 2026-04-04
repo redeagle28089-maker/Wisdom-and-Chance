@@ -1,5 +1,15 @@
-import { fetch } from "expo/fetch";
+import { Platform } from "react-native";
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+
+let fetchFn: typeof globalThis.fetch = globalThis.fetch.bind(globalThis);
+try {
+  if (Platform.OS !== 'web') {
+    const expoFetch = require('expo/fetch');
+    if (expoFetch?.fetch) {
+      fetchFn = expoFetch.fetch;
+    }
+  }
+} catch {}
 
 /**
  * Gets the base URL for the Express API server (e.g., "http://localhost:3000")
@@ -32,7 +42,7 @@ export async function apiRequest(
   const baseUrl = getApiUrl();
   const url = new URL(route, baseUrl);
 
-  const res = await fetch(url.toString(), {
+  const res = await fetchFn(url.toString(), {
     method,
     headers: data ? { "Content-Type": "application/json" } : {},
     body: data ? JSON.stringify(data) : undefined,
@@ -52,7 +62,7 @@ export const getQueryFn: <T>(options: {
     const baseUrl = getApiUrl();
     const url = new URL(queryKey.join("/") as string, baseUrl);
 
-    const res = await fetch(url.toString(), {
+    const res = await fetchFn(url.toString(), {
       credentials: "include",
     });
 

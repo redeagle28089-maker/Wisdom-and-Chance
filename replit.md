@@ -108,7 +108,9 @@ Both apps connect to the same server and database. The web app connects directly
 - **Mobile API Client:** `mobile/lib/api.ts` — all API calls with auth token management
 - **Mobile Key Files:** `mobile/app/` (screens), `mobile/components/` (shared components), `mobile/lib/` (API, auth, game engine, WebSocket)
 - **App Store Deployment:** Use `eas build --platform ios/android` from `/mobile` folder, then `eas submit` to publish
+- **Mobile Preview:** Visit `/mobile` on the web app (port 5000) to see the mobile app in a phone-frame preview within the Replit preview pane. The preview loads the Expo web version (port 8080) in an iframe.
 - **Workflows:** "Start application" runs the web server (port 5000). "Start mobile app" runs Expo dev server (port 8080).
+- **EAS Project:** Published to Expo as `@redeagle2808/wisdom-chance-tcg` (project ID: 5b6489bb-213d-4142-91aa-56f3ac338aaf). Use `eas update --branch preview` from `/mobile` to push OTA updates.
 - **GitHub:** Single repo at `github.com/redeagle28089-maker/Wisdom-and-Chance`. Original mobile repo archived at `github.com/redeagle28089-maker/wisdom-and-chance-mobile`.
 
 ## External Dependencies

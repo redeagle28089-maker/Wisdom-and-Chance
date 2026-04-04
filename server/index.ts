@@ -2,7 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import cors from "cors";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
-import { createServer } from "http";
+import { createServer, request as httpRequest } from "http";
 import { initializeWebSocket } from "./websocket";
 import { preWarmOidc } from "./replit_integrations/auth/replitAuth";
 import { storage } from "./storage";
@@ -85,9 +85,44 @@ app.use((req, res, next) => {
     throw err;
   });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
+  if (process.env.NODE_ENV !== "production") {
+    app.get("/mobile", (_req, res) => {
+      const domain = process.env.REPLIT_DEV_DOMAIN || "localhost";
+      const mobileUrl = `https://${domain}:8080`;
+      res.send(`<!DOCTYPE html>
+<html><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mobile Preview</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0D0D14;display:flex;flex-direction:column;height:100vh;font-family:system-ui,sans-serif}
+.toolbar{background:#1a1a2e;padding:8px 16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #333}
+.toolbar a{color:#6C63FF;text-decoration:none;font-size:14px}
+.toolbar span{color:#888;font-size:13px}
+.toolbar .dot{width:8px;height:8px;border-radius:50%;background:#4ade80}
+.frame-wrap{flex:1;display:flex;justify-content:center;padding:16px;overflow:hidden}
+.phone-frame{width:390px;height:100%;border:2px solid #333;border-radius:24px;overflow:hidden;background:#0D0D14;box-shadow:0 0 40px rgba(108,99,255,0.15)}
+iframe{width:100%;height:100%;border:none}
+.full .phone-frame{width:100%;border-radius:0;border:none}
+</style>
+</head><body>
+<div class="toolbar">
+<div class="dot"></div>
+<span>Mobile Preview</span>
+<a href="#" onclick="document.body.classList.toggle('full');return false">Toggle Frame</a>
+<a href="${mobileUrl}" target="_blank">Open Direct ↗</a>
+<a href="/" target="_self">← Back to Web App</a>
+</div>
+<div class="frame-wrap">
+<div class="phone-frame">
+<iframe src="${mobileUrl}" allow="clipboard-write"></iframe>
+</div>
+</div>
+</body></html>`);
+    });
+  }
+
   if (process.env.NODE_ENV === "production") {
     serveStatic(app);
   } else {
