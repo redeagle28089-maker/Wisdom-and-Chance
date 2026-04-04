@@ -1,27 +1,45 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import React, { useEffect, useState } from "react";
-import { View, Text, ActivityIndicator, Platform, NativeModules } from "react-native";
+import React, { Component, useEffect, useState } from "react";
+import { View, Text, ActivityIndicator, Platform, Pressable } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from "@expo-google-fonts/inter";
-import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { queryClient } from "@/lib/query-client";
 import { AuthProvider } from "@/lib/auth-context";
 
-let GestureHandlerRootView: any = View;
-try {
-  GestureHandlerRootView = require("react-native-gesture-handler").GestureHandlerRootView;
-} catch {}
-
-let KeyboardProvider: any = null;
-try {
-  if (NativeModules.KeyboardController) {
-    KeyboardProvider = require("react-native-keyboard-controller").KeyboardProvider;
-  }
-} catch {}
-
 SplashScreen.preventAutoHideAsync().catch(() => {});
+
+class SimpleErrorBoundary extends Component<{ children: React.ReactNode }, { error: Error | null }> {
+  state = { error: null as Error | null };
+
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+
+  render() {
+    if (this.state.error) {
+      return (
+        <View style={{ flex: 1, backgroundColor: '#0D0D14', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+          <Text style={{ color: '#fff', fontSize: 22, fontWeight: 'bold', marginBottom: 12 }}>Something went wrong</Text>
+          <Text selectable style={{ color: '#f87171', fontSize: 14, textAlign: 'center', marginBottom: 8 }}>
+            {this.state.error.message}
+          </Text>
+          <Text selectable style={{ color: '#888', fontSize: 10, textAlign: 'center', marginBottom: 20, maxHeight: 200 }}>
+            {this.state.error.stack?.slice(0, 500)}
+          </Text>
+          <Pressable
+            onPress={() => this.setState({ error: null })}
+            style={{ backgroundColor: '#6C63FF', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 }}
+          >
+            <Text style={{ color: '#fff', fontWeight: '600' }}>Try Again</Text>
+          </Pressable>
+        </View>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 function RootLayoutNav() {
   return (
@@ -63,7 +81,6 @@ export default function RootLayout() {
   useEffect(() => {
     const timer = setTimeout(() => {
       if (!fontsLoaded) {
-        console.warn('[layout] Font loading timed out after 5s, proceeding without custom fonts');
         setFontTimeout(true);
       }
     }, 5000);
@@ -71,17 +88,10 @@ export default function RootLayout() {
   }, [fontsLoaded]);
 
   useEffect(() => {
-    if (fontsLoaded || fontTimeout) {
+    if (fontsLoaded || fontTimeout || fontError) {
       SplashScreen.hideAsync();
     }
-  }, [fontsLoaded, fontTimeout]);
-
-  useEffect(() => {
-    if (fontError) {
-      console.error('[layout] Font load error:', fontError);
-      SplashScreen.hideAsync();
-    }
-  }, [fontError]);
+  }, [fontsLoaded, fontTimeout, fontError]);
 
   if (!fontsLoaded && !fontTimeout && !fontError) {
     return (
@@ -92,26 +102,16 @@ export default function RootLayout() {
     );
   }
 
-  const content = (
-    <>
-      <StatusBar style="light" />
-      <RootLayoutNav />
-    </>
-  );
-
   return (
-    <ErrorBoundary>
+    <SimpleErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <GestureHandlerRootView style={{ flex: 1 }}>
-            {KeyboardProvider && Platform.OS !== 'web' ? (
-              <KeyboardProvider>{content}</KeyboardProvider>
-            ) : (
-              content
-            )}
-          </GestureHandlerRootView>
+          <View style={{ flex: 1 }}>
+            <StatusBar style="light" />
+            <RootLayoutNav />
+          </View>
         </AuthProvider>
       </QueryClientProvider>
-    </ErrorBoundary>
+    </SimpleErrorBoundary>
   );
 }
