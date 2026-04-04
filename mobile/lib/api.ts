@@ -55,7 +55,7 @@ export type {
   GameRecord,
 };
 
-const REMOTE_URL = 'https://wisdom-and-chance.replit.app';
+const REMOTE_URL = 'https://wisdom-and-chance-2.replit.app';
 
 function getBaseUrl(): string {
   if (Platform.OS !== 'web') return REMOTE_URL;

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { Platform, AppState } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 
-const WS_URL = 'wss://wisdom-and-chance.replit.app/ws';
+const WS_URL = 'wss://wisdom-and-chance-2.replit.app/ws';
 const TOKEN_KEY = 'wc_jwt_token';
 const RECONNECT_DELAY = 3000;
 const MAX_RECONNECT_DELAY = 30000;
