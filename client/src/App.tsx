@@ -38,6 +38,7 @@ import PackOpeningPage from "@/pages/pack-opening";
 import SeasonPage from "@/pages/season";
 import BattlePassPage from "@/pages/battle-pass";
 import PurchaseHistoryPage from "@/pages/purchase-history";
+import MobileLinkPage from "@/pages/mobile-link";
 import NotFound from "@/pages/not-found";
 
 /**
@@ -77,6 +78,7 @@ function AppContent() {
           <Route path="/season" component={SeasonPage} />
           <Route path="/battle-pass" component={BattlePassPage} />
           <Route path="/purchase-history" component={PurchaseHistoryPage} />
+          <Route path="/mobile-app" component={MobileLinkPage} />
           <Route path="/admin/card-art" component={AdminCardArtPage} />
           <Route path="/admin/image-database" component={AdminImageDatabasePage} />
           <Route path="/admin/user-database" component={AdminUserDatabasePage} />
