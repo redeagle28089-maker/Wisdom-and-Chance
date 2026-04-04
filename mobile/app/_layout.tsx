@@ -64,6 +64,8 @@ function RootLayoutNav() {
       <Stack.Screen name="analytics" options={{ presentation: 'modal' }} />
       <Stack.Screen name="live-matches" options={{ presentation: 'modal' }} />
       <Stack.Screen name="about" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="challenges" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="game/pvp-board" />
       <Stack.Screen name="messages/[friendId]" />
     </Stack>
   );
