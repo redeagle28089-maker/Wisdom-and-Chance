@@ -1,7 +1,8 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
+import { View, Text, ActivityIndicator, Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { StatusBar } from "expo-status-bar";
@@ -41,20 +42,45 @@ function RootLayoutNav() {
 }
 
 export default function RootLayout() {
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
     Inter_600SemiBold,
     Inter_700Bold,
   });
+  const [fontTimeout, setFontTimeout] = useState(false);
 
   useEffect(() => {
-    if (fontsLoaded) {
-      SplashScreen.hideAsync();
-    }
+    const timer = setTimeout(() => {
+      if (!fontsLoaded) {
+        console.warn('[layout] Font loading timed out after 5s, proceeding without custom fonts');
+        setFontTimeout(true);
+      }
+    }, 5000);
+    return () => clearTimeout(timer);
   }, [fontsLoaded]);
 
-  if (!fontsLoaded) return null;
+  useEffect(() => {
+    if (fontsLoaded || fontTimeout) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded, fontTimeout]);
+
+  useEffect(() => {
+    if (fontError) {
+      console.error('[layout] Font load error:', fontError);
+      SplashScreen.hideAsync();
+    }
+  }, [fontError]);
+
+  if (!fontsLoaded && !fontTimeout && !fontError) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#0D0D14', justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#6C63FF" />
+        <Text style={{ color: '#888', marginTop: 16, fontSize: 14 }}>Loading...</Text>
+      </View>
+    );
+  }
 
   return (
     <ErrorBoundary>

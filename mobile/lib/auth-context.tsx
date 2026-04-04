@@ -22,22 +22,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function checkAuth() {
     try {
+      console.log('[auth] Checking saved user...');
       const savedUser = await getSavedUser();
       if (savedUser) {
+        console.log('[auth] Found saved user:', savedUser.email);
         setUser(savedUser);
         try {
           const freshUser = await api.getMe();
+          console.log('[auth] Refreshed user from server');
           setUser(freshUser);
           await saveUserData(freshUser);
-        } catch {
+        } catch (e) {
+          console.warn('[auth] Failed to refresh user, clearing:', e);
           await clearToken();
           setUser(null);
         }
+      } else {
+        console.log('[auth] No saved user found');
       }
-    } catch {
+    } catch (e) {
+      console.error('[auth] checkAuth error:', e);
       setUser(null);
     } finally {
       setIsLoading(false);
+      console.log('[auth] Loading complete');
     }
   }
 

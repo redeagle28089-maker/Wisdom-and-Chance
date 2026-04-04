@@ -1,9 +1,16 @@
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
-const fetchFn: typeof globalThis.fetch = Platform.OS === 'web'
-  ? globalThis.fetch.bind(globalThis)
-  : require('expo/fetch').fetch;
+let fetchFn: typeof globalThis.fetch = globalThis.fetch.bind(globalThis);
+try {
+  if (Platform.OS !== 'web') {
+    const expoFetch = require('expo/fetch');
+    if (expoFetch?.fetch) {
+      fetchFn = expoFetch.fetch;
+    }
+  }
+} catch {
+}
 import type {
   User,
   Card,
