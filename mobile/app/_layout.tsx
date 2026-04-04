@@ -2,7 +2,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect, useState } from "react";
-import { View, Text, ActivityIndicator, Platform } from "react-native";
+import { View, Text, ActivityIndicator, Platform, NativeModules } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from "@expo-google-fonts/inter";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -16,7 +16,9 @@ try {
 
 let KeyboardProvider: any = null;
 try {
-  KeyboardProvider = require("react-native-keyboard-controller").KeyboardProvider;
+  if (NativeModules.KeyboardController) {
+    KeyboardProvider = require("react-native-keyboard-controller").KeyboardProvider;
+  }
 } catch {}
 
 SplashScreen.preventAutoHideAsync().catch(() => {});

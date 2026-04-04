@@ -1,9 +1,11 @@
-import { Platform, ScrollView, ScrollViewProps } from "react-native";
+import { Platform, ScrollView, ScrollViewProps, NativeModules } from "react-native";
 import React from "react";
 
 let KeyboardAwareScrollView: any = null;
 try {
-  KeyboardAwareScrollView = require("react-native-keyboard-controller").KeyboardAwareScrollView;
+  if (NativeModules.KeyboardController) {
+    KeyboardAwareScrollView = require("react-native-keyboard-controller").KeyboardAwareScrollView;
+  }
 } catch {}
 
 type Props = ScrollViewProps & {
