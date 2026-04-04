@@ -16,7 +16,7 @@ import {
   Home, BookOpen, Database, Layers, Swords, Trophy, User, GraduationCap, 
   LogIn, LogOut, Users, Gamepad2, Medal, Calendar, BarChart3, Eye, 
   BookMarked, Palette, ImageIcon, ChevronDown, X, UserCircle, Package, ShoppingBag,
-  Shield, Star
+  Shield, Star, Smartphone, ExternalLink
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -163,6 +163,21 @@ export function NavHeader() {
             {filteredPlayItems.length > 0 && <NavGroup label="Play" items={filteredPlayItems} />}
             {filteredProgressItems.length > 0 && <NavGroup label="Progress" items={filteredProgressItems} />}
             <NavGroup label="Lore" items={loreItems} />
+
+            <div className="mb-3 landscape-mobile:mb-2">
+              <p className="text-xs font-semibold uppercase tracking-wider mb-2 landscape-mobile:mb-1 text-emerald-400">Mobile</p>
+              <a
+                href="https://expo.dev/accounts/redeagle2808/projects/wisdom-chance-tcg"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 landscape-mobile:gap-2 px-3 py-2 landscape-mobile:py-1.5 rounded-lg cursor-pointer hover-elevate active-elevate-2 text-purple-200"
+                data-testid="nav-mobile-app"
+              >
+                <Smartphone className="w-4 h-4 landscape-mobile:w-3.5 landscape-mobile:h-3.5" />
+                <span className="text-sm landscape-mobile:text-xs flex-1">Mobile App</span>
+                <ExternalLink className="w-3 h-3 text-purple-400" />
+              </a>
+            </div>
 
             {adminCheck?.isAdmin && (
               <NavGroup 
