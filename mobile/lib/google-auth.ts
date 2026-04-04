@@ -26,7 +26,7 @@ export async function signInWithGoogle(): Promise<GoogleProfile> {
   const clientId = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
 
   if (!clientId) {
-    throw new GoogleAuthError('missing_client_id', 'Google Client ID is not configured. Please add EXPO_PUBLIC_GOOGLE_CLIENT_ID to your environment secrets.');
+    throw new GoogleAuthError('missing_client_id', 'Google sign-in is not available yet. Please use email sign-in below.');
   }
 
   const redirectUri = AuthSession.makeRedirectUri({ useProxy: true });

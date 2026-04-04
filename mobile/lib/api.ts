@@ -1,6 +1,9 @@
-import { fetch } from 'expo/fetch';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
+
+const fetchFn: typeof globalThis.fetch = Platform.OS === 'web'
+  ? globalThis.fetch.bind(globalThis)
+  : require('expo/fetch').fetch;
 import type {
   User,
   Card,
@@ -46,10 +49,23 @@ export type {
 };
 
 const REMOTE_URL = 'https://wisdom-and-chance.replit.app';
-const LOCAL_PROXY = process.env.EXPO_PUBLIC_DOMAIN
-  ? `https://${process.env.EXPO_PUBLIC_DOMAIN}`
-  : 'http://localhost:5000';
-const BASE_URL = Platform.OS === 'web' ? LOCAL_PROXY : REMOTE_URL;
+
+function getBaseUrl(): string {
+  if (Platform.OS !== 'web') return REMOTE_URL;
+
+  if (typeof window !== 'undefined' && window.location) {
+    const { protocol, hostname } = window.location;
+    return `${protocol}//${hostname}:5000`;
+  }
+
+  if (process.env.EXPO_PUBLIC_DOMAIN) {
+    return `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
+  }
+
+  return 'http://localhost:5000';
+}
+
+const BASE_URL = getBaseUrl();
 const TOKEN_KEY = 'wc_jwt_token';
 const USER_KEY = 'wc_user_data';
 
@@ -134,7 +150,7 @@ async function apiRequest<T>(
     }
   }
 
-  const res = await fetch(`${BASE_URL}${path}`, {
+  const res = await fetchFn(`${BASE_URL}${path}`, {
     method,
     headers,
     body: body ? JSON.stringify(body) : undefined,
