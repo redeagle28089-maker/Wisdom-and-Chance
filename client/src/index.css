@@ -352,48 +352,6 @@
   }
 }
 
-/* =========================================================================
- * MOBILE LANDSCAPE ORIENTATION ENFORCEMENT
- * 
- * TO REVERT/DISABLE THIS FEATURE:
- * 1. Delete this entire section (from START to END markers)
- * 2. Remove <LandscapeOverlay /> import from App.tsx
- * ========================================================================= */
-
-/* START: Mobile Landscape Orientation */
-
-/* The overlay that appears when mobile is in portrait mode */
-.landscape-overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
-  z-index: 99999;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%);
-  align-items: center;
-  justify-content: center;
-}
-
-/* Show overlay on mobile devices in portrait orientation */
-@media screen and (max-width: 768px) and (orientation: portrait) {
-  .landscape-overlay {
-    display: flex;
-  }
-  
-  /* Hide the main app content when overlay is shown */
-  body > #root > *:not(.landscape-overlay) {
-    display: none;
-  }
-}
-
-/* Hide overlay on desktop and when in landscape mode */
-@media screen and (min-width: 769px),
-       screen and (orientation: landscape) {
-  .landscape-overlay {
-    display: none !important;
-  }
-}
-
-/* END: Mobile Landscape Orientation */
 
 /* =========================================================================
  * LANDSCAPE-FIRST LAYOUT DESIGN

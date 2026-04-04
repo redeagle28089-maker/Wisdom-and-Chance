@@ -10,12 +10,6 @@ import { ThemeProvider } from "@/components/theme-provider";
  * See game-sidebar.tsx for the original sidebar code
  */
 import { NavHeader } from "@/components/nav-header";
-/**
- * MOBILE LANDSCAPE ORIENTATION OVERLAY
- * TO REVERT: Remove this import and the <LandscapeOverlay /> component below
- */
-import { LandscapeOverlay } from "@/components/landscape-overlay";
-import { PWAInstallPrompt } from "@/components/pwa-install-prompt";
 import { ConfigProvider } from "@/lib/config";
 import HomePage from "@/pages/home";
 import RulesPage from "@/pages/rules";
@@ -101,8 +95,6 @@ function App() {
         <ThemeProvider defaultTheme="dark" storageKey="wisdom-chance-theme">
           <TooltipProvider>
             <Toaster />
-            <LandscapeOverlay />
-            <PWAInstallPrompt />
             <AppContent />
           </TooltipProvider>
         </ThemeProvider>
