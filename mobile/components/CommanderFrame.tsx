@@ -72,9 +72,8 @@ export default function CommanderFrame({
         selected && styles.selected,
       ]}
     >
-      <AuthImage
-        uri={getCommanderImageUrl(commander.id)}
-        fallbackUri={portrait}
+      <Image
+        source={{ uri: portrait }}
         style={StyleSheet.absoluteFillObject}
         resizeMode="cover"
       />

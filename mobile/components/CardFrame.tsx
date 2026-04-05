@@ -172,7 +172,7 @@ export default function CardFrame({
 
       <View style={styles.artArea}>
         {showArt ? (
-          card.id ? (
+          card.imageUrl ? (
             <AuthImage
               uri={getCardImageUrl(card.id)}
               fallbackUri={getCardArt(card)}
