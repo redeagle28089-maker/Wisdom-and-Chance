@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 
-const ART_BASE = 'https://wisdom-and-chance.replit.app/assets';
-const REMOTE_URL = 'https://wisdom-and-chance.replit.app';
+const ART_BASE = 'https://wisdom-and-chance-2.replit.app/assets';
+const REMOTE_URL = 'https://wisdom-and-chance-2.replit.app';
 const LOCAL_PROXY = process.env.EXPO_PUBLIC_DOMAIN
   ? `https://${process.env.EXPO_PUBLIC_DOMAIN}`
   : 'http://localhost:5000';

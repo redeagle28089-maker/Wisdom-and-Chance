@@ -20,11 +20,11 @@ import AuthImage from '@/components/AuthImage';
 function safeHaptic(fn: () => void) { try { fn(); } catch {} }
 
 const ELEMENT_ART: Record<string, string> = {
-  fire: 'https://wisdom-and-chance.replit.app/assets/fire_element_card_art-CVY0E2Oz.png',
-  water: 'https://wisdom-and-chance.replit.app/assets/water_element_card_art-1rT54hTT.png',
-  earth: 'https://wisdom-and-chance.replit.app/assets/earth_element_card_art-DFKomA2g.png',
-  air: 'https://wisdom-and-chance.replit.app/assets/air_element_card_art-CvArjYh_.png',
-  nature: 'https://wisdom-and-chance.replit.app/assets/nature_element_card_art-BxKtqsEq.png',
+  fire: 'https://wisdom-and-chance-2.replit.app/assets/fire_element_card_art-CVY0E2Oz.png',
+  water: 'https://wisdom-and-chance-2.replit.app/assets/water_element_card_art-1rT54hTT.png',
+  earth: 'https://wisdom-and-chance-2.replit.app/assets/earth_element_card_art-DFKomA2g.png',
+  air: 'https://wisdom-and-chance-2.replit.app/assets/air_element_card_art-CvArjYh_.png',
+  nature: 'https://wisdom-and-chance-2.replit.app/assets/nature_element_card_art-BxKtqsEq.png',
 };
 
 const ELEMENT_SOLID_BORDERS: Record<string, string> = {

@@ -70,7 +70,7 @@ export default function AboutScreen() {
 
         <Pressable
           style={styles.linkBtn}
-          onPress={() => Linking.openURL('https://wisdom-and-chance.replit.app')}
+          onPress={() => Linking.openURL('https://wisdom-and-chance-2.replit.app')}
         >
           <Ionicons name="globe-outline" size={20} color={Colors.primary} />
           <Text style={styles.linkBtnText}>Visit Web Version</Text>
