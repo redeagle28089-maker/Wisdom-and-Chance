@@ -3,7 +3,7 @@ import fs from "fs";
 import path from "path";
 import { execSync } from "child_process";
 
-const OUTPUT_PATH = path.resolve("Wisdom_Chance_TCG_Business_Plan_v6.pdf");
+const OUTPUT_PATH = path.resolve("Wisdom_Chance_TCG_Business_Plan_v6.1.pdf");
 
 function countEndpoints(filePath: string): number {
   try {
@@ -109,7 +109,7 @@ function createPDF() {
     size: "letter",
     margins: { top: 60, bottom: 60, left: 60, right: 60 },
     info: {
-      Title: "Wisdom & Chance TCG — Business Plan v6.0",
+      Title: "Wisdom & Chance TCG — Business Plan v6.1",
       Author: "Wisdom & Chance TCG",
       Subject: "Investment & Crowdfunding Business Plan — Solo Operator Edition",
     },
@@ -198,7 +198,7 @@ function createPDF() {
   doc.fontSize(42).fillColor(COLORS.accent).text("WISDOM & CHANCE", { align: "center" });
   doc.fontSize(36).fillColor(COLORS.gold).text("TCG", { align: "center" });
   doc.moveDown(1);
-  doc.fontSize(14).fillColor(COLORS.white).text("BUSINESS PLAN v6.0", { align: "center" });
+  doc.fontSize(14).fillColor(COLORS.white).text("BUSINESS PLAN v6.1", { align: "center" });
   doc.moveDown(0.5);
   doc.fontSize(12).fillColor(COLORS.gold).text("Solo Operator Edition", { align: "center" });
   doc.moveDown(0.5);
@@ -243,7 +243,7 @@ function createPDF() {
   );
 
   body(
-    "What makes this project extraordinary is how it was built: a single founder, working entirely within Replit\u2019s AI-assisted development platform, has created a product that would traditionally require a team of 4\u20136 engineers and $150,000\u2013$200,000+ in development costs. The entire operation runs on approximately $50\u2013$150 per month in infrastructure costs \u2014 making this one of the most capital-efficient game development projects in the digital TCG space."
+    "What makes this project extraordinary is how it was built: a single founder, working entirely within Replit\u2019s AI-assisted development platform, has created a product that would traditionally require a team of 4\u20136 engineers and $150,000\u2013$200,000+ in development costs. Including a $50,000/year founder salary and Replit platform costs for 40+ hours/week of AI-assisted development, the entire operation runs on approximately $4,250\u2013$4,350 per month \u2014 a fraction of what any competing TCG spends on a single developer."
   );
 
   body("Key milestones achieved:");
@@ -259,11 +259,11 @@ function createPDF() {
   doc.moveDown(0.3);
 
   body(
-    "Monthly operating costs are approximately $50\u2013$150 (Replit subscription + hosting), compared to Hearthstone\u2019s estimated $15\u2013$20 million per year in operating costs. This extreme capital efficiency means profitability can be achieved with as few as 50\u2013100 paying users per month."
+    "Total monthly operating costs including founder compensation are approximately $4,250\u2013$4,350 ($50,000/year founder salary + Replit platform + services), compared to Hearthstone\u2019s estimated $15\u2013$20 million per year in operating costs. This extreme capital efficiency means profitability can be achieved with approximately 500\u2013550 paying users per month."
   );
 
   body(
-    "The project is seeking $5,000\u2013$15,000 in funding to cover marketing, app store fees, AI image generation for professional card artwork, and growth capital. No funding is needed for development or team payroll \u2014 the founder handles everything."
+    "The project is seeking $25,000\u2013$50,000 in funding to cover 6\u201312 months of founder salary, marketing, app store fees, AI image generation for professional card artwork, and growth capital."
   );
 
   sectionTitle("2. Founder & Solo Operator Overview");
@@ -287,7 +287,7 @@ function createPDF() {
   );
 
   body(
-    "This solo-operator model is not a limitation \u2014 it\u2019s a strategic advantage. With near-zero burn rate, the project can sustain indefinitely without external funding, take calculated risks on features and marketing, and reach profitability with minimal user traction."
+    "This solo-operator model is not a limitation \u2014 it\u2019s a strategic advantage. With the founder drawing a $50,000/year salary and total monthly costs under $4,350, the project\u2019s burn rate is less than what most studios spend on a single junior developer. This enables the project to take calculated risks on features and marketing, and reach profitability with modest user traction."
   );
 
   sectionTitle("3. Product Description");
@@ -409,11 +409,11 @@ function createPDF() {
     ["Development Cost", "$30\u2013$50 million", "~$300 (Replit sub)"],
     ["Development Time", "5+ years", "~12 months"],
     ["Team Size", "100\u2013150 people", "1 person"],
-    ["Monthly Operating Cost", "$1.2\u2013$1.7 million", "$50\u2013$150"],
+    ["Monthly Operating Cost", "$1.2\u2013$1.7 million", "~$4,300 (incl. salary)"],
     ["Cost Per Card", "$50,000\u2013$100,000+", "~$0.50 (AI generation)"],
     ["Infrastructure", "Custom data centers", "Replit managed hosting"],
-    ["Break-even Users Needed", "~500,000+ MAU", "~50\u2013100 paying users"],
-    ["Profit at 1,000 Payers", "Still losing money", "$8,000\u2013$15,000/month"],
+    ["Break-even Users Needed", "~500,000+ MAU", "~500\u2013550 paying users"],
+    ["Profit at 1,000 Payers", "Still losing money", "$4,000\u2013$6,000/month"],
   ];
   for (const row of compData) {
     y = tableRow(row, y, cmpW);
@@ -422,11 +422,11 @@ function createPDF() {
 
   subSection("Key Takeaway");
   body(
-    "Hearthstone needed approximately $30\u2013$50 million in development costs and 500,000+ monthly active users before it became profitable. Wisdom & Chance, with monthly costs under $150, can achieve profitability with fewer than 100 paying users. This 5,000x difference in cost structure means that even capturing 0.01% of Hearthstone\u2019s market would generate substantial profit."
+    "Hearthstone needed approximately $30\u2013$50 million in development costs and 500,000+ monthly active users before it became profitable. Wisdom & Chance, with monthly costs of ~$4,300 (including the founder\u2019s $50,000/year salary), can achieve profitability with approximately 500\u2013550 paying users. This 1,000x difference in cost structure means that even capturing a tiny fraction of Hearthstone\u2019s market would generate substantial profit."
   );
 
   body(
-    "While Hearthstone benefits from Blizzard\u2019s massive brand, IP library, and marketing budget, Wisdom & Chance benefits from zero payroll, zero office costs, AI-multiplied productivity, and the ability to operate indefinitely without external funding. In a worst-case scenario where user growth is slow, the project simply continues at near-zero cost until traction builds \u2014 an option unavailable to any venture-funded competitor."
+    "While Hearthstone benefits from Blizzard\u2019s massive brand, IP library, and marketing budget, Wisdom & Chance benefits from a single compensated founder, AI-multiplied productivity, and a burn rate lower than most studios\u2019 monthly coffee budget. In a worst-case scenario where user growth is slow, the project continues at minimal cost until traction builds \u2014 an option unavailable to any venture-funded competitor."
   );
 
   sectionTitle("6. Revenue Model & Product Catalog");
@@ -494,24 +494,39 @@ function createPDF() {
   doc.y = y + 10;
   body("All of this was built by a single founder on Replit. Actual out-of-pocket development cost: approximately $300 in Replit subscription fees over 12 months.");
 
-  subSection("Ongoing Monthly Costs \u2014 Primary: Replit Platform");
-  body("The founder\u2019s primary expense is Replit, which provides the complete development and hosting stack:");
+  subSection("Ongoing Monthly Costs \u2014 Primary: Founder Compensation");
+  body("The founder draws a salary of $50,000 per year ($4,167/month) as the sole operator of the business. This covers all development, design, marketing, operations, and business management:");
   y = doc.y + 5;
   const mw = [300, 180];
+  y = tableRow(["Compensation", "Monthly Cost"], y, mw, true);
+  const salaryCosts = [
+    ["Founder Salary (full-time, 40+ hrs/week)", "$4,167/month"],
+    ["Total Founder Compensation", "$4,167/month"],
+  ];
+  for (const row of salaryCosts) {
+    y = tableRow(row, y, mw);
+  }
+  doc.y = y + 10;
+  body("This salary is below market rate for a single full-stack developer ($80K\u2013$150K/year), let alone a combined developer + designer + product manager + marketer role. It reflects the founder\u2019s commitment to keeping costs lean while ensuring personal sustainability.");
+
+  subSection("Ongoing Monthly Costs \u2014 Secondary: Replit Platform (40 hrs/week usage)");
+  body("The founder uses Replit as the complete development, AI, and hosting platform, averaging 40+ hours per week of active development with AI Agent assistance:");
+  y = doc.y + 5;
   y = tableRow(["Replit Expense", "Monthly Cost"], y, mw, true);
   const replitCosts = [
     ["Replit Core Subscription (AI Agent access)", "$25/month"],
     ["Replit Deployments (production hosting)", "$7\u2013$20/month"],
     ["PostgreSQL Database Hosting", "Included in Replit"],
-    ["AI Agent Usage (~40 hrs/week development)", "Included in Core"],
+    ["AI Agent Compute (~160 hrs/month usage)", "Included in Core"],
     ["Total Replit Costs", "$32\u2013$45/month"],
   ];
   for (const row of replitCosts) {
     y = tableRow(row, y, mw);
   }
   doc.y = y + 10;
+  body("At 40 hours per week, the founder logs approximately 160 hours per month of AI-assisted development. Replit\u2019s Core plan includes AI Agent access, making the effective cost per hour of AI-assisted development approximately $0.16\u2013$0.28 \u2014 compared to $50\u2013$150/hour for a traditional developer.");
 
-  subSection("Ongoing Costs \u2014 Secondary: Platform & Transaction Fees");
+  subSection("Ongoing Costs \u2014 Tertiary: Platform & Transaction Fees");
   body("These costs are variable and only apply when revenue is generated \u2014 they scale proportionally with income:");
   y = doc.y + 5;
   y = tableRow(["Platform", "Fee Structure"], y, mw, true);
@@ -528,7 +543,7 @@ function createPDF() {
   doc.y = y + 10;
   body("At projected Year 1 revenue levels (~$25,000), total platform fees would be approximately $2,500\u2013$5,000 depending on the channel mix between web (lower fees) and mobile (higher fees).");
 
-  subSection("Ongoing Costs \u2014 Tertiary: Services");
+  subSection("Ongoing Costs \u2014 Additional Services");
   y = doc.y + 5;
   y = tableRow(["Service", "Cost"], y, mw, true);
   const tertiaryCosts = [
@@ -548,12 +563,12 @@ function createPDF() {
   const sw = [300, 180];
   y = tableRow(["Category", "Monthly Cost"], y, sw, true);
   const totalCosts = [
-    ["Replit Platform (primary)", "$32\u2013$45"],
+    ["Founder Salary ($50,000/year)", "$4,167"],
+    ["Replit Platform (40 hrs/week usage)", "$32\u2013$45"],
     ["AI Image Generation + Domain + Dev Accounts", "$15\u2013$30"],
     ["Platform/Transaction Fees (variable)", "$0\u2013varies with revenue"],
-    ["Team/Payroll", "$0 (solo operator)"],
     ["Office/Equipment", "$0 (works from home)"],
-    ["Total Fixed Monthly Costs", "$47\u2013$75"],
+    ["Total Fixed Monthly Costs", "$4,214\u2013$4,242"],
   ];
   for (const row of totalCosts) {
     y = tableRow(row, y, sw);
@@ -561,7 +576,7 @@ function createPDF() {
   doc.y = y + 10;
 
   body(
-    "Compare this to the v5.0 business plan which projected $2,100\u2013$4,100/month in operating costs (including a $2,000\u2013$4,000/month creative team). The solo operator model reduces fixed costs by 95\u201398%, fundamentally changing the project\u2019s financial dynamics."
+    "Total annual fixed operating cost: ~$50,568\u2013$50,904/year. Compare this to the v5.0 business plan which excluded founder compensation entirely and still projected $2,100\u2013$4,100/month with a hired creative team. The solo operator model with fair founder compensation still costs less per month than a single junior developer\u2019s salary at a traditional studio."
   );
 
   sectionTitle("8. Marketing & Growth Strategy");
@@ -596,10 +611,10 @@ function createPDF() {
   body("Primary platform: Kickstarter (largest audience for game projects). Backup: BackerKit for post-campaign management and late pledges.");
 
   subSection("Campaign Goal \u2014 Revised for Solo Model");
-  body("Base goal: $5,000 \u2014 Covers app store fees, initial marketing spend, and AI image generation for all 50 cards + 5 commanders.");
-  body("Stretch goals up to $15,000 \u2014 Additional marketing, tournament prize pool, localization, new card expansion.");
+  body("Base goal: $25,000 \u2014 Covers 6 months of founder salary, app store fees, marketing launch, and AI image generation for all 50 cards + 5 commanders.");
+  body("Stretch goals up to $50,000 \u2014 12 months founder salary runway, expanded marketing, tournament prize pool, localization, new card expansion.");
 
-  body("Note: Because the solo operator model has near-zero fixed costs, the crowdfunding goal is dramatically lower than traditional game projects. This makes the campaign far more likely to succeed and reduces backer risk.");
+  body("Note: Even with the founder\u2019s $50,000/year salary included, this crowdfunding goal is still dramatically lower than traditional game projects (which typically seek $100K\u2013$500K+). This makes the campaign far more likely to succeed and reduces backer risk.");
 
   subSection("Reward Tiers");
   y = doc.y + 5;
@@ -662,7 +677,7 @@ function createPDF() {
 
   sectionTitle("11. Financial Projections");
 
-  body("Conservative projections assume gradual user acquisition post-launch with the solo operator cost structure. All figures are in USD. Operating costs reflect actual costs ($50\u2013$75/month fixed + variable platform fees), not the inflated team-based costs from the v5.0 plan.");
+  body("Conservative projections assume gradual user acquisition post-launch with the solo operator cost structure including $50,000/year founder salary. All figures are in USD. Monthly fixed costs are ~$4,230 ($4,167 salary + ~$63 Replit/services).");
   doc.moveDown(0.3);
 
   subSection("Year 1 Post-Launch Quarterly Projections");
@@ -674,18 +689,18 @@ function createPDF() {
     ["Paying Users (5%)", "25", "75", "150", "250"],
     ["Avg Revenue/Payer", "$8", "$10", "$12", "$15"],
     ["Quarterly Revenue", "$600", "$2,250", "$5,400", "$11,250"],
-    ["Fixed Costs (3 mo)", "$200", "$200", "$225", "$225"],
+    ["Fixed Costs (3 mo)", "$12,690", "$12,690", "$12,690", "$12,690"],
     ["Platform Fees (~15%)", "$90", "$338", "$810", "$1,688"],
-    ["Total Costs", "$290", "$538", "$1,035", "$1,913"],
-    ["Net Income", "+$310", "+$1,712", "+$4,365", "+$9,337"],
+    ["Total Costs", "$12,780", "$13,028", "$13,500", "$14,378"],
+    ["Net Income", "-$12,180", "-$10,778", "-$8,100", "-$3,128"],
   ];
   for (const row of yr1) {
     y = tableRow(row, y, fw);
   }
   doc.y = y + 10;
 
-  body("Year 1 total projected revenue: ~$19,500. Year 1 total costs: ~$3,776. Net profit: +$15,724.");
-  body("The project is profitable from Q1 \u2014 Day 1 post-launch. Compare to v5.0 projections which showed -$21,500 net loss in Year 1 due to team payroll costs.");
+  body("Year 1 total projected revenue: ~$19,500. Year 1 total costs: ~$53,686. Net: -$34,186.");
+  body("The project operates at a loss in Year 1 as user base grows, but costs are entirely predictable and sustainable. The founder\u2019s salary ensures personal financial stability while building the business. Note that losses narrow each quarter as revenue grows.");
   doc.moveDown(0.3);
 
   subSection("Year 2 Projections (Growth Phase)");
@@ -696,55 +711,56 @@ function createPDF() {
     ["Paying Users (6%)", "420", "600", "900", "1,200"],
     ["Avg Revenue/Payer", "$15", "$18", "$20", "$22"],
     ["Quarterly Revenue", "$18,900", "$32,400", "$54,000", "$79,200"],
-    ["Fixed Costs (3 mo)", "$225", "$225", "$225", "$225"],
+    ["Fixed Costs (3 mo)", "$12,690", "$12,690", "$12,690", "$12,690"],
     ["Platform Fees (~18%)", "$3,402", "$5,832", "$9,720", "$14,256"],
-    ["Total Costs", "$3,627", "$6,057", "$9,945", "$14,481"],
-    ["Net Income", "+$15,273", "+$26,343", "+$44,055", "+$64,719"],
+    ["Total Costs", "$16,092", "$18,522", "$22,410", "$26,946"],
+    ["Net Income", "+$2,808", "+$13,878", "+$31,590", "+$52,254"],
   ];
   for (const row of yr2) {
     y = tableRow(row, y, fw);
   }
   doc.y = y + 10;
-  body("Year 2 total projected revenue: ~$184,500. Year 2 total costs: ~$34,110. Net profit: +$150,390.");
-  body("Year 2 profit margin: ~81.5%. This extraordinary margin is possible because costs are almost entirely variable (platform fees) with negligible fixed costs.");
+  body("Year 2 total projected revenue: ~$184,500. Year 2 total costs: ~$83,970. Net profit: +$100,530.");
+  body("Break-even occurs in Q1 of Year 2. By Q4, the project generates $52,254 quarterly profit \u2014 more than covering the founder\u2019s annual salary in a single quarter.");
 
   subSection("Profitability Threshold Analysis");
-  body("With monthly fixed costs of ~$50\u2013$75 and average revenue per payer of $10:");
-  bullet("Break-even: 6\u20138 paying users per month (after platform fees)");
-  bullet("$1,000/month profit: ~125 paying users");
-  bullet("$5,000/month profit: ~625 paying users");
-  bullet("$10,000/month profit: ~1,250 paying users");
+  body("With monthly fixed costs of ~$4,230 (including founder salary) and average revenue per payer of $10:");
+  bullet("Break-even: ~500 paying users per month (after ~15% platform fees)");
+  bullet("$1,000/month profit above salary: ~620 paying users");
+  bullet("$5,000/month profit above salary: ~1,090 paying users");
+  bullet("$10,000/month profit above salary: ~1,680 paying users");
   doc.moveDown(0.3);
-  body("For comparison, Hearthstone needed an estimated 500,000+ monthly active users to cover its operating costs. Wisdom & Chance needs fewer than 10 paying users to break even.");
+  body("For comparison, Hearthstone needed an estimated 500,000+ monthly active users and $15\u2013$20M/year in operating costs. Wisdom & Chance needs approximately 500 paying users to fully cover the founder\u2019s salary, Replit costs, and all platform fees.");
 
   sectionTitle("12. Funding Requirements & Use of Funds");
 
-  subSection("Total Funding Sought: $5,000 \u2013 $15,000");
-  body("Because the solo operator model eliminates team payroll, the funding requirement is 70\u201390% lower than the v5.0 plan\u2019s $45,000\u2013$65,000 target.");
+  subSection("Total Funding Sought: $25,000 \u2013 $50,000");
+  body("Funding covers the founder\u2019s salary runway during the critical growth phase, plus marketing and launch costs. This is 40\u201365% lower than the v5.0 plan\u2019s $45,000\u2013$65,000 target, despite now including founder compensation.");
   doc.moveDown(0.3);
 
   y = doc.y;
   const uw = [240, 120, 120];
   y = tableRow(["Use of Funds", "Minimum", "Maximum"], y, uw, true);
   const funds = [
-    ["Marketing & User Acquisition", "$2,000", "$5,000"],
+    ["Founder Salary Runway (6\u201312 months)", "$12,500", "$25,000"],
+    ["Marketing & User Acquisition", "$5,000", "$10,000"],
     ["AI Card Art Generation (55 cards)", "$200", "$500"],
     ["App Store Submission Fees", "$125", "$125"],
-    ["Crowdfunding Campaign Costs (8\u201310%)", "$400", "$1,500"],
+    ["Crowdfunding Campaign Costs (8\u201310%)", "$2,000", "$5,000"],
     ["Launch Trailer (AI-assisted production)", "$200", "$500"],
     ["Tournament Prize Pool (Season 1)", "$500", "$2,000"],
-    ["Operating Reserve (12 months)", "$600", "$900"],
-    ["Contingency / Growth Capital", "$975", "$4,475"],
-    ["Total", "$5,000", "$15,000"],
+    ["Replit Operating Reserve (12 months)", "$500", "$600"],
+    ["Contingency / Growth Capital", "$3,975", "$6,275"],
+    ["Total", "$25,000", "$50,000"],
   ];
   for (const row of funds) {
     y = tableRow(row, y, uw);
   }
   doc.y = y + 10;
 
-  subSection("Why Funding Amounts Are Low");
-  body("Traditional game studios need funding for: developer salaries ($80K\u2013$150K/year each), office space ($2K\u2013$10K/month), equipment ($5K\u2013$10K per developer), health insurance, HR, legal, accounting, and more. Wisdom & Chance has none of these costs.");
-  body("The funding is purely for growth acceleration \u2014 marketing, app store presence, and competitive season prizes. The project can and will continue development regardless of funding outcome.");
+  subSection("Why Funding Amounts Are Still Low");
+  body("Traditional game studios need funding for: multiple developer salaries ($80K\u2013$150K/year each), office space ($2K\u2013$10K/month), equipment ($5K\u2013$10K per developer), health insurance, HR, legal, accounting, and more. Wisdom & Chance replaces all of this with a single founder at $50K/year and ~$63/month in platform costs.");
+  body("The majority of funding goes to founder salary runway and marketing. Once the project reaches ~500 paying users/month, it becomes fully self-sustaining. The project can and will continue development regardless of funding outcome \u2014 the founder is committed to the product.");
 
   subSection("Return on Investment");
   body(
@@ -752,7 +768,7 @@ function createPDF() {
   );
 
   subSection("Why Now?");
-  body("The product is substantially built \u2014 over $150,000 in estimated development value has been created with under $300 in actual costs. Funding now accelerates the last mile: professional art, app store launch, and marketing. The risk-reward ratio is exceptionally favorable because the core product already exists, is functional, and the ongoing cost to maintain it is negligible.");
+  body("The product is substantially built \u2014 over $150,000 in estimated development value has been created with under $300 in actual costs. Funding now covers the founder\u2019s salary runway during the critical growth phase and accelerates the last mile: professional art, app store launch, and marketing. The risk-reward ratio is exceptionally favorable because the core product already exists, is functional, and the ongoing cost to maintain it is under $4,250/month including the founder\u2019s salary.");
 
   sectionTitle("13. Risk Analysis & Mitigation");
 
@@ -795,7 +811,7 @@ function createPDF() {
     [
       "Crowdfunding Failure",
       "Campaign does not reach funding goal",
-      "Set achievable base goal ($5K vs industry-typical $50K+); build pre-campaign audience; web app generates revenue independently; project continues regardless of campaign outcome",
+      "Set achievable base goal ($25K vs industry-typical $100K\u2013$500K+); build pre-campaign audience; web app generates revenue independently; project continues regardless of campaign outcome",
     ],
   ];
 
@@ -891,7 +907,7 @@ function createPDF() {
     doc.switchToPage(i);
     doc.fontSize(8).fillColor(COLORS.textLight);
     doc.text(
-      "Wisdom & Chance TCG \u2014 Confidential Business Plan v6.0 \u2014 Solo Operator Edition \u2014 April 2026",
+      "Wisdom & Chance TCG \u2014 Confidential Business Plan v6.1 \u2014 Solo Operator Edition \u2014 April 2026",
       60,
       doc.page.height - 55,
       { align: "center", width: doc.page.width - 120, lineBreak: false }

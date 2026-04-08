@@ -84,3 +84,9 @@ id = "J_KbN6ggq_FHgv4sjaYEv"
 uri = "file://Wisdom_Chance_TCG_Business_Plan_v6.pdf"
 type = "pdf"
 title = "Wisdom & Chance TCG — Business Plan v6.0 (Solo Operator Edition)"
+
+[[outputs]]
+id = "9HdjOpsgTfjwlbfIPUD6t"
+uri = "file://Wisdom_Chance_TCG_Business_Plan_v6.1.pdf"
+type = "pdf"
+title = "Wisdom & Chance TCG — Business Plan v6.1 (Solo Operator + Founder Salary)"
