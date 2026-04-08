@@ -3,7 +3,7 @@ import fs from "fs";
 import path from "path";
 import { execSync } from "child_process";
 
-const OUTPUT_PATH = path.resolve("Wisdom_Chance_TCG_Business_Plan_v6.1.pdf");
+const OUTPUT_PATH = path.resolve("Wisdom_Chance_TCG_Business_Plan_v6.2.pdf");
 
 function countEndpoints(filePath: string): number {
   try {
@@ -109,7 +109,7 @@ function createPDF() {
     size: "letter",
     margins: { top: 60, bottom: 60, left: 60, right: 60 },
     info: {
-      Title: "Wisdom & Chance TCG — Business Plan v6.1",
+      Title: "Wisdom & Chance TCG — Business Plan v6.2",
       Author: "Wisdom & Chance TCG",
       Subject: "Investment & Crowdfunding Business Plan — Solo Operator Edition",
     },
@@ -198,7 +198,7 @@ function createPDF() {
   doc.fontSize(42).fillColor(COLORS.accent).text("WISDOM & CHANCE", { align: "center" });
   doc.fontSize(36).fillColor(COLORS.gold).text("TCG", { align: "center" });
   doc.moveDown(1);
-  doc.fontSize(14).fillColor(COLORS.white).text("BUSINESS PLAN v6.1", { align: "center" });
+  doc.fontSize(14).fillColor(COLORS.white).text("BUSINESS PLAN v6.2", { align: "center" });
   doc.moveDown(0.5);
   doc.fontSize(12).fillColor(COLORS.gold).text("Solo Operator Edition", { align: "center" });
   doc.moveDown(0.5);
@@ -964,7 +964,7 @@ function createPDF() {
     doc.switchToPage(i);
     doc.fontSize(8).fillColor(COLORS.textLight);
     doc.text(
-      "Wisdom & Chance TCG \u2014 Confidential Business Plan v6.1 \u2014 Solo Operator Edition \u2014 April 2026",
+      "Wisdom & Chance TCG \u2014 Confidential Business Plan v6.2 \u2014 Solo Operator Edition \u2014 April 2026",
       60,
       doc.page.height - 55,
       { align: "center", width: doc.page.width - 120, lineBreak: false }

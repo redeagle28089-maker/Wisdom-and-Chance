@@ -90,3 +90,9 @@ id = "9HdjOpsgTfjwlbfIPUD6t"
 uri = "file://Wisdom_Chance_TCG_Business_Plan_v6.1.pdf"
 type = "pdf"
 title = "Wisdom & Chance TCG — Business Plan v6.1 (Updated with Weekly Costs, AI Value, Server Scaling)"
+
+[[outputs]]
+id = "Pj23VuBY9wrRF0OGjdXgG"
+uri = "file://Wisdom_Chance_TCG_Business_Plan_v6.2.pdf"
+type = "pdf"
+title = "Wisdom & Chance TCG — Business Plan v6.2 (with Weekly Costs, AI Value & Server Scaling)"
