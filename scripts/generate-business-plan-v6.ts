@@ -978,7 +978,7 @@ function createPDF() {
   bullet(`Mobile screens: ${METRICS.mobileScreens}`);
   bullet(`Shared type models: ${METRICS.sharedModels} modules`);
   bullet("Game elements: 5 (Fire, Water, Earth, Air, Nature)");
-  bullet("Unique cards: 50");
+  bullet("Unique cards: 50 built / 100 planned in Set 1");
   bullet("Commanders: 5");
   bullet("Commander abilities: 15+ unique effects");
   bullet("Game modes: Standard (2/2) and Accelerated (3/3)");
