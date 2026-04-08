@@ -243,7 +243,7 @@ function createPDF() {
   );
 
   body(
-    "What makes this project extraordinary is how it was built: a single founder, working entirely within Replit\u2019s AI-assisted development platform, has created a product that would traditionally require a team of 4\u20136 engineers and $150,000\u2013$200,000+ in development costs. Including a $50,000/year founder salary and Replit platform costs for 40+ hours/week of AI-assisted development, the entire operation runs on approximately $4,250\u2013$4,350 per month \u2014 a fraction of what any competing TCG spends on a single developer."
+    "What makes this project extraordinary is how it was built: a single founder, working entirely within Replit\u2019s AI-assisted development platform, has created a product that would traditionally require a team of 4\u20136 engineers and $150,000\u2013$200,000+ in development costs. Including a $50,000/year founder salary and Replit platform costs for 40+ hours/week of AI-assisted development, the entire operation runs on approximately $4,214\u2013$4,242 per month in fixed costs \u2014 a fraction of what any competing TCG spends on a single developer."
   );
 
   body("Key milestones achieved:");
@@ -259,7 +259,7 @@ function createPDF() {
   doc.moveDown(0.3);
 
   body(
-    "Total monthly operating costs including founder compensation are approximately $4,250\u2013$4,350 ($50,000/year founder salary + Replit platform + services), compared to Hearthstone\u2019s estimated $15\u2013$20 million per year in operating costs. This extreme capital efficiency means profitability can be achieved with approximately 500\u2013550 paying users per month."
+    "Total monthly fixed operating costs including founder compensation are approximately $4,214\u2013$4,242 ($50,000/year founder salary + Replit platform + services), compared to Hearthstone\u2019s estimated $15\u2013$20 million per year in operating costs. This extreme capital efficiency means profitability can be achieved with approximately 500\u2013550 paying users per month."
   );
 
   body(
@@ -287,7 +287,7 @@ function createPDF() {
   );
 
   body(
-    "This solo-operator model is not a limitation \u2014 it\u2019s a strategic advantage. With the founder drawing a $50,000/year salary and total monthly costs under $4,350, the project\u2019s burn rate is less than what most studios spend on a single junior developer. This enables the project to take calculated risks on features and marketing, and reach profitability with modest user traction."
+    "This solo-operator model is not a limitation \u2014 it\u2019s a strategic advantage. With the founder drawing a $50,000/year salary and total fixed monthly costs of ~$4,214\u2013$4,242, the project\u2019s burn rate is less than what most studios spend on a single junior developer. This enables the project to take calculated risks on features and marketing, and reach profitability with modest user traction."
   );
 
   sectionTitle("3. Product Description");
@@ -735,7 +735,7 @@ function createPDF() {
   sectionTitle("12. Funding Requirements & Use of Funds");
 
   subSection("Total Funding Sought: $25,000 \u2013 $50,000");
-  body("Funding covers the founder\u2019s salary runway during the critical growth phase, plus marketing and launch costs. This is 40\u201365% lower than the v5.0 plan\u2019s $45,000\u2013$65,000 target, despite now including founder compensation.");
+  body("Funding covers the founder\u2019s salary runway during the critical growth phase, plus marketing and launch costs. Even with founder compensation included, the high end ($50,000) is comparable to v5.0\u2019s low end ($45,000), while providing significantly more runway due to the elimination of all other team costs.");
   doc.moveDown(0.3);
 
   y = doc.y;
