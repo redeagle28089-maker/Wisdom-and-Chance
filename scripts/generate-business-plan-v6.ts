@@ -777,6 +777,8 @@ function createPDF() {
 
   body("Conservative projections assume gradual user acquisition post-launch with the solo operator cost structure including $50,000/year founder salary. All figures are in USD. Monthly fixed costs are ~$4,230 ($4,167 salary + ~$63 Replit/services). Pack pricing is $2/pack with an average of 3\u20135 packs per purchase.");
   doc.moveDown(0.3);
+  body("Average Revenue Per Paying User (ARPPU) derivation: At $2/pack, a payer buying 4\u20135 packs/month spends $8\u2013$10. With Season Pass ($9.99) and cosmetic purchases factored in, ARPPU grows from ~$8 in Q1 to ~$15 by Q4 Year 1 as engaged players increase spending. Year 2 ARPPU rises further ($15\u2013$22) as new card sets drive repeat purchases and the Battle Pass adds a second subscription tier.");
+  doc.moveDown(0.3);
 
   subSection("Year 1 Post-Launch Quarterly Projections");
   y = doc.y + 5;
