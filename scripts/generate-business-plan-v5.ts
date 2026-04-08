@@ -119,39 +119,10 @@ function createPDF() {
   const stream = fs.createWriteStream(OUTPUT_PATH);
   doc.pipe(stream);
 
-  let pageNum = 0;
-  let addingMeta = false;
-
-  function addPageMeta() {
-    if (addingMeta) return;
-    addingMeta = true;
-    pageNum++;
-    if (pageNum > 1) {
-      const savedY = doc.y;
-      doc.fontSize(9).fillColor(COLORS.textLight);
-      doc.text(`Page ${pageNum}`, 60, doc.page.height - 40, {
-        align: "center",
-        width: doc.page.width - 120,
-        lineBreak: false,
-      });
-      doc.fontSize(8).fillColor(COLORS.textLight);
-      doc.text(
-        "Wisdom & Chance TCG — Confidential Business Plan v5.0 — April 2026",
-        60,
-        doc.page.height - 55,
-        { align: "center", width: doc.page.width - 120, lineBreak: false }
-      );
-      doc.y = savedY;
-    }
-    addingMeta = false;
-  }
-
-  doc.on("pageAdded", () => {
-    addPageMeta();
-  });
+  
 
   function sectionTitle(title: string) {
-    if (doc.y > doc.page.height - 200) doc.addPage();
+    ensureSpace(80);
     doc.moveDown(1);
     doc
       .fontSize(18)
@@ -167,7 +138,7 @@ function createPDF() {
   }
 
   function subSection(title: string) {
-    if (doc.y > doc.page.height - 150) doc.addPage();
+    ensureSpace(60);
     doc.moveDown(0.5);
     doc.fontSize(13).fillColor(COLORS.accentDark).text(title, { underline: false });
     doc.moveDown(0.3);
@@ -188,7 +159,13 @@ function createPDF() {
     });
   }
 
+  const PAGE_BOTTOM = doc.page.height - 80;
+
   function tableRow(doc: PDFKit.PDFDocument, cells: string[], y: number, widths: number[], header = false) {
+    if (y + 22 > PAGE_BOTTOM) {
+      doc.addPage();
+      y = 60;
+    }
     let x = 60;
     const h = header ? 22 : 20;
     for (let i = 0; i < cells.length; i++) {
@@ -197,12 +174,16 @@ function createPDF() {
         doc.fontSize(9).fillColor(COLORS.white).text(cells[i], x + 4, y + 5, {
           width: widths[i] - 8,
           align: i > 0 ? "right" : "left",
+          lineBreak: false,
         });
       } else {
-        doc.rect(x, y, widths[i], h).fill(y % 40 < 20 ? COLORS.lightBg : COLORS.white).stroke();
+        const rowIdx = Math.floor((y - 60) / 20);
+        doc.rect(x, y, widths[i], h).fill(rowIdx % 2 === 0 ? COLORS.lightBg : COLORS.white);
+        doc.rect(x, y, widths[i], h).strokeColor(COLORS.border).lineWidth(0.5).stroke();
         doc.fontSize(9).fillColor(COLORS.text).text(cells[i], x + 4, y + 5, {
           width: widths[i] - 8,
           align: i > 0 ? "right" : "left",
+          lineBreak: false,
         });
       }
       x += widths[i];
@@ -210,8 +191,11 @@ function createPDF() {
     return y + h;
   }
 
+  function ensureSpace(needed: number) {
+    if (doc.y + needed > PAGE_BOTTOM) doc.addPage();
+  }
+
   // ====== COVER PAGE ======
-  addPageMeta();
   doc.rect(0, 0, doc.page.width, doc.page.height).fill(COLORS.primary);
   doc.moveDown(6);
   doc.fontSize(42).fillColor(COLORS.accent).text("WISDOM & CHANCE", { align: "center" });
@@ -234,26 +218,22 @@ function createPDF() {
   sectionTitle("Table of Contents");
   doc.moveDown(0.5);
   const toc = [
-    ["1.", "Executive Summary", "3"],
-    ["2.", "Company & Team Overview", "4"],
-    ["3.", "Product Description", "5"],
-    ["4.", "Market Analysis", "7"],
-    ["5.", "Revenue Model & Product Catalog", "8"],
-    ["6.", "Cost Analysis", "10"],
-    ["7.", "Marketing & Growth Strategy", "11"],
-    ["8.", "Crowdfunding Campaign Strategy", "12"],
-    ["9.", "Development Roadmap", "13"],
-    ["10.", "Financial Projections", "14"],
-    ["11.", "Funding Requirements & Use of Funds", "15"],
-    ["12.", "Risk Analysis & Mitigation", "16"],
-    ["13.", "Appendix: Technical Architecture", "17"],
+    "1.  Executive Summary",
+    "2.  Company & Team Overview",
+    "3.  Product Description",
+    "4.  Market Analysis",
+    "5.  Revenue Model & Product Catalog",
+    "6.  Cost Analysis",
+    "7.  Marketing & Growth Strategy",
+    "8.  Crowdfunding Campaign Strategy",
+    "9.  Development Roadmap",
+    "10. Financial Projections",
+    "11. Funding Requirements & Use of Funds",
+    "12. Risk Analysis & Mitigation",
+    "13. Appendix: Technical Architecture",
   ];
-  for (const [num, title, pg] of toc) {
-    doc
-      .fontSize(11)
-      .fillColor(COLORS.text)
-      .text(`${num}  ${title}`, 80, doc.y, { continued: true, width: 350 })
-      .text(pg, { align: "right", width: 80 });
+  for (const entry of toc) {
+    doc.fontSize(11).fillColor(COLORS.text).text(entry, 80);
   }
 
   // ====== 1. EXECUTIVE SUMMARY ======
@@ -284,7 +264,6 @@ function createPDF() {
   );
 
   // ====== 2. TEAM ======
-  doc.addPage();
   sectionTitle("2. Company & Team Overview");
 
   subSection("Founder & Lead Developer");
@@ -309,7 +288,6 @@ function createPDF() {
   );
 
   // ====== 3. PRODUCT DESCRIPTION ======
-  doc.addPage();
   sectionTitle("3. Product Description");
 
   subSection("Core Game Mechanics");
@@ -361,7 +339,6 @@ function createPDF() {
   bullet("Performance optimization and final QA pass");
 
   // ====== 4. MARKET ANALYSIS ======
-  doc.addPage();
   sectionTitle("4. Market Analysis");
 
   subSection("Digital TCG Market Size");
@@ -393,7 +370,6 @@ function createPDF() {
   bullet("Tertiary: Content creators and streamers in the indie game space");
 
   // ====== 5. REVENUE MODEL ======
-  doc.addPage();
   sectionTitle("5. Revenue Model & Product Catalog");
 
   subSection("Web Revenue Streams (Stripe + PayPal)");
@@ -436,7 +412,6 @@ function createPDF() {
   bullet("Cosmetic items — Card backs, board themes, and visual customizations");
 
   // ====== 6. COST ANALYSIS ======
-  doc.addPage();
   sectionTitle("6. Cost Analysis");
 
   subSection("Development Costs (Already Invested)");
@@ -480,7 +455,6 @@ function createPDF() {
   doc.y = y + 10;
 
   // ====== 7. MARKETING ======
-  doc.addPage();
   sectionTitle("7. Marketing & Growth Strategy");
 
   subSection("Pre-Launch (Current Phase)");
@@ -507,7 +481,6 @@ function createPDF() {
   bullet("Localization — Translate to Spanish, Portuguese, French, German, Japanese for global reach");
 
   // ====== 8. CROWDFUNDING ======
-  doc.addPage();
   sectionTitle("8. Crowdfunding Campaign Strategy");
 
   subSection("Platform");
@@ -540,7 +513,6 @@ function createPDF() {
   body("Post-campaign: BackerKit for surveys, add-ons, and late pledges. Fulfillment within 60 days of campaign close.");
 
   // ====== 9. ROADMAP ======
-  doc.addPage();
   sectionTitle("9. Development Roadmap");
 
   subSection("Phase 1: Completed (Q1 2025 – Q1 2026)");
@@ -579,7 +551,6 @@ function createPDF() {
   bullet("Esports integration — sponsored tournaments with prize pools");
 
   // ====== 10. FINANCIAL PROJECTIONS ======
-  doc.addPage();
   sectionTitle("10. Financial Projections");
 
   body("Conservative projections assume gradual user acquisition post-launch with increasing monetization as the game matures. All figures are in USD.");
@@ -624,7 +595,6 @@ function createPDF() {
   body("Break-even is projected in Q1 of Year 2 post-launch.");
 
   // ====== 11. FUNDING ======
-  doc.addPage();
   sectionTitle("11. Funding Requirements & Use of Funds");
 
   subSection("Total Funding Sought: $45,000 – $65,000");
@@ -658,7 +628,6 @@ function createPDF() {
   body("The product is substantially built — over $150,000 in estimated development value has been created with minimal capital outlay. Funding now accelerates the last mile: professional art, app store launch, and marketing. The risk-reward ratio is highly favorable because the core product already exists and is functional.");
 
   // ====== 12. RISK ANALYSIS ======
-  doc.addPage();
   sectionTitle("12. Risk Analysis & Mitigation");
 
   const risks = [
@@ -705,7 +674,7 @@ function createPDF() {
   ];
 
   for (const [risk, desc, mitigation] of risks) {
-    if (doc.y > doc.page.height - 120) doc.addPage();
+    ensureSpace(80);
     doc.fontSize(11).fillColor(COLORS.red).text(`Risk: ${risk}`);
     doc.fontSize(10).fillColor(COLORS.textLight).text(`Impact: ${desc}`);
     doc.fontSize(10).fillColor(COLORS.green).text(`Mitigation: ${mitigation}`);
@@ -713,7 +682,6 @@ function createPDF() {
   }
 
   // ====== 13. APPENDIX ======
-  doc.addPage();
   sectionTitle("13. Appendix: Technical Architecture");
 
   subSection("Monorepo Structure");
@@ -791,6 +759,24 @@ function createPDF() {
   doc.moveDown(3);
   doc.fontSize(9).fillColor("#666").text("© 2026 Wisdom & Chance TCG. All rights reserved.", { align: "center" });
   doc.fontSize(8).fillColor("#555").text("This document is confidential and intended solely for the addressee.", { align: "center" });
+
+  const totalPages = doc.bufferedPageRange().count;
+  for (let i = 1; i < totalPages; i++) {
+    doc.switchToPage(i);
+    doc.fontSize(9).fillColor(COLORS.textLight);
+    doc.text(`Page ${i + 1}`, 60, doc.page.height - 40, {
+      align: "center",
+      width: doc.page.width - 120,
+      lineBreak: false,
+    });
+    doc.fontSize(8).fillColor(COLORS.textLight);
+    doc.text(
+      "Wisdom & Chance TCG — Confidential Business Plan v5.0 — April 2026",
+      60,
+      doc.page.height - 55,
+      { align: "center", width: doc.page.width - 120, lineBreak: false }
+    );
+  }
 
   doc.end();
   return new Promise<void>((resolve) => {
