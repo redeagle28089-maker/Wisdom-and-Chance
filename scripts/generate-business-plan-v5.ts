@@ -37,10 +37,30 @@ function countFiles(pattern: string, exclude?: string): number {
   } catch { return 0; }
 }
 
+const ROUTE_FILES = [
+  { label: "routes.ts", path: "server/routes.ts" },
+  { label: "paymentRoutes.ts", path: "server/paymentRoutes.ts" },
+  { label: "multiplayerRoutes.ts", path: "server/multiplayerRoutes.ts" },
+  { label: "mobileAuth.ts", path: "server/mobileAuth.ts" },
+  { label: "apiDocs.ts", path: "server/apiDocs.ts" },
+  { label: "auth/routes.ts", path: "server/replit_integrations/auth/routes.ts" },
+  { label: "auth/replitAuth.ts", path: "server/replit_integrations/auth/replitAuth.ts" },
+  { label: "chat/routes.ts", path: "server/replit_integrations/chat/routes.ts" },
+  { label: "image/routes.ts", path: "server/replit_integrations/image/routes.ts" },
+];
+
+const endpointsByFile = ROUTE_FILES.map(f => ({
+  ...f,
+  count: countEndpoints(f.path),
+}));
+
 const METRICS = {
-  routesEndpoints: countEndpoints("server/routes.ts"),
-  paymentEndpoints: countEndpoints("server/paymentRoutes.ts"),
-  get totalEndpoints() { return this.routesEndpoints + this.paymentEndpoints; },
+  endpointsByFile,
+  routesEndpoints: endpointsByFile.find(f => f.label === "routes.ts")!.count,
+  paymentEndpoints: endpointsByFile.find(f => f.label === "paymentRoutes.ts")!.count,
+  multiplayerEndpoints: endpointsByFile.find(f => f.label === "multiplayerRoutes.ts")!.count,
+  mobileAuthEndpoints: endpointsByFile.find(f => f.label === "mobileAuth.ts")!.count,
+  get totalEndpoints() { return this.endpointsByFile.reduce((sum, f) => sum + f.count, 0); },
   serverLOC: countLines("server"),
   clientLOC: countLines("client/src"),
   mobileLOC: countLines("mobile/app mobile/components mobile/lib mobile/constants"),
@@ -701,23 +721,25 @@ function createPDF() {
   doc.font("Courier").fontSize(9).fillColor(COLORS.text);
   doc.text(`
   /
-  ├── server/           # Express.js backend (${METRICS.serverLOC.toLocaleString()} lines)
-  │   ├── routes.ts     # ${METRICS.routesEndpoints} API endpoints (${METRICS.routesLOC.toLocaleString()} lines)
-  │   ├── paymentRoutes.ts  # ${METRICS.paymentEndpoints} payment endpoints (${METRICS.paymentRoutesLOC.toLocaleString()} lines)
-  │   ├── websocket.ts  # Real-time multiplayer (${METRICS.websocketLOC.toLocaleString()} lines)
-  │   ├── gameEngine.ts # Server-side combat engine (${METRICS.gameEngineLOC.toLocaleString()} lines)
-  │   ├── storage.ts    # Database interface (${METRICS.storageLOC.toLocaleString()} lines)
-  │   └── economyService.ts # In-game economy (${METRICS.economyLOC.toLocaleString()} lines)
-  ├── client/           # React + Vite web app (${METRICS.clientLOC.toLocaleString()} lines)
-  │   └── src/pages/    # ${METRICS.webPages} web pages
-  ├── mobile/           # React Native + Expo (${METRICS.mobileLOC.toLocaleString()} lines)
-  │   ├── app/          # ${METRICS.mobileScreens} screens (expo-router)
-  │   ├── components/   # ${METRICS.mobileComponents} shared components
-  │   └── lib/          # API client, game engine, WebSocket
-  ├── shared/           # Shared TypeScript types & schemas (${METRICS.sharedLOC.toLocaleString()} lines)
-  │   ├── schema.ts     # Zod schemas & game constants
-  │   └── models/       # ${METRICS.sharedModels} model modules (auth, multiplayer, chat, config, economy)
-  └── package.json      # Monorepo root
+  ├── server/               # Express.js backend (${METRICS.serverLOC.toLocaleString()} lines)
+  │   ├── routes.ts         # ${METRICS.routesEndpoints} core API endpoints
+  │   ├── multiplayerRoutes.ts  # ${METRICS.multiplayerEndpoints} multiplayer endpoints
+  │   ├── paymentRoutes.ts  # ${METRICS.paymentEndpoints} payment endpoints
+  │   ├── mobileAuth.ts    # ${METRICS.mobileAuthEndpoints} mobile auth endpoints
+  │   ├── websocket.ts     # Real-time multiplayer (${METRICS.websocketLOC.toLocaleString()} lines)
+  │   ├── gameEngine.ts    # Server-side combat engine (${METRICS.gameEngineLOC.toLocaleString()} lines)
+  │   ├── storage.ts       # Database interface (${METRICS.storageLOC.toLocaleString()} lines)
+  │   └── replit_integrations/  # Auth, chat, image routes
+  ├── client/               # React + Vite web app (${METRICS.clientLOC.toLocaleString()} lines)
+  │   └── src/pages/        # ${METRICS.webPages} web pages
+  ├── mobile/               # React Native + Expo (${METRICS.mobileLOC.toLocaleString()} lines)
+  │   ├── app/              # ${METRICS.mobileScreens} screens (expo-router)
+  │   ├── components/       # ${METRICS.mobileComponents} shared components
+  │   └── lib/              # API client, game engine, WebSocket
+  ├── shared/               # Shared TypeScript types & schemas (${METRICS.sharedLOC.toLocaleString()} lines)
+  │   ├── schema.ts         # Zod schemas & game constants
+  │   └── models/           # ${METRICS.sharedModels} model modules
+  └── package.json          # Monorepo root
   `, { lineGap: 1 });
   doc.font("Helvetica");
 
@@ -734,7 +756,10 @@ function createPDF() {
   doc.moveDown(0.5);
 
   subSection("API Endpoint Summary");
-  body(`${METRICS.totalEndpoints} total endpoints across two route files (${METRICS.routesEndpoints} in routes.ts + ${METRICS.paymentEndpoints} in paymentRoutes.ts).`);
+  body(`${METRICS.totalEndpoints} total HTTP endpoints across ${METRICS.endpointsByFile.filter(f => f.count > 0).length} route files:`);
+  for (const f of METRICS.endpointsByFile.filter(f => f.count > 0)) {
+    bullet(`${f.label} — ${f.count} endpoints`);
+  }
   doc.moveDown(0.5);
 
   subSection("Key Metrics");
