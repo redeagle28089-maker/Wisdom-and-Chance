@@ -530,7 +530,7 @@ function createPDF() {
   bullet("AI opponents (Easy/Medium/Hard difficulty)");
   bullet("Social system (friends, messaging, leaderboards, achievements)");
   bullet("Payment integration (Stripe + PayPal) on web");
-  bullet("Mobile app (React Native/Expo) with 31 screens — functional in Expo Go");
+  bullet(`Mobile app (React Native/Expo) with ${METRICS.mobileScreens} screens — functional in Expo Go`);
   bullet("Unified monorepo architecture sharing one server and database");
   doc.moveDown(0.5);
 
