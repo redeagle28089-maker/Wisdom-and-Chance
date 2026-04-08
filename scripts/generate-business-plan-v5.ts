@@ -1,8 +1,74 @@
 import PDFDocument from "pdfkit";
 import fs from "fs";
 import path from "path";
+import { execSync } from "child_process";
 
 const OUTPUT_PATH = path.resolve("Wisdom_Chance_TCG_Business_Plan_v5.pdf");
+
+function countEndpoints(filePath: string): number {
+  try {
+    const out = execSync(`grep -cE '\\.(get|post|patch|put|delete)\\(' ${filePath}`, { encoding: "utf-8" });
+    return parseInt(out.trim(), 10) || 0;
+  } catch { return 0; }
+}
+
+function countLines(pattern: string): number {
+  try {
+    const out = execSync(`find ${pattern} -name '*.tsx' -o -name '*.ts' 2>/dev/null | xargs wc -l 2>/dev/null | tail -1`, { encoding: "utf-8" });
+    const match = out.trim().match(/^(\d+)/);
+    return match ? parseInt(match[1], 10) : 0;
+  } catch { return 0; }
+}
+
+function countLinesOfFile(filePath: string): number {
+  try {
+    const out = execSync(`wc -l < ${filePath}`, { encoding: "utf-8" });
+    return parseInt(out.trim(), 10) || 0;
+  } catch { return 0; }
+}
+
+function countFiles(pattern: string, exclude?: string): number {
+  try {
+    let cmd = `find ${pattern} -name '*.tsx'`;
+    if (exclude) cmd += ` ! -name '${exclude}'`;
+    cmd += ` 2>/dev/null | wc -l`;
+    const out = execSync(cmd, { encoding: "utf-8" });
+    return parseInt(out.trim(), 10) || 0;
+  } catch { return 0; }
+}
+
+const METRICS = {
+  routesEndpoints: countEndpoints("server/routes.ts"),
+  paymentEndpoints: countEndpoints("server/paymentRoutes.ts"),
+  get totalEndpoints() { return this.routesEndpoints + this.paymentEndpoints; },
+  serverLOC: countLines("server"),
+  clientLOC: countLines("client/src"),
+  mobileLOC: countLines("mobile/app mobile/components mobile/lib mobile/constants"),
+  sharedLOC: countLines("shared"),
+  get totalLOC() { return this.serverLOC + this.clientLOC + this.mobileLOC + this.sharedLOC; },
+  webPages: countFiles("client/src/pages"),
+  mobileScreens: (() => {
+    try {
+      const out = execSync(`find mobile/app -name '*.tsx' ! -name '_layout.tsx' ! -name '+*' 2>/dev/null | wc -l`, { encoding: "utf-8" });
+      return parseInt(out.trim(), 10) || 0;
+    } catch { return 0; }
+  })(),
+  mobileComponents: countFiles("mobile/components"),
+  sharedModels: (() => {
+    try {
+      const out = execSync(`ls shared/models/*.ts 2>/dev/null | wc -l`, { encoding: "utf-8" });
+      return parseInt(out.trim(), 10) || 0;
+    } catch { return 0; }
+  })(),
+  routesLOC: countLinesOfFile("server/routes.ts"),
+  paymentRoutesLOC: countLinesOfFile("server/paymentRoutes.ts"),
+  websocketLOC: countLinesOfFile("server/websocket.ts"),
+  gameEngineLOC: countLinesOfFile("server/gameEngine.ts"),
+  storageLOC: countLinesOfFile("server/storage.ts"),
+  economyLOC: countLinesOfFile("server/economyService.ts"),
+};
+
+console.log("Computed metrics:", JSON.stringify(METRICS, null, 2));
 
 const COLORS = {
   primary: "#1a1a2e",
@@ -185,9 +251,9 @@ function createPDF() {
   bullet("Fully functional web application live at wisdom-and-chance-2.replit.app");
   bullet("Fully functional mobile application running in Expo Go (iOS/Android)");
   bullet("Unified monorepo architecture — web and mobile share one Express server and PostgreSQL database");
-  bullet("102 API endpoints powering cards, decks, commanders, game engine, social features, economy, and payments");
+  bullet(`${METRICS.totalEndpoints} API endpoints powering cards, decks, commanders, game engine, social features, economy, and payments`);
   bullet("Server-side game engine with real-time WebSocket multiplayer");
-  bullet("~40,000 lines of production code across server, web client, and mobile app");
+  bullet(`~${(Math.round(METRICS.totalLOC / 1000) * 1000).toLocaleString()} lines of production code across server, web client, and mobile app`);
   bullet("AI-powered deck suggestions using Google Gemini integration");
   bullet("Stripe and PayPal payment integrations for web; ready for mobile in-app purchases");
   bullet("Social system with friends, messaging, leaderboards, achievements, and daily challenges");
@@ -245,7 +311,7 @@ function createPDF() {
 
   subSection("Web Application — Live & Operational");
   body("The web app (wisdom-and-chance-2.replit.app) includes:");
-  bullet("29 pages: Home, Card Database, Deck Builder, Practice Mode, Multiplayer Lobby, Game Board, Shop, Profile, Analytics, Leaderboard, Achievements, Daily Challenges, Friends, Messaging, Rules, Lore, Tutorial, Live Matches, Season Pass, Pack Opening, Admin Tools, and more");
+  bullet(`${METRICS.webPages} pages: Home, Card Database, Deck Builder, Practice Mode, Multiplayer Lobby, Game Board, Shop, Profile, Analytics, Leaderboard, Achievements, Daily Challenges, Friends, Messaging, Rules, Lore, Tutorial, Live Matches, Season Pass, Pack Opening, Admin Tools, and more`);
   bullet("Real-time multiplayer via WebSocket with reconnection handling");
   bullet("AI opponents (Easy/Medium/Hard) powered by a server-side game engine");
   bullet("Stripe and PayPal payment processing (currently in beta mode)");
@@ -255,7 +321,7 @@ function createPDF() {
 
   subSection("Mobile Application — Functional in Expo Go");
   body("The React Native / Expo mobile app includes:");
-  bullet("31 screens across 5 tab sections (Home, Cards, Decks, Social, More)");
+  bullet(`${METRICS.mobileScreens} screens across 5 tab sections (Home, Cards, Decks, Social, More)`);
   bullet("Full card browsing with element-themed card frames and static artwork");
   bullet("Deck management — create, edit, delete, import/export via share codes");
   bullet("Practice battles against AI with the same game engine as web");
@@ -360,13 +426,13 @@ function createPDF() {
   const cw = [280, 200];
   y = tableRow(doc, ["Item", "Estimated Value"], y, cw, true);
   const devCosts = [
-    ["Server-side development (~9,600 lines)", "$35,000–$50,000"],
-    ["Web client development (~17,900 lines)", "$40,000–$55,000"],
-    ["Mobile app development (~12,400 lines)", "$30,000–$45,000"],
+    [`Server-side development (${METRICS.serverLOC.toLocaleString()} lines)`, "$35,000–$50,000"],
+    [`Web client development (${METRICS.clientLOC.toLocaleString()} lines)`, "$40,000–$55,000"],
+    [`Mobile app development (${METRICS.mobileLOC.toLocaleString()} lines)`, "$30,000–$45,000"],
     ["Game engine & combat system", "$15,000–$20,000"],
     ["WebSocket multiplayer system", "$10,000–$15,000"],
     ["Payment integration (Stripe + PayPal)", "$5,000–$8,000"],
-    ["Database schema & API design (102 endpoints)", "$12,000–$18,000"],
+    [`Database schema & API design (${METRICS.totalEndpoints} endpoints)`, "$12,000–$18,000"],
     ["Total estimated development value", "$147,000–$211,000"],
   ];
   for (const row of devCosts) {
@@ -635,22 +701,22 @@ function createPDF() {
   doc.font("Courier").fontSize(9).fillColor(COLORS.text);
   doc.text(`
   /
-  ├── server/           # Express.js backend (9,576 lines)
-  │   ├── routes.ts     # 89 API endpoints
-  │   ├── paymentRoutes.ts  # 13 payment endpoints
-  │   ├── websocket.ts  # Real-time multiplayer (703 lines)
-  │   ├── gameEngine.ts # Server-side combat engine (1,201 lines)
-  │   ├── storage.ts    # Database interface (854 lines)
-  │   └── economyService.ts # In-game economy (248 lines)
-  ├── client/           # React + Vite web app (17,925 lines)
-  │   └── src/pages/    # 29 web pages
-  ├── mobile/           # React Native + Expo (12,437 lines)
-  │   ├── app/          # 31 screens (expo-router)
-  │   ├── components/   # 6 shared components
+  ├── server/           # Express.js backend (${METRICS.serverLOC.toLocaleString()} lines)
+  │   ├── routes.ts     # ${METRICS.routesEndpoints} API endpoints (${METRICS.routesLOC.toLocaleString()} lines)
+  │   ├── paymentRoutes.ts  # ${METRICS.paymentEndpoints} payment endpoints (${METRICS.paymentRoutesLOC.toLocaleString()} lines)
+  │   ├── websocket.ts  # Real-time multiplayer (${METRICS.websocketLOC.toLocaleString()} lines)
+  │   ├── gameEngine.ts # Server-side combat engine (${METRICS.gameEngineLOC.toLocaleString()} lines)
+  │   ├── storage.ts    # Database interface (${METRICS.storageLOC.toLocaleString()} lines)
+  │   └── economyService.ts # In-game economy (${METRICS.economyLOC.toLocaleString()} lines)
+  ├── client/           # React + Vite web app (${METRICS.clientLOC.toLocaleString()} lines)
+  │   └── src/pages/    # ${METRICS.webPages} web pages
+  ├── mobile/           # React Native + Expo (${METRICS.mobileLOC.toLocaleString()} lines)
+  │   ├── app/          # ${METRICS.mobileScreens} screens (expo-router)
+  │   ├── components/   # ${METRICS.mobileComponents} shared components
   │   └── lib/          # API client, game engine, WebSocket
-  ├── shared/           # Shared TypeScript types & schemas
+  ├── shared/           # Shared TypeScript types & schemas (${METRICS.sharedLOC.toLocaleString()} lines)
   │   ├── schema.ts     # Zod schemas & game constants
-  │   └── models/       # 5 model modules (auth, multiplayer, chat, config, economy)
+  │   └── models/       # ${METRICS.sharedModels} model modules (auth, multiplayer, chat, config, economy)
   └── package.json      # Monorepo root
   `, { lineGap: 1 });
   doc.font("Helvetica");
@@ -668,24 +734,15 @@ function createPDF() {
   doc.moveDown(0.5);
 
   subSection("API Endpoint Summary");
-  body("102 total endpoints across two route files:");
-  bullet("Authentication & User Management — 12 endpoints");
-  bullet("Cards & Commanders — 8 endpoints");
-  bullet("Deck Management — 10 endpoints");
-  bullet("Game Creation & Management — 14 endpoints");
-  bullet("Social (Friends, Messages) — 12 endpoints");
-  bullet("Economy (Achievements, Challenges, Leaderboard) — 15 endpoints");
-  bullet("Multiplayer Rooms — 10 endpoints");
-  bullet("Admin Tools — 8 endpoints");
-  bullet("Payments (Stripe + PayPal) — 13 endpoints");
+  body(`${METRICS.totalEndpoints} total endpoints across two route files (${METRICS.routesEndpoints} in routes.ts + ${METRICS.paymentEndpoints} in paymentRoutes.ts).`);
   doc.moveDown(0.5);
 
   subSection("Key Metrics");
-  bullet("Total production code: ~39,938 lines");
-  bullet("API endpoints: 102");
-  bullet("Web pages: 29");
-  bullet("Mobile screens: 31");
-  bullet("Database models: 5 shared modules");
+  bullet(`Total production code: ${METRICS.totalLOC.toLocaleString()} lines`);
+  bullet(`API endpoints: ${METRICS.totalEndpoints}`);
+  bullet(`Web pages: ${METRICS.webPages}`);
+  bullet(`Mobile screens: ${METRICS.mobileScreens}`);
+  bullet(`Shared type models: ${METRICS.sharedModels} modules`);
   bullet("Game elements: 5 (Fire, Water, Earth, Air, Nature)");
   bullet("Unique cards: 50");
   bullet("Commanders: 5");
