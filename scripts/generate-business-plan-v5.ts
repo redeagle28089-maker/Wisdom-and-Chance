@@ -331,7 +331,7 @@ function createPDF() {
   doc.moveDown(0.3);
 
   subSection("Remaining Mobile Work");
-  body("The mobile app is approximately 85% complete. Remaining items:");
+  body("The mobile app is approximately 80–85% complete. Remaining items:");
   bullet("In-app purchase integration (Apple IAP + Google Play Billing)");
   bullet("Push notification system");
   bullet("App Store / Google Play submission and review process");
