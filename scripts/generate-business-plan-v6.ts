@@ -243,7 +243,7 @@ function createPDF() {
   );
 
   body(
-    "What makes this project extraordinary is how it was built: a single founder, working entirely within Replit\u2019s AI-assisted development platform, has created a product that would traditionally require a team of 4\u20136 engineers and $150,000\u2013$200,000+ in development costs. Including a $50,000/year founder salary and Replit platform costs for 40+ hours/week of AI-assisted development, the entire operation runs on approximately $4,214\u2013$4,242 per month in fixed costs \u2014 a fraction of what any competing TCG spends on a single developer."
+    "What makes this project extraordinary is how it was built: a single founder, working entirely within Replit\u2019s AI-assisted development platform, has created a product that would traditionally require a team of 4\u20136 engineers and $150,000\u2013$200,000+ in development costs. Including a $50,000/year founder salary and Replit platform costs for 40+ hours/week of AI-assisted development, the entire operation runs on approximately $4,209\u2013$4,237 per month in fixed costs \u2014 a fraction of what any competing TCG spends on a single developer."
   );
 
   body("Key milestones achieved:");
@@ -259,7 +259,7 @@ function createPDF() {
   doc.moveDown(0.3);
 
   body(
-    "Total monthly fixed operating costs including founder compensation are approximately $4,214\u2013$4,242 ($50,000/year founder salary + Replit platform + services), compared to Hearthstone\u2019s estimated $15\u2013$20 million per year in operating costs. This extreme capital efficiency means profitability can be achieved with approximately 500\u2013550 paying users per month."
+    "Total monthly fixed operating costs including founder compensation are approximately $4,209\u2013$4,237 ($50,000/year founder salary + Replit platform + services), compared to Hearthstone\u2019s estimated $15\u2013$20 million per year in operating costs. This extreme capital efficiency means profitability can be achieved with approximately 500\u2013550 paying users per month."
   );
 
   body(
@@ -287,7 +287,7 @@ function createPDF() {
   );
 
   body(
-    "This solo-operator model is not a limitation \u2014 it\u2019s a strategic advantage. With the founder drawing a $50,000/year salary and total fixed monthly costs of ~$4,214\u2013$4,242, the project\u2019s burn rate is less than what most studios spend on a single junior developer. This enables the project to take calculated risks on features and marketing, and reach profitability with modest user traction."
+    "This solo-operator model is not a limitation \u2014 it\u2019s a strategic advantage. With the founder drawing a $50,000/year salary and total fixed monthly costs of ~$4,209\u2013$4,237, the project\u2019s burn rate is less than what most studios spend on a single junior developer. This enables the project to take calculated risks on features and marketing, and reach profitability with modest user traction."
   );
 
   sectionTitle("3. Product Description");
@@ -409,7 +409,7 @@ function createPDF() {
     ["Development Cost", "$30\u2013$50 million", "~$300 (Replit sub)"],
     ["Development Time", "5+ years", "~12 months"],
     ["Team Size", "100\u2013150 people", "1 person"],
-    ["Monthly Operating Cost", "$1.2\u2013$1.7 million", "~$4,300 (incl. salary)"],
+    ["Monthly Operating Cost", "$1.2\u2013$1.7 million", "~$4,230 (incl. salary)"],
     ["Cost Per Card", "$50,000\u2013$100,000+", "~$0.50 (AI generation)"],
     ["Infrastructure", "Custom data centers", "Replit managed hosting"],
     ["Break-even Users Needed", "~500,000+ MAU", "~500\u2013550 paying users"],
@@ -422,7 +422,7 @@ function createPDF() {
 
   subSection("Key Takeaway");
   body(
-    "Hearthstone needed approximately $30\u2013$50 million in development costs and 500,000+ monthly active users before it became profitable. Wisdom & Chance, with monthly costs of ~$4,300 (including the founder\u2019s $50,000/year salary), can achieve profitability with approximately 500\u2013550 paying users. This 1,000x difference in cost structure means that even capturing a tiny fraction of Hearthstone\u2019s market would generate substantial profit."
+    "Hearthstone needed approximately $30\u2013$50 million in development costs and 500,000+ monthly active users before it became profitable. Wisdom & Chance, with monthly costs of ~$4,230 (including the founder\u2019s $50,000/year salary), can achieve profitability with approximately 500\u2013550 paying users. This 1,000x difference in cost structure means that even capturing a tiny fraction of Hearthstone\u2019s market would generate substantial profit."
   );
 
   body(
@@ -510,23 +510,80 @@ function createPDF() {
   body("This salary is below market rate for a single full-stack developer ($80K\u2013$150K/year), let alone a combined developer + designer + product manager + marketer role. It reflects the founder\u2019s commitment to keeping costs lean while ensuring personal sustainability.");
 
   subSection("Ongoing Monthly Costs \u2014 Secondary: Replit Platform (40 hrs/week usage)");
-  body("The founder uses Replit as the complete development, AI, and hosting platform, averaging 40+ hours per week of active development with AI Agent assistance:");
+  body("The founder uses Replit as the complete development, AI, and hosting platform, averaging 40+ hours per week of active development with AI Agent assistance. Replit\u2019s $20/month plan provides AI Agent access, cloud development environments, and deployment infrastructure:");
   y = doc.y + 5;
   y = tableRow(["Replit Expense", "Monthly Cost"], y, mw, true);
   const replitCosts = [
-    ["Replit Core Subscription (AI Agent access)", "$25/month"],
+    ["Replit Subscription ($20/mo plan w/ AI Agent)", "$20/month"],
     ["Replit Deployments (production hosting)", "$7\u2013$20/month"],
-    ["PostgreSQL Database Hosting", "Included in Replit"],
-    ["AI Agent Compute (~160 hrs/month usage)", "Included in Core"],
-    ["Total Replit Costs", "$32\u2013$45/month"],
+    ["PostgreSQL Database Hosting", "Included in plan"],
+    ["AI Agent Compute (~160 hrs/month)", "Included in plan"],
+    ["Total Replit Costs", "$27\u2013$40/month"],
   ];
   for (const row of replitCosts) {
     y = tableRow(row, y, mw);
   }
   doc.y = y + 10;
-  body("At 40 hours per week, the founder logs approximately 160 hours per month of AI-assisted development. Replit\u2019s Core plan includes AI Agent access, making the effective cost per hour of AI-assisted development approximately $0.16\u2013$0.28 \u2014 compared to $50\u2013$150/hour for a traditional developer.");
 
-  subSection("Ongoing Costs \u2014 Tertiary: Platform & Transaction Fees");
+  subSection("Weekly Replit Cost Breakdown");
+  body("At 40 hours per week of development, here is the effective weekly cost of operating the entire tech stack:");
+  y = doc.y + 5;
+  const ww = [300, 180];
+  y = tableRow(["Weekly Expense", "Cost/Week"], y, ww, true);
+  const weeklyCosts = [
+    ["Replit Subscription ($20/mo \u00F7 4.33 weeks)", "$4.62/week"],
+    ["Replit Deployments ($7\u2013$20/mo \u00F7 4.33)", "$1.62\u2013$4.62/week"],
+    ["AI Agent Usage (40 hrs @ $0/hr additional)", "$0 (included)"],
+    ["Total Weekly Replit Cost", "$6.24\u2013$9.24/week"],
+    ["Effective Cost Per Dev Hour", "$0.16\u2013$0.23/hour"],
+  ];
+  for (const row of weeklyCosts) {
+    y = tableRow(row, y, ww);
+  }
+  doc.y = y + 10;
+  body("For context: a single freelance developer costs $50\u2013$150/hour. At 40 hours/week, that would be $2,000\u2013$6,000/week. The founder\u2019s entire weekly Replit cost ($6\u2013$9) is less than the price of a single lunch.");
+
+  subSection("AI Agent Work Hours \u2014 Value Estimate");
+  body("The Replit AI Agent acts as a virtual engineering team, providing code generation, debugging, refactoring, and deployment assistance. Here is the estimated market value of the AI compute consumed:");
+  y = doc.y + 5;
+  y = tableRow(["AI Agent Metric", "Value"], y, ww, true);
+  const aiValue = [
+    ["Weekly AI-assisted dev hours", "40 hours"],
+    ["Monthly AI-assisted dev hours", "~160 hours"],
+    ["Annual AI-assisted dev hours", "~2,080 hours"],
+    ["Market rate for equivalent dev work", "$50\u2013$150/hour"],
+    ["Monthly value of AI output", "$8,000\u2013$24,000"],
+    ["Annual value of AI output", "$104,000\u2013$312,000"],
+    ["Actual monthly cost for AI access", "$20 (subscription)"],
+    ["Cost savings vs. hiring equivalent", "99.75\u201399.92%"],
+  ];
+  for (const row of aiValue) {
+    y = tableRow(row, y, ww);
+  }
+  doc.y = y + 10;
+  body("This is the core economic advantage of the solo operator model: the founder leverages AI to produce output equivalent to a small engineering team, at a fraction of one percent of the cost.");
+
+  subSection("Server Scaling Costs \u2014 Projected Replit Deployment Costs by User Traffic");
+  body("As the game attracts more players, server costs through Replit Deployments will increase based on compute usage, database connections, and WebSocket traffic. Estimated scaling costs:");
+  y = doc.y + 5;
+  const scw = [120, 120, 120, 120];
+  y = tableRow(["Monthly Active Users", "Est. Server Cost", "DB Cost", "Total Hosting"], y, scw, true);
+  const scalingCosts = [
+    ["100\u2013500 MAU", "$7\u2013$10/mo", "Included", "$7\u2013$10/mo"],
+    ["500\u20131,000 MAU", "$10\u2013$15/mo", "Included", "$10\u2013$15/mo"],
+    ["1,000\u20135,000 MAU", "$15\u2013$30/mo", "Included", "$15\u2013$30/mo"],
+    ["5,000\u201310,000 MAU", "$30\u2013$60/mo", "$0\u2013$10/mo", "$30\u2013$70/mo"],
+    ["10,000\u201320,000 MAU", "$60\u2013$120/mo", "$10\u2013$25/mo", "$70\u2013$145/mo"],
+    ["20,000\u201350,000 MAU", "$120\u2013$250/mo", "$25\u2013$50/mo", "$145\u2013$300/mo"],
+  ];
+  for (const row of scalingCosts) {
+    y = tableRow(row, y, scw);
+  }
+  doc.y = y + 10;
+  body("Even at 50,000 monthly active users, estimated hosting costs remain under $300/month \u2014 compared to $500,000\u2013$1,000,000+/month for Hearthstone\u2019s custom infrastructure. Replit\u2019s auto-scaling deployment model means costs grow linearly with usage rather than requiring large upfront infrastructure investment.");
+  body("Important: These server costs scale with revenue. At 20,000 MAU with 6% conversion and $20 average revenue per payer, monthly revenue would be ~$24,000 against ~$145 in hosting costs \u2014 a hosting cost ratio under 0.6%.");
+
+  subSection("Ongoing Costs \u2014 Platform & Transaction Fees");
   body("These costs are variable and only apply when revenue is generated \u2014 they scale proportionally with income:");
   y = doc.y + 5;
   y = tableRow(["Platform", "Fee Structure"], y, mw, true);
@@ -564,11 +621,11 @@ function createPDF() {
   y = tableRow(["Category", "Monthly Cost"], y, sw, true);
   const totalCosts = [
     ["Founder Salary ($50,000/year)", "$4,167"],
-    ["Replit Platform (40 hrs/week usage)", "$32\u2013$45"],
+    ["Replit Platform (40 hrs/week usage)", "$27\u2013$40"],
     ["AI Image Generation + Domain + Dev Accounts", "$15\u2013$30"],
     ["Platform/Transaction Fees (variable)", "$0\u2013varies with revenue"],
     ["Office/Equipment", "$0 (works from home)"],
-    ["Total Fixed Monthly Costs", "$4,214\u2013$4,242"],
+    ["Total Fixed Monthly Costs", "$4,209\u2013$4,237"],
   ];
   for (const row of totalCosts) {
     y = tableRow(row, y, sw);
@@ -576,7 +633,7 @@ function createPDF() {
   doc.y = y + 10;
 
   body(
-    "Total annual fixed operating cost: ~$50,568\u2013$50,904/year. Compare this to the v5.0 business plan which excluded founder compensation entirely and still projected $2,100\u2013$4,100/month with a hired creative team. The solo operator model with fair founder compensation still costs less per month than a single junior developer\u2019s salary at a traditional studio."
+    "Total annual fixed operating cost: ~$50,508\u2013$50,844/year. Compare this to the v5.0 business plan which excluded founder compensation entirely and still projected $2,100\u2013$4,100/month with a hired creative team. The solo operator model with fair founder compensation still costs less per month than a single junior developer\u2019s salary at a traditional studio."
   );
 
   sectionTitle("8. Marketing & Growth Strategy");
