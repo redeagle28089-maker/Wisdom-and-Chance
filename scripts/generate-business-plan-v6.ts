@@ -3,7 +3,7 @@ import fs from "fs";
 import path from "path";
 import { execSync } from "child_process";
 
-const OUTPUT_PATH = path.resolve("Wisdom_Chance_TCG_Business_Plan_v6.2.pdf");
+const OUTPUT_PATH = path.resolve("Wisdom_Chance_TCG_Business_Plan_v6.3.pdf");
 
 function countEndpoints(filePath: string): number {
   try {
@@ -109,7 +109,7 @@ function createPDF() {
     size: "letter",
     margins: { top: 60, bottom: 60, left: 60, right: 60 },
     info: {
-      Title: "Wisdom & Chance TCG — Business Plan v6.2",
+      Title: "Wisdom & Chance TCG — Business Plan v6.3",
       Author: "Wisdom & Chance TCG",
       Subject: "Investment & Crowdfunding Business Plan — Solo Operator Edition",
     },
@@ -198,7 +198,7 @@ function createPDF() {
   doc.fontSize(42).fillColor(COLORS.accent).text("WISDOM & CHANCE", { align: "center" });
   doc.fontSize(36).fillColor(COLORS.gold).text("TCG", { align: "center" });
   doc.moveDown(1);
-  doc.fontSize(14).fillColor(COLORS.white).text("BUSINESS PLAN v6.2", { align: "center" });
+  doc.fontSize(14).fillColor(COLORS.white).text("BUSINESS PLAN v6.3", { align: "center" });
   doc.moveDown(0.5);
   doc.fontSize(12).fillColor(COLORS.gold).text("Solo Operator Edition", { align: "center" });
   doc.moveDown(0.5);
@@ -239,7 +239,7 @@ function createPDF() {
   sectionTitle("1. Executive Summary");
 
   body(
-    "Wisdom & Chance TCG is a digital trading card game that combines strategic deck-building with elemental combat mechanics. The game features five elemental factions \u2014 Fire, Water, Earth, Air, and Nature \u2014 with 50 unique cards and 5 Commanders, each with specialized abilities that create deep strategic gameplay."
+    "Wisdom & Chance TCG is a digital trading card game that combines strategic deck-building with elemental combat mechanics. The game features five elemental factions \u2014 Fire, Water, Earth, Air, and Nature \u2014 with a planned first set of 100 unique cards and 5 Commanders (50 cards and all 5 Commanders built so far), each with specialized abilities that create deep strategic gameplay."
   );
 
   body(
@@ -432,27 +432,58 @@ function createPDF() {
   sectionTitle("6. Revenue Model & Product Catalog");
 
   subSection("Web Revenue Streams (Stripe + PayPal)");
-  body("The web shop offers 11 digital products:");
+  body("The shop uses a simple, transparent quantity-based pricing model. Instead of preset bundles, players select how many packs they want and the price scales linearly \u2014 no hidden markups, no confusing tiers:");
   doc.moveDown(0.3);
 
-  y = doc.y;
-  const pw = [200, 80, 80, 120];
-  y = tableRow(["Product", "Price", "Currency", "Category"], y, pw, true);
-  const products = [
-    ["Starter Pack (5 cards)", "$1.99", "USD", "Card Pack"],
-    ["Booster Pack (10 cards)", "$3.99", "USD", "Card Pack"],
-    ["Premium Pack (15 cards)", "$7.99", "USD", "Card Pack"],
-    ["Legendary Pack (20 cards)", "$14.99", "USD", "Card Pack"],
-    ["Ultimate Bundle (50 cards)", "$29.99", "USD", "Bundle"],
-    ["500 Gold Coins", "$4.99", "USD", "Currency"],
-    ["1,200 Gold Coins", "$9.99", "USD", "Currency"],
-    ["3,000 Gold Coins", "$19.99", "USD", "Currency"],
-    ["Season Pass", "$9.99", "USD/season", "Subscription"],
-    ["Battle Pass Premium", "$14.99", "USD/season", "Subscription"],
-    ["Cosmetic Card Backs", "$2.99", "USD", "Cosmetic"],
+  subSection("Card Pack Pricing \u2014 Quantity Selector Model");
+  body("Base unit: 1 Pack = 5 random cards from the current set. Price: $2.00 USD or 200 Gold.");
+  body("Players choose their quantity and the total updates automatically:");
+  y = doc.y + 5;
+  const pw = [120, 100, 100, 160];
+  y = tableRow(["Quantity", "USD Price", "Gold Price", "Cards Received"], y, pw, true);
+  const packPricing = [
+    ["1 Pack", "$2.00", "200 Gold", "5 cards"],
+    ["2 Packs", "$4.00", "400 Gold", "10 cards"],
+    ["3 Packs", "$6.00", "600 Gold", "15 cards"],
+    ["5 Packs", "$10.00", "1,000 Gold", "25 cards"],
+    ["10 Packs", "$20.00", "2,000 Gold", "50 cards"],
+    ["25 Packs", "$50.00", "5,000 Gold", "125 cards"],
   ];
-  for (const row of products) {
+  for (const row of packPricing) {
     y = tableRow(row, y, pw);
+  }
+  doc.y = y + 10;
+  body("Formula: Total = Quantity \u00D7 $2.00 (or Quantity \u00D7 200 Gold). No bulk discounts \u2014 every pack costs the same whether you buy 1 or 100. This keeps pricing fair, simple, and easy to understand for all players.");
+
+  subSection("In-Game Gold Currency");
+  body("Gold can be earned through gameplay (daily challenges, achievements, wins) or purchased directly:");
+  y = doc.y + 5;
+  const gw = [200, 100, 180];
+  y = tableRow(["Gold Amount", "USD Price", "Pack Equivalent"], y, gw, true);
+  const goldPricing = [
+    ["200 Gold", "$2.00", "1 Pack"],
+    ["500 Gold", "$5.00", "2.5 Packs"],
+    ["1,000 Gold", "$10.00", "5 Packs"],
+    ["2,000 Gold", "$20.00", "10 Packs"],
+    ["5,000 Gold", "$50.00", "25 Packs"],
+  ];
+  for (const row of goldPricing) {
+    y = tableRow(row, y, gw);
+  }
+  doc.y = y + 10;
+  body("Gold maintains a fixed 1:1 exchange rate with USD ($1 = 100 Gold). Players can use gold to buy packs, cosmetics, and tournament entry fees.");
+
+  subSection("Additional Shop Products");
+  y = doc.y + 5;
+  const aw = [240, 120, 120];
+  y = tableRow(["Product", "Price", "Category"], y, aw, true);
+  const additionalProducts = [
+    ["Season Pass", "$9.99/season", "Subscription"],
+    ["Battle Pass Premium", "$14.99/season", "Subscription"],
+    ["Cosmetic Card Backs", "$2.99 each", "Cosmetic"],
+  ];
+  for (const row of additionalProducts) {
+    y = tableRow(row, y, aw);
   }
   doc.y = y + 10;
 
@@ -465,8 +496,8 @@ function createPDF() {
 
   subSection("Revenue Model Summary");
   body("Revenue comes from four primary channels:");
-  bullet("Direct card pack sales \u2014 One-time purchases for random card packs");
-  bullet("In-game currency \u2014 Gold coins used to purchase packs, cosmetics, and entry fees");
+  bullet("Card pack sales \u2014 $2/pack with quantity selector; players buy as many as they want");
+  bullet("In-game currency \u2014 Gold purchased with USD or earned through gameplay, used for packs, cosmetics, and entry fees");
   bullet("Season/Battle Pass \u2014 Recurring seasonal subscriptions with exclusive rewards");
   bullet("Cosmetic items \u2014 Card backs, board themes, and visual customizations");
 
@@ -668,8 +699,8 @@ function createPDF() {
   body("Primary platform: Kickstarter (largest audience for game projects). Backup: BackerKit for post-campaign management and late pledges.");
 
   subSection("Campaign Goal \u2014 Revised for Solo Model");
-  body("Base goal: $25,000 \u2014 Covers 6 months of founder salary, app store fees, marketing launch, and AI image generation for all 50 cards + 5 commanders.");
-  body("Stretch goals up to $50,000 \u2014 12 months founder salary runway, expanded marketing, tournament prize pool, localization, new card expansion.");
+  body("Base goal: $25,000 \u2014 Covers 6 months of founder salary, app store fees, marketing launch, and AI image generation for all 100 cards + 5 commanders in the first set.");
+  body("Stretch goals up to $50,000 \u2014 12 months founder salary runway, expanded marketing, tournament prize pool, localization, and head start on Set 2 development.");
 
   body("Note: Even with the founder\u2019s $50,000/year salary included, this crowdfunding goal is still dramatically lower than traditional game projects (which typically seek $100K\u2013$500K+). This makes the campaign far more likely to succeed and reduces backer risk.");
 
@@ -679,10 +710,10 @@ function createPDF() {
   y = tableRow(["Tier", "Reward", "Price"], y, rw, true);
   const tiers = [
     ["Supporter", "Name in credits, digital thank-you card", "$5"],
-    ["Player", "Starter deck (5 packs) + exclusive card back", "$15"],
-    ["Champion", "10 packs + Season Pass + founder badge", "$30"],
-    ["Commander", "25 packs + Battle Pass + exclusive Commander skin", "$50"],
-    ["Legend", "50 packs + all passes + name a card + VIP Discord", "$100"],
+    ["Player", "5 packs ($10 value) + exclusive card back", "$15"],
+    ["Champion", "15 packs ($30 value) + Season Pass + founder badge", "$40"],
+    ["Commander", "25 packs ($50 value) + Battle Pass + exclusive Commander skin", "$65"],
+    ["Legend", "50 packs ($100 value) + all passes + name a card + VIP Discord", "$125"],
     ["Patron", "Everything above + 1-hour strategy call + custom card", "$250"],
   ];
   for (const row of tiers) {
@@ -698,7 +729,7 @@ function createPDF() {
   sectionTitle("10. Development Roadmap");
 
   subSection("Phase 1: Completed (Q1 2025 \u2013 Q1 2026)");
-  bullet("Core game engine with 5 elements, 50 cards, 5 commanders");
+  bullet("Core game engine with 5 elements, 50 cards built so far (of 100 planned for Set 1), 5 commanders");
   bullet("Full web application with 29 pages and complete gameplay loop");
   bullet("Server-side multiplayer game engine with WebSocket real-time sync");
   bullet("AI opponents (Easy/Medium/Hard difficulty)");
@@ -708,8 +739,9 @@ function createPDF() {
   bullet("Unified monorepo architecture sharing one server and database");
   doc.moveDown(0.5);
 
-  subSection("Phase 2: App Store Launch (Q2\u2013Q3 2026)");
-  bullet("Generate professional card artwork using AI image generation tools");
+  subSection("Phase 2: Complete Set 1 & App Store Launch (Q2\u2013Q3 2026)");
+  bullet("Complete remaining 50 cards to finish Set 1 (100 total cards + 5 Commanders)");
+  bullet("Generate professional card artwork using AI image generation tools for all 105 cards");
   bullet("Integrate Apple IAP and Google Play Billing in mobile app");
   bullet("Push notification system for mobile");
   bullet("Final QA pass and performance optimization");
@@ -720,21 +752,30 @@ function createPDF() {
   subSection("Phase 3: Growth & Season 1 (Q3\u2013Q4 2026)");
   bullet("Season 1 launch with ranked play, seasonal rewards, and battle pass");
   bullet("Tournament system \u2014 in-game organized competitive play");
-  bullet("New card expansion set (10\u201315 additional cards)");
   bullet("Social features expansion \u2014 guilds/clans, spectator mode improvements");
   bullet("Content creator program \u2014 streamer tools and referral integration");
+  bullet("Begin development of Set 2 (100 new cards, targeting Q1 2027 release)");
   doc.moveDown(0.5);
 
-  subSection("Phase 4: Expansion (2027)");
+  subSection("Phase 4: Set 2 Launch & Expansion (Q1\u2013Q2 2027)");
+  bullet("Release Set 2 \u2014 100 new cards with new mechanics and strategies");
   bullet("New element or card mechanics (e.g., dual-element cards)");
   bullet("Localization \u2014 5+ languages");
   bullet("Draft/Arena game mode");
   bullet("Physical merchandise tie-ins (optional, dependent on revenue)");
   bullet("Esports integration \u2014 sponsored tournaments with prize pools");
+  doc.moveDown(0.5);
+
+  subSection("Card Set Release Schedule");
+  body("New 100-card sets will be released every 6 months following this cadence:");
+  bullet("Set 1 (Launch): 100 cards + 5 Commanders \u2014 Q2/Q3 2026");
+  bullet("Set 2: 100 new cards \u2014 Q1 2027");
+  bullet("Set 3: 100 new cards \u2014 Q3 2027");
+  body("Set release frequency will be re-evaluated in late 2027 based on player engagement data, revenue trends, and community feedback. The cadence may increase, decrease, or shift to smaller/larger sets depending on what the data shows.");
 
   sectionTitle("11. Financial Projections");
 
-  body("Conservative projections assume gradual user acquisition post-launch with the solo operator cost structure including $50,000/year founder salary. All figures are in USD. Monthly fixed costs are ~$4,230 ($4,167 salary + ~$63 Replit/services).");
+  body("Conservative projections assume gradual user acquisition post-launch with the solo operator cost structure including $50,000/year founder salary. All figures are in USD. Monthly fixed costs are ~$4,230 ($4,167 salary + ~$63 Replit/services). Pack pricing is $2/pack with an average of 3\u20135 packs per purchase.");
   doc.moveDown(0.3);
 
   subSection("Year 1 Post-Launch Quarterly Projections");
@@ -801,13 +842,13 @@ function createPDF() {
   const funds = [
     ["Founder Salary Runway (6\u201312 months)", "$12,500", "$25,000"],
     ["Marketing & User Acquisition", "$5,000", "$10,000"],
-    ["AI Card Art Generation (55 cards)", "$200", "$500"],
+    ["AI Card Art Generation (100 cards + 5 commanders)", "$400", "$1,000"],
     ["App Store Submission Fees", "$125", "$125"],
     ["Crowdfunding Campaign Costs (8\u201310%)", "$2,000", "$5,000"],
     ["Launch Trailer (AI-assisted production)", "$200", "$500"],
     ["Tournament Prize Pool (Season 1)", "$500", "$2,000"],
     ["Replit Operating Reserve (12 months)", "$500", "$600"],
-    ["Contingency / Growth Capital", "$3,975", "$6,275"],
+    ["Contingency / Growth Capital", "$3,775", "$5,775"],
     ["Total", "$25,000", "$50,000"],
   ];
   for (const row of funds) {
@@ -964,7 +1005,7 @@ function createPDF() {
     doc.switchToPage(i);
     doc.fontSize(8).fillColor(COLORS.textLight);
     doc.text(
-      "Wisdom & Chance TCG \u2014 Confidential Business Plan v6.2 \u2014 Solo Operator Edition \u2014 April 2026",
+      "Wisdom & Chance TCG \u2014 Confidential Business Plan v6.3 \u2014 Solo Operator Edition \u2014 April 2026",
       60,
       doc.page.height - 55,
       { align: "center", width: doc.page.width - 120, lineBreak: false }
