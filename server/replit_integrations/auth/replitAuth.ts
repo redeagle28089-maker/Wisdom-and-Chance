@@ -611,17 +611,19 @@ export async function setupAuth(app: Express) {
       // Verify ID token with full signature and claim validation
       const claims = await verifyAndDecodeJWT(tokens.id_token, metadata, pending.nonce);
       
-      await upsertUser(claims);
+      const dbUser = await upsertUser(claims);
+      const effectiveUserId = dbUser.id;
 
       try {
         const { seedStarterDecks } = await import("../starter-decks");
-        await seedStarterDecks(claims.sub);
+        await seedStarterDecks(effectiveUserId);
       } catch (error) {
         console.warn("[auth] Failed to seed starter decks:", error);
       }
       
+      const sessionClaims = { ...claims, sub: effectiveUserId };
       const user = {
-        claims,
+        claims: sessionClaims,
         access_token: tokens.access_token,
         refresh_token: tokens.refresh_token,
         expires_at: claims.exp,
@@ -632,7 +634,7 @@ export async function setupAuth(app: Express) {
           console.error("[auth] Login error after callback:", err);
           return res.redirect("/?error=auth_failed");
         }
-        console.log("[auth] Login successful for user:", claims.sub);
+        console.log("[auth] Login successful for user:", effectiveUserId);
         res.redirect("/");
       });
     } catch (error: any) {
