@@ -238,7 +238,8 @@ function createPDF() {
     "12. Financial Projections",
     "13. Funding Requirements & Use of Funds",
     "14. Risk Analysis & Mitigation",
-    "15. Appendix: Technical Architecture",
+    "15. Appendix A: Technical Architecture",
+    "16. Appendix B: Campaign Summary — Back, Play, Shape the Future",
   ];
   for (const entry of toc) {
     doc.fontSize(11).fillColor(COLORS.text).text(entry, 80);
@@ -1033,7 +1034,7 @@ function createPDF() {
     doc.moveDown(0.5);
   }
 
-  sectionTitle("15. Appendix: Technical Architecture");
+  sectionTitle("15. Appendix A: Technical Architecture");
 
   subSection("Monorepo Structure");
   body("The project uses a unified monorepo with shared types between web and mobile:");
@@ -1093,6 +1094,95 @@ function createPDF() {
   bullet("Commander abilities: 15+ unique effects");
   bullet("Game modes: Standard (2/2) and Accelerated (3/3)");
   bullet("AI difficulty levels: Easy, Medium, Hard");
+
+  sectionTitle("16. Appendix B: Campaign Summary \u2014 Back, Play, Shape the Future");
+
+  subSection("What Is Wisdom & Chance?");
+  body(
+    "Wisdom & Chance TCG is a digital collectible card game (DCCG) that blends strategic deck-building with elemental combat. Choose from five elemental factions \u2014 Fire, Water, Earth, Air, and Nature \u2014 each with unique playstyles, strengths, and synergies. Build your deck, pick your Commander, and battle opponents in fast-paced matches that reward both careful planning and bold risk-taking."
+  );
+  body(
+    "Whether you prefer outsmarting the AI in solo mode or testing your skills against real players in real-time multiplayer, Wisdom & Chance delivers a deep, satisfying card game experience accessible on web browsers and mobile devices."
+  );
+
+  subSection("What Makes It Special");
+  bullet("Five Elemental Factions \u2014 Fire, Water, Earth, Air, and Nature with unique cards, mechanics, and strategies");
+  bullet("Commander System \u2014 Choose a Commander with powerful unique abilities that define your battle strategy");
+  bullet("Real-Time Multiplayer \u2014 Challenge friends or get matched with opponents for live PvP card battles");
+  bullet("AI Opponents \u2014 Practice against Easy, Medium, and Hard AI to sharpen your skills");
+  bullet("Daily Challenges \u2014 New challenges every day that reward Gold, packs, and exclusive items");
+  bullet("Achievements & Leaderboards \u2014 Climb the ranks and show off your accomplishments");
+  bullet("Cross-Platform \u2014 Play on web or mobile; your collection and progress sync across devices");
+  bullet("In-Game Economy \u2014 Earn Gold through gameplay or purchase packs to grow your collection");
+  doc.moveDown(0.3);
+
+  subSection("This Game Is Already Playable");
+  body(
+    "Unlike most crowdfunding campaigns that launch with nothing more than concept art and promises, Wisdom & Chance TCG is a fully functional game you can play RIGHT NOW. Visit the website, create an account, and start playing \u2014 before you even decide to pledge."
+  );
+  body("29 web pages, 27 mobile screens, 146 API endpoints, 47,000+ lines of code, real-time multiplayer, a full economy system, AI opponents, social features, and payment processing \u2014 all live and working today.");
+  body(
+    "Building a game like this from scratch with a traditional development team would cost between $320,000 and $900,000. Jason Myers, founder of Legraphics Gaming Division, built it for approximately $400 in Replit subscription fees using AI-assisted development. The hardest part \u2014 building the game \u2014 is already done. Your backing funds art, polish, marketing, and growth."
+  );
+
+  subSection("Beta Access \u2014 Play Now for $10+");
+  body(
+    "Every backer who pledges $10 or more gets immediate, full access to the game on web and mobile \u2014 no waiting! When you pledge $10+, you receive a unique one-time passcode via email. Enter it in the game to unlock your Beta Backer status permanently."
+  );
+  body("What Beta Backers get:");
+  bullet("Full access to the game on web and mobile");
+  bullet("All current and future Set 1 cards as they\u2019re released");
+  bullet("Real-time multiplayer, AI battles, deck building, and social features");
+  bullet("Exclusive Beta Backer in-game badge (permanent)");
+  bullet("Exclusive Beta Backer card back (permanent)");
+  bullet("Your feedback directly shapes the game\u2019s development");
+  bullet("Early access to new features before public launch");
+  doc.moveDown(0.3);
+
+  subSection("Backer Reward Tiers");
+  body("Every pledge level comes with unique rewards. All tiers at $10 and above include full beta access via one-time passcode:");
+  doc.moveDown(0.3);
+
+  y = doc.y + 5;
+  const campTw = [80, 290, 60];
+  y = tableRow(["Tier", "Rewards", "Price"], y, campTw, true);
+  y = tableRow(["Supporter", "Name in credits + digital thank-you card", "$5"], y, campTw);
+  y = tableRow(["Beta Backer", "Beta access + 2 packs ($4 value) + Beta badge", "$10"], y, campTw);
+  y = tableRow(["Player", "Beta access + 5 packs ($10 value) + exclusive card back", "$15"], y, campTw);
+  y = tableRow(["Champion", "Beta access + 15 packs ($30) + Season Pass + founder badge", "$40"], y, campTw);
+  y = tableRow(["Commander", "Beta access + 25 packs ($50) + Battle Pass + Commander skin", "$65"], y, campTw);
+  y = tableRow(["Legend", "Beta access + 50 packs ($100) + all passes + name a card + VIP", "$125"], y, campTw);
+  y = tableRow(["Patron", "Everything above + 1-hour strategy call + custom card design", "$250"], y, campTw);
+  doc.y = y + 10;
+
+  body("Best entry point: Beta Backer ($10) \u2014 Get instant access to the full game + 2 bonus packs + an exclusive Beta Backer badge. The most affordable way to play now and support the game\u2019s development.");
+
+  subSection("Pack Pricing \u2014 Simple & Transparent");
+  body("No confusing bundles or hidden markups \u2014 pricing scales linearly at $2 per pack (5 cards each):");
+  doc.moveDown(0.3);
+
+  y = doc.y + 5;
+  const campPw = [160, 130, 140];
+  y = tableRow(["Quantity", "USD Price", "In-Game Gold"], y, campPw, true);
+  y = tableRow(["1 pack (5 cards)", "$2.00", "200 Gold"], y, campPw);
+  y = tableRow(["5 packs (25 cards)", "$10.00", "1,000 Gold"], y, campPw);
+  y = tableRow(["10 packs (50 cards)", "$20.00", "2,000 Gold"], y, campPw);
+  y = tableRow(["25 packs (125 cards)", "$50.00", "5,000 Gold"], y, campPw);
+  y = tableRow(["50 packs (250 cards)", "$100.00", "10,000 Gold"], y, campPw);
+  doc.y = y + 10;
+
+  body("Exchange rate: $1 = 100 Gold. What you see is what you get.");
+
+  subSection("Campaign Pipeline \u2014 Kickstarter + BackerKit");
+  body("Phase 1 \u2014 Kickstarter Campaign (30 Days): The main fundraising event on the largest platform for game projects. Live gameplay demo as the headline, daily updates, stretch goal reveals, and immediate beta access for all $10+ backers.");
+  body("Phase 2 \u2014 BackerKit (Ongoing After Campaign): Late pledges, add-on purchases, backer surveys, and a permanent pre-order store. Many successful game Kickstarters generate 15\u201325% additional revenue through BackerKit late pledges.");
+
+  subSection("Funding Goal");
+  body("Base goal: $25,000 \u2014 Covers 6 months of founder salary, app store fees, marketing launch, and AI-generated artwork for all 100 cards + 5 Commanders in Set 1.");
+  body("Stretch goal: $50,000 \u2014 12 months founder salary runway, expanded marketing, tournament prize pool, localization, and head start on Set 2 development.");
+
+  subSection("Try It Right Now");
+  body("Don\u2019t take our word for it \u2014 play the game today at wisdom-and-chance-2.replit.app. No download required. Free to try. Pledge $10+ to unlock the full beta and join the community shaping the future of Wisdom & Chance TCG.");
 
   doc.addPage();
   doc.rect(0, 0, doc.page.width, doc.page.height).fill(COLORS.primary);
