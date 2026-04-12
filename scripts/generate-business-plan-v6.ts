@@ -3,7 +3,7 @@ import fs from "fs";
 import path from "path";
 import { execSync } from "child_process";
 
-const OUTPUT_PATH = path.resolve("Wisdom_Chance_TCG_Business_Plan_v6.3.pdf");
+const OUTPUT_PATH = path.resolve("Wisdom_Chance_TCG_Business_Plan_v7.0.pdf");
 
 function countEndpoints(filePath: string): number {
   try {
@@ -109,9 +109,9 @@ function createPDF() {
     size: "letter",
     margins: { top: 60, bottom: 60, left: 60, right: 60 },
     info: {
-      Title: "Wisdom & Chance TCG — Business Plan v6.3",
-      Author: "Wisdom & Chance TCG",
-      Subject: "Investment & Crowdfunding Business Plan — Solo Operator Edition",
+      Title: "Wisdom & Chance TCG — Business Plan v7.0",
+      Author: "Legraphics Gaming Division — Jason Myers",
+      Subject: "Investment & Crowdfunding Business Plan — Legraphics Gaming Division",
     },
     bufferPages: true,
   });
@@ -126,8 +126,11 @@ function createPDF() {
   }
 
   function sectionTitle(title: string) {
-    ensureSpace(80);
-    doc.moveDown(1);
+    const usedOnPage = doc.y - 60;
+    if (usedOnPage > 40) {
+      doc.addPage();
+    }
+    doc.moveDown(0.5);
     doc
       .fontSize(18)
       .fillColor(COLORS.accent)
@@ -194,22 +197,26 @@ function createPDF() {
   }
 
   doc.rect(0, 0, doc.page.width, doc.page.height).fill(COLORS.primary);
-  doc.moveDown(6);
+  doc.moveDown(5);
   doc.fontSize(42).fillColor(COLORS.accent).text("WISDOM & CHANCE", { align: "center" });
   doc.fontSize(36).fillColor(COLORS.gold).text("TCG", { align: "center" });
-  doc.moveDown(1);
-  doc.fontSize(14).fillColor(COLORS.white).text("BUSINESS PLAN v6.3", { align: "center" });
-  doc.moveDown(0.5);
-  doc.fontSize(12).fillColor(COLORS.gold).text("Solo Operator Edition", { align: "center" });
-  doc.moveDown(0.5);
+  doc.moveDown(0.8);
+  doc.fontSize(14).fillColor(COLORS.white).text("BUSINESS PLAN v7.0", { align: "center" });
+  doc.moveDown(0.4);
+  doc.fontSize(12).fillColor(COLORS.gold).text("Legraphics Gaming Division", { align: "center" });
+  doc.moveDown(0.3);
+  doc.fontSize(11).fillColor("#aaa").text("A division of Legraphics \u2014 Family-Owned Graphic Design Business (Est. 30+ Years)", { align: "center" });
+  doc.moveDown(0.3);
   doc.fontSize(11).fillColor("#aaa").text("Investment & Crowdfunding Prospectus", { align: "center" });
-  doc.moveDown(0.5);
+  doc.moveDown(0.3);
   doc.fontSize(11).fillColor("#aaa").text("April 2026", { align: "center" });
-  doc.moveDown(4);
+  doc.moveDown(3);
   doc.fontSize(10).fillColor("#888").text("CONFIDENTIAL", { align: "center" });
-  doc.moveDown(0.5);
-  doc.fontSize(9).fillColor("#666").text("Prepared for potential investors, crowdfunding backers, and strategic partners", { align: "center" });
-  doc.moveDown(1);
+  doc.moveDown(0.4);
+  doc.fontSize(9).fillColor("#666").text("Prepared by Jason Myers, Founder & Division Head", { align: "center" });
+  doc.moveDown(0.3);
+  doc.fontSize(9).fillColor("#666").text("For potential investors, crowdfunding backers, and strategic partners", { align: "center" });
+  doc.moveDown(0.8);
   doc.fontSize(9).fillColor("#666").text("https://wisdom-and-chance-2.replit.app", { align: "center", link: "https://wisdom-and-chance-2.replit.app" });
 
   doc.addPage();
@@ -217,19 +224,20 @@ function createPDF() {
   doc.moveDown(0.5);
   const toc = [
     "1.  Executive Summary",
-    "2.  Founder & Solo Operator Overview",
+    "2.  Founder & Legraphics Gaming Division",
     "3.  Product Description",
-    "4.  Market Analysis",
-    "5.  Competitive Analysis — Hearthstone Case Study",
-    "6.  Revenue Model & Product Catalog",
-    "7.  Cost Analysis — Solo Operator Model",
-    "8.  Marketing & Growth Strategy",
-    "9.  Crowdfunding Campaign Strategy",
-    "10. Development Roadmap",
-    "11. Financial Projections",
-    "12. Funding Requirements & Use of Funds",
-    "13. Risk Analysis & Mitigation",
-    "14. Appendix: Technical Architecture",
+    "4.  The Prototype Advantage — Why Backers Should Be Excited",
+    "5.  Market Analysis",
+    "6.  Competitive Analysis — Hearthstone Case Study",
+    "7.  Revenue Model & Product Catalog",
+    "8.  Cost Analysis — Solo Operator Model",
+    "9.  Marketing & Growth Strategy",
+    "10. Crowdfunding Campaign Strategy — Kickstarter + BackerKit",
+    "11. Development Roadmap",
+    "12. Financial Projections",
+    "13. Funding Requirements & Use of Funds",
+    "14. Risk Analysis & Mitigation",
+    "15. Appendix: Technical Architecture",
   ];
   for (const entry of toc) {
     doc.fontSize(11).fillColor(COLORS.text).text(entry, 80);
@@ -243,7 +251,7 @@ function createPDF() {
   );
 
   body(
-    "What makes this project extraordinary is how it was built: a single founder, working entirely within Replit\u2019s AI-assisted development platform, has created a product that would traditionally require a team of 4\u20136 engineers and $150,000\u2013$200,000+ in development costs. Including a $50,000/year founder salary and Replit platform costs for 40+ hours/week of AI-assisted development, the entire operation runs on approximately $4,209\u2013$4,237 per month in fixed costs \u2014 a fraction of what any competing TCG spends on a single developer."
+    "What makes this project extraordinary is how it was built: Jason Myers, heading the new Legraphics Gaming Division (an expansion of Legraphics, a family-owned graphic design business with 30+ years of history), has single-handedly created a product that would traditionally require a team of 4\u20136 engineers and $320,000\u2013$900,000 in development costs \u2014 for approximately $400 in Replit subscription fees. Including a $50,000/year founder salary and Replit platform costs, the entire operation runs on approximately $4,209\u2013$4,237 per month in fixed costs \u2014 a fraction of what any competing TCG spends on a single developer."
   );
 
   body("Key milestones achieved:");
@@ -266,19 +274,38 @@ function createPDF() {
     "The project is seeking $25,000\u2013$50,000 in funding to cover 6\u201312 months of founder salary, marketing, app store fees, AI image generation for professional card artwork, and growth capital."
   );
 
-  sectionTitle("2. Founder & Solo Operator Overview");
+  sectionTitle("2. Founder & Legraphics Gaming Division");
 
-  subSection("Sole Founder & Developer");
+  subSection("Jason Myers \u2014 Founder & Division Head");
   body(
-    "The founder serves as sole developer, product designer, artist, marketer, and project manager. All code \u2014 server, web client, and mobile app \u2014 has been written exclusively on Replit using AI-assisted development tools (Replit Agent), averaging 40 hours per week of development time. This approach has enabled one person to build what would traditionally require a team of 4\u20136 engineers over 12+ months."
+    "Jason Myers is an avid game enthusiast and storyteller who has spent years immersed in trading card games, strategy games, and interactive storytelling. As the founder and head of the Legraphics Gaming Division, Jason brings a unique combination of creative vision, design heritage, and hands-on technical execution to Wisdom & Chance TCG."
   );
+  body(
+    "Jason serves as sole developer, product designer, artist, marketer, and project manager. All code \u2014 server, web client, and mobile app \u2014 has been written exclusively on Replit using AI-assisted development tools (Replit Agent), averaging 40 hours per week of development time. This approach has enabled one person to build what would traditionally require a team of 4\u20136 engineers over 12+ months."
+  );
+
+  subSection("Legraphics \u2014 A Family Legacy of Design (30+ Years)");
+  body(
+    "Wisdom & Chance TCG is not a random indie project from an unknown developer \u2014 it is the first venture of the Legraphics Gaming Division, a new arm of Legraphics, a family-owned graphic design business with more than 30 years of history. For three decades, Legraphics has served clients with professional design, branding, and visual communication services, building a reputation for quality craftsmanship and creative excellence."
+  );
+  body(
+    "The gaming division leverages this deep design DNA in every aspect of the product: from the elemental card frame aesthetics and UI/UX design to the branding, marketing materials, and this very business plan. Legraphics\u2019 30+ years of design expertise give Wisdom & Chance a visual polish and brand coherence that most indie games lack \u2014 because most indie developers don\u2019t have a family design business backing them."
+  );
+
+  subSection("Why Legraphics Gaming Division?");
+  bullet("Established business infrastructure \u2014 Legraphics is a real, operating business with 30+ years of history, not a startup from scratch");
+  bullet("Design heritage \u2014 Decades of professional graphic design experience directly informs card art direction, UI design, and brand identity");
+  bullet("Family stability \u2014 A family-owned business adds credibility and long-term commitment that solo indie devs and VC-backed startups often lack");
+  bullet("Cross-pollination \u2014 Gaming division benefits from Legraphics\u2019 existing client network, business tools, and operational knowledge");
+  bullet("Low overhead \u2014 Shared business infrastructure means the gaming division doesn\u2019t need separate legal, accounting, or administrative costs");
+  doc.moveDown(0.3);
 
   subSection("How One Person Does It All");
   bullet("Development: Replit Agent provides AI-assisted coding, debugging, and deployment \u2014 multiplying individual output by 5\u201310x");
-  bullet("Card Artwork: AI image generation services create professional-quality card illustrations at a fraction of traditional artist costs");
-  bullet("Marketing: Social media, community management, and content creation \u2014 all handled by the founder");
+  bullet("Card Artwork: AI image generation + Legraphics design expertise create professional-quality card illustrations");
+  bullet("Marketing: Social media, community management, and content creation \u2014 all handled by Jason");
   bullet("Operations: Replit\u2019s integrated platform handles hosting, database, deployments, and infrastructure automatically");
-  bullet("Business Strategy: Founder handles all planning, financial modeling, and investor relations");
+  bullet("Business Strategy: Jason handles all planning, financial modeling, and investor relations, backed by Legraphics\u2019 30+ years of business experience");
   doc.moveDown(0.3);
 
   subSection("Development Philosophy");
@@ -287,7 +314,7 @@ function createPDF() {
   );
 
   body(
-    "This solo-operator model is not a limitation \u2014 it\u2019s a strategic advantage. With the founder drawing a $50,000/year salary and total fixed monthly costs of ~$4,209\u2013$4,237, the project\u2019s burn rate is less than what most studios spend on a single junior developer. This enables the project to take calculated risks on features and marketing, and reach profitability with modest user traction."
+    "This solo-operator model is not a limitation \u2014 it\u2019s a strategic advantage. With Jason drawing a $50,000/year salary and total fixed monthly costs of ~$4,209\u2013$4,237, the project\u2019s burn rate is less than what most studios spend on a single junior developer. This enables the project to take calculated risks on features and marketing, and reach profitability with modest user traction."
   );
 
   sectionTitle("3. Product Description");
@@ -340,7 +367,55 @@ function createPDF() {
   bullet("AI-generated professional card artwork integration");
   bullet("Performance optimization and final QA pass");
 
-  sectionTitle("4. Market Analysis");
+  sectionTitle("4. The Prototype Advantage \u2014 Why Backers Should Be Excited");
+
+  subSection("A Playable Game, Not Just a Promise");
+  body(
+    "Most crowdfunding campaigns for video games and card games launch with nothing more than concept art, a trailer, and a vision. Backers are asked to fund a dream \u2014 with no guarantee the team can deliver. The history of gaming Kickstarters is littered with failed projects that took millions in funding and never shipped a playable product."
+  );
+  body(
+    "Wisdom & Chance TCG is fundamentally different. The game is already built and playable \u2014 right now. Backers don\u2019t have to imagine what the game might look like; they can open a browser, visit wisdom-and-chance-2.replit.app, and play it today. They can build decks, battle AI opponents, challenge friends in real-time multiplayer, earn achievements, and experience the full gameplay loop."
+  );
+  body(
+    "This is not a prototype in the traditional sense of a rough mockup \u2014 it\u2019s a functional, feature-complete application with 29 web pages, 27 mobile screens, real-time multiplayer, a server-side game engine, payment processing, social features, and a complete economy system."
+  );
+
+  subSection("What This Prototype Would Normally Cost");
+  body("To appreciate the value that already exists, consider what it would cost to build this from scratch using traditional methods:");
+  let y = doc.y + 5;
+  const ptw = [260, 220];
+  y = tableRow(["Development Approach", "Estimated Cost"], y, ptw, true);
+  const protoCosts = [
+    ["Traditional studio (4\u20136 engineers \u00D7 12 months)", "$320,000\u2013$900,000"],
+    ["Freelance team (3\u20134 devs \u00D7 12 months)", "$150,000\u2013$300,000"],
+    ["Offshore development team", "$80,000\u2013$150,000"],
+    ["Single senior developer (12 months)", "$100,000\u2013$180,000"],
+    ["Actual cost (Replit AI-assisted, 1 person)", "~$400"],
+  ];
+  for (const row of protoCosts) {
+    y = tableRow(row, y, ptw);
+  }
+  doc.y = y + 10;
+  body("The ~$400 actual cost represents approximately 12\u201318 months of Replit subscription fees ($20/month). The cost savings compared to even the cheapest traditional approach is over 99.7%. This is the power of AI-assisted development: one person with the right tools can produce what previously required a team and six figures of investment.");
+
+  subSection("What \u201CPlayable Now\u201D Means for Backers");
+  body("Having a functional prototype dramatically reduces backer risk and increases campaign credibility:");
+  bullet("Zero delivery risk \u2014 The game exists and works. Backers aren\u2019t funding a concept; they\u2019re funding the growth of a working product");
+  bullet("Try before you pledge \u2014 Any potential backer can play the game for free on the web before deciding to support");
+  bullet("Proven technical capability \u2014 The founder has already demonstrated the ability to build and ship a complex product");
+  bullet("Transparent development \u2014 The codebase, the live site, and the mobile app are all visible proof of progress");
+  bullet("Immediate beta access \u2014 Backers who pledge $10+ receive a one-time passcode for instant beta access to the full game");
+  doc.moveDown(0.3);
+
+  subSection("The $400 Prototype vs. The Industry Standard");
+  body(
+    "In the gaming industry, a \u201Cprototype\u201D typically refers to a rough vertical slice that demonstrates core mechanics \u2014 usually costing $50,000\u2013$200,000 and taking 3\u20136 months to build. Wisdom & Chance has gone far beyond a prototype: it\u2019s a near-complete product with multiplayer, social features, economy, payments, and both web and mobile versions. All built for roughly the price of a nice dinner out."
+  );
+  body(
+    "This extreme capital efficiency is what makes the Legraphics Gaming Division\u2019s approach so compelling for investors and backers: the hardest part \u2014 building the product \u2014 is already done. Funding now goes toward art, polish, marketing, and growth, not toward hoping a team can write the code."
+  );
+
+  sectionTitle("5. Market Analysis");
 
   subSection("Digital TCG Market Size");
   body(
@@ -371,7 +446,7 @@ function createPDF() {
   bullet("Secondary: Mobile gamers looking for quick competitive matches (5\u201310 minutes)");
   bullet("Tertiary: Content creators and streamers in the indie game space");
 
-  sectionTitle("5. Competitive Analysis \u2014 Hearthstone Case Study");
+  sectionTitle("6. Competitive Analysis \u2014 Hearthstone Case Study");
 
   body(
     "Hearthstone, developed by Blizzard Entertainment, is the most commercially successful digital TCG in history. Analyzing its cost structure and profitability provides valuable context for understanding Wisdom & Chance\u2019s positioning and potential."
@@ -379,7 +454,7 @@ function createPDF() {
 
   subSection("Hearthstone Development & Operating Costs");
 
-  let y = doc.y + 5;
+  y = doc.y + 5;
   const hw = [260, 220];
   y = tableRow(["Metric", "Hearthstone (Estimated)"], y, hw, true);
   const hsData = [
@@ -429,7 +504,7 @@ function createPDF() {
     "While Hearthstone benefits from Blizzard\u2019s massive brand, IP library, and marketing budget, Wisdom & Chance benefits from a single compensated founder, AI-multiplied productivity, and a burn rate lower than most studios\u2019 monthly coffee budget. In a worst-case scenario where user growth is slow, the project continues at minimal cost until traction builds \u2014 an option unavailable to any venture-funded competitor."
   );
 
-  sectionTitle("6. Revenue Model & Product Catalog");
+  sectionTitle("7. Revenue Model & Product Catalog");
 
   subSection("Web Revenue Streams (Stripe + PayPal)");
   body("The shop uses a simple, transparent quantity-based pricing model. Instead of preset bundles, players select how many packs they want and the price scales linearly \u2014 no hidden markups, no confusing tiers:");
@@ -501,7 +576,7 @@ function createPDF() {
   bullet("Season/Battle Pass \u2014 Recurring seasonal subscriptions with exclusive rewards");
   bullet("Cosmetic items \u2014 Card backs, board themes, and visual customizations");
 
-  sectionTitle("7. Cost Analysis \u2014 Solo Operator Model");
+  sectionTitle("8. Cost Analysis \u2014 Solo Operator Model");
 
   subSection("Development Value Already Created");
   body("The following represents work already completed, demonstrating extreme capital efficiency:");
@@ -667,7 +742,7 @@ function createPDF() {
     "Total annual fixed operating cost: ~$50,508\u2013$50,844/year. Compare this to the v5.0 business plan which excluded founder compensation entirely and still projected $2,100\u2013$4,100/month with a hired creative team. The solo operator model with fair founder compensation still costs less per month than a single junior developer\u2019s salary at a traditional studio."
   );
 
-  sectionTitle("8. Marketing & Growth Strategy");
+  sectionTitle("9. Marketing & Growth Strategy");
 
   subSection("Pre-Launch (Current Phase)");
   bullet("Build social media presence \u2014 Twitter/X, TikTok, Instagram, Reddit (r/cardgames, r/tcg)");
@@ -693,40 +768,74 @@ function createPDF() {
   bullet("Streamer partnerships \u2014 Sponsored streams and tournament coverage");
   bullet("Localization \u2014 Translate to Spanish, Portuguese, French, German, Japanese for global reach");
 
-  sectionTitle("9. Crowdfunding Campaign Strategy");
+  sectionTitle("10. Crowdfunding Campaign Strategy \u2014 Kickstarter + BackerKit");
 
-  subSection("Platform");
-  body("Primary platform: Kickstarter (largest audience for game projects). Backup: BackerKit for post-campaign management and late pledges.");
+  subSection("Platform Strategy: Kickstarter First, BackerKit After");
+  body("The crowdfunding strategy uses a two-phase approach to maximize funding and ongoing revenue:");
+  bullet("Phase 1 \u2014 Kickstarter Campaign (30 days): Primary fundraising on Kickstarter, the largest platform for game projects with the most engaged backer community");
+  bullet("Phase 2 \u2014 BackerKit (ongoing after campaign): Late pledges, add-on purchases, backer surveys, and a permanent pre-order store that keeps revenue flowing after the Kickstarter ends");
+  doc.moveDown(0.3);
+  body("BackerKit extends the funding window indefinitely. Many successful game Kickstarters generate 15\u201325% additional revenue through BackerKit late pledges after the main campaign closes. This is especially powerful for Wisdom & Chance because the game is already playable \u2014 late backers can try the game and pledge with confidence.");
 
-  subSection("Campaign Goal \u2014 Revised for Solo Model");
+  subSection("Campaign Goal");
   body("Base goal: $25,000 \u2014 Covers 6 months of founder salary, app store fees, marketing launch, and AI image generation for all 100 cards + 5 commanders in the first set.");
   body("Stretch goals up to $50,000 \u2014 12 months founder salary runway, expanded marketing, tournament prize pool, localization, and head start on Set 2 development.");
-
   body("Note: Even with the founder\u2019s $50,000/year salary included, this crowdfunding goal is still dramatically lower than traditional game projects (which typically seek $100K\u2013$500K+). This makes the campaign far more likely to succeed and reduces backer risk.");
+
+  subSection("Beta Access \u2014 $10+ Pledge Unlock");
+  body("All backers who pledge $10 or more receive immediate beta access to the full game on both web and mobile. This is a major differentiator \u2014 backers don\u2019t have to wait months or years to play; they get access right away.");
+  doc.moveDown(0.3);
+  body("Beta Access Verification Flow:");
+  bullet("1. Backer pledges $10+ on Kickstarter (or BackerKit late pledge)");
+  bullet("2. After pledge is confirmed, the system generates a unique one-time passcode");
+  bullet("3. Passcode is emailed to the backer with instructions");
+  bullet("4. Backer enters the passcode in the game (web or mobile) to verify their pledge");
+  bullet("5. Account is permanently flagged as a Beta Backer with full access");
+  doc.moveDown(0.3);
+  body("This passcode system is simple, secure, and scalable. Each code is single-use and tied to the backer\u2019s email, preventing sharing or abuse. Beta Backers also receive a unique in-game badge and card back as a permanent mark of their early support.");
 
   subSection("Reward Tiers");
   y = doc.y + 5;
-  const rw = [100, 200, 180];
+  const rw = [100, 240, 140];
   y = tableRow(["Tier", "Reward", "Price"], y, rw, true);
   const tiers = [
     ["Supporter", "Name in credits, digital thank-you card", "$5"],
-    ["Player", "5 packs ($10 value) + exclusive card back", "$15"],
-    ["Champion", "15 packs ($30 value) + Season Pass + founder badge", "$40"],
-    ["Commander", "25 packs ($50 value) + Battle Pass + exclusive Commander skin", "$65"],
-    ["Legend", "50 packs ($100 value) + all passes + name a card + VIP Discord", "$125"],
-    ["Patron", "Everything above + 1-hour strategy call + custom card", "$250"],
+    ["Beta Backer", "Beta access + 2 packs ($4 value) + beta badge", "$10"],
+    ["Player", "Beta access + 5 packs ($10 value) + exclusive card back", "$15"],
+    ["Champion", "Beta access + 15 packs ($30) + Season Pass + founder badge", "$40"],
+    ["Commander", "Beta access + 25 packs ($50) + Battle Pass + Commander skin", "$65"],
+    ["Legend", "Beta access + 50 packs ($100) + all passes + name a card + VIP", "$125"],
+    ["Patron", "Everything above + 1-hour strategy call + custom card design", "$250"],
   ];
   for (const row of tiers) {
     y = tableRow(row, y, rw);
   }
   doc.y = y + 10;
+  body("All tiers at $10 and above include beta access via one-time passcode. The Beta Backer tier is specifically designed as the entry point for players who want to play immediately at the lowest cost.");
 
   subSection("Campaign Timeline");
-  body("Pre-campaign: 4\u20136 weeks of social media buildup, email list collection, and press outreach.");
-  body("Campaign duration: 30 days.");
-  body("Post-campaign: BackerKit for surveys, add-ons, and late pledges. Fulfillment within 60 days of campaign close.");
+  body("Pre-campaign (4\u20136 weeks):");
+  bullet("Social media buildup across Twitter/X, TikTok, Instagram, Reddit");
+  bullet("Email list collection via landing page with early-bird signup incentives");
+  bullet("Press outreach to indie game publications and TCG community influencers");
+  bullet("Demo video showing live gameplay on web and mobile");
+  doc.moveDown(0.3);
+  body("Kickstarter Campaign (30 days):");
+  bullet("Launch with live gameplay demo \u2014 \u201Cplay the game right now\u201D as the headline");
+  bullet("Daily/weekly updates with development progress, card reveals, and community highlights");
+  bullet("Stretch goal reveals at key funding milestones to maintain momentum");
+  bullet("Cross-promotion between web game and campaign page");
+  doc.moveDown(0.3);
+  body("Post-Campaign \u2014 BackerKit (ongoing):");
+  bullet("Transition all backers to BackerKit for surveys, add-on purchases, and fulfillment");
+  bullet("Open BackerKit pre-order store for late pledges \u2014 same tiers as Kickstarter");
+  bullet("Late backers also receive beta access upon $10+ pledge confirmation");
+  bullet("Add-on items: extra packs, cosmetic bundles, Season Pass upgrades");
+  bullet("BackerKit store remains open indefinitely, providing a continuous revenue stream");
+  doc.moveDown(0.3);
+  body("Post-campaign fulfillment within 60 days of campaign close. Beta access passcodes are delivered immediately upon pledge confirmation, not at fulfillment.");
 
-  sectionTitle("10. Development Roadmap");
+  sectionTitle("11. Development Roadmap");
 
   subSection("Phase 1: Completed (Q1 2025 \u2013 Q1 2026)");
   bullet("Core game engine with 5 elements, 50 cards built so far (of 100 planned for Set 1), 5 commanders");
@@ -773,7 +882,7 @@ function createPDF() {
   bullet("Set 3: 100 new cards \u2014 Q3 2027");
   body("Set release frequency will be re-evaluated in late 2027 based on player engagement data, revenue trends, and community feedback. The cadence may increase, decrease, or shift to smaller/larger sets depending on what the data shows.");
 
-  sectionTitle("11. Financial Projections");
+  sectionTitle("12. Financial Projections");
 
   body("Conservative projections assume gradual user acquisition post-launch with the solo operator cost structure including $50,000/year founder salary. All figures are in USD. Monthly fixed costs are ~$4,230 ($4,167 salary + ~$63 Replit/services). Pack pricing is $2/pack with an average of 3\u20135 packs per purchase.");
   doc.moveDown(0.3);
@@ -832,7 +941,7 @@ function createPDF() {
   doc.moveDown(0.3);
   body("For comparison, Hearthstone needed an estimated 500,000+ monthly active users and $15\u2013$20M/year in operating costs. Wisdom & Chance needs approximately 500 paying users to fully cover the founder\u2019s salary, Replit costs, and all platform fees.");
 
-  sectionTitle("12. Funding Requirements & Use of Funds");
+  sectionTitle("13. Funding Requirements & Use of Funds");
 
   subSection("Total Funding Sought: $25,000 \u2013 $50,000");
   body("Funding covers the founder\u2019s salary runway during the critical growth phase, plus marketing and launch costs. Even with founder compensation included, the high end ($50,000) is comparable to v5.0\u2019s low end ($45,000), while providing significantly more runway due to the elimination of all other team costs.");
@@ -870,7 +979,7 @@ function createPDF() {
   subSection("Why Now?");
   body("The product is substantially built \u2014 over $150,000 in estimated development value has been created with under $300 in actual costs. Funding now covers the founder\u2019s salary runway during the critical growth phase and accelerates the last mile: professional art, app store launch, and marketing. The risk-reward ratio is exceptionally favorable because the core product already exists, is functional, and the ongoing cost to maintain it is under $4,250/month including the founder\u2019s salary.");
 
-  sectionTitle("13. Risk Analysis & Mitigation");
+  sectionTitle("14. Risk Analysis & Mitigation");
 
   const risks = [
     [
@@ -923,7 +1032,7 @@ function createPDF() {
     doc.moveDown(0.5);
   }
 
-  sectionTitle("14. Appendix: Technical Architecture");
+  sectionTitle("15. Appendix: Technical Architecture");
 
   subSection("Monorepo Structure");
   body("The project uses a unified monorepo with shared types between web and mobile:");
@@ -991,7 +1100,9 @@ function createPDF() {
   doc.moveDown(1);
   doc.fontSize(14).fillColor(COLORS.white).text("Wisdom & Chance TCG", { align: "center" });
   doc.moveDown(0.5);
-  doc.fontSize(12).fillColor(COLORS.gold).text("Built by one person. Ready for the world.", { align: "center" });
+  doc.fontSize(12).fillColor(COLORS.gold).text("Built by one person. Backed by 30+ years of design heritage.", { align: "center" });
+  doc.moveDown(0.5);
+  doc.fontSize(11).fillColor("#aaa").text("A Legraphics Gaming Division Production", { align: "center" });
   doc.moveDown(1);
   doc.fontSize(11).fillColor("#aaa").text("For investment inquiries and partnership opportunities:", { align: "center" });
   doc.moveDown(0.5);
@@ -999,7 +1110,7 @@ function createPDF() {
   doc.moveDown(0.5);
   doc.fontSize(11).fillColor("#aaa").text("https://wisdom-and-chance-2.replit.app", { align: "center", link: "https://wisdom-and-chance-2.replit.app" });
   doc.moveDown(3);
-  doc.fontSize(9).fillColor("#666").text("\u00A9 2026 Wisdom & Chance TCG. All rights reserved.", { align: "center" });
+  doc.fontSize(9).fillColor("#666").text("\u00A9 2026 Legraphics Gaming Division. All rights reserved.", { align: "center" });
   doc.fontSize(8).fillColor("#555").text("This document is confidential and intended solely for the addressee.", { align: "center" });
 
   const totalPages = doc.bufferedPageRange().count;
@@ -1007,7 +1118,7 @@ function createPDF() {
     doc.switchToPage(i);
     doc.fontSize(8).fillColor(COLORS.textLight);
     doc.text(
-      "Wisdom & Chance TCG \u2014 Confidential Business Plan v6.3 \u2014 Solo Operator Edition \u2014 April 2026",
+      "Wisdom & Chance TCG \u2014 Confidential Business Plan v7.0 \u2014 Legraphics Gaming Division \u2014 April 2026",
       60,
       doc.page.height - 55,
       { align: "center", width: doc.page.width - 120, lineBreak: false }
