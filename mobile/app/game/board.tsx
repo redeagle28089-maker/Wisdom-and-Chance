@@ -20,6 +20,7 @@ import {
 import { aiTurn, AIDifficulty } from '@/lib/ai-player';
 import { getCardImageUrl } from '@/constants/card-art';
 import AuthImage from '@/components/AuthImage';
+import { useThrottledCallback, useNavigationGuard } from '@/hooks/useThrottledCallback';
 
 const ELEMENT_ART: Record<string, string> = {
   fire: 'https://wisdom-and-chance-2.replit.app/assets/fire_element_card_art-CVY0E2Oz.png',
@@ -280,6 +281,8 @@ export default function GameBoardScreen() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [combatPhase, setCombatPhase] = useState<number>(-1);
   const [combatSteps, setCombatSteps] = useState<{ label: string; detail: string; icon: string; color: string }[]>([]);
+  const guardedNavigate = useNavigationGuard();
+  const orientationLockRef = useRef<Promise<void>>(Promise.resolve());
   const [showGameOver, setShowGameOver] = useState(false);
   const [drawToast, setDrawToast] = useState<string | null>(null);
   const isMountedRef = React.useRef(true);
@@ -329,18 +332,27 @@ export default function GameBoardScreen() {
   useEffect(() => {
     let cancelled = false;
     if (Platform.OS !== 'web') {
-      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE)
+      const lockPromise = orientationLockRef.current
+        .then(() => new Promise<void>(resolve => setTimeout(resolve, 100)))
+        .then(() => {
+          if (cancelled) return;
+          return ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
+        })
         .then(() => {
           if (cancelled) {
-            ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
+            return ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
           }
         })
         .catch(() => {});
+      orientationLockRef.current = lockPromise;
     }
     return () => {
       cancelled = true;
       if (Platform.OS !== 'web') {
-        ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
+        const unlockPromise = orientationLockRef.current
+          .then(() => ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP))
+          .catch(() => {});
+        orientationLockRef.current = unlockPromise;
       }
     };
   }, []);
@@ -378,9 +390,10 @@ export default function GameBoardScreen() {
     setGame(withDraws);
   }, [deckQuery.data, cardsQuery.data, commandersQuery.data, cardsPerTurn]);
 
-  const handleDeploy = useCallback((index: number) => {
+  const handleDeploy = useThrottledCallback((index: number) => {
     if (!game || (game.phase !== 'deployment' && game.phase !== 'card_draw') || isProcessing) return;
     if (game.player1.deployed.length >= game.cardsDeployedPerTurn) return;
+    setIsProcessing(true);
     safeHaptic(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light));
     const deployingCard = game.player1.hand[index];
     const isCarePackage = deployingCard?.trait === 'Care Package';
@@ -391,19 +404,20 @@ export default function GameBoardScreen() {
       setDrawToast(`Care Package: drawing ${cpExtra} extra card${cpExtra !== 1 ? 's' : ''}!`);
       setTimeout(() => { if (isMountedRef.current) setDrawToast(null); }, 2500);
     }
-  }, [game, isProcessing]);
+    setTimeout(() => { if (isMountedRef.current) setIsProcessing(false); }, 300);
+  }, 300, [game, isProcessing]);
 
-  const handleUndeploy = useCallback((index: number) => {
+  const handleUndeploy = useThrottledCallback((index: number) => {
     if (!game || (game.phase !== 'deployment' && game.phase !== 'card_draw') || isProcessing) return;
     safeHaptic(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light));
     setGame(prev => prev ? undeployCard(prev, 'p1', index) : null);
-  }, [game, isProcessing]);
+  }, 300, [game, isProcessing]);
 
-  const handleUseAbility = useCallback((abilityId: string) => {
+  const handleUseAbility = useThrottledCallback((abilityId: string) => {
     if (!game || isProcessing) return;
     safeHaptic(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium));
     setGame(prev => prev ? useCommanderAbility(prev, 'p1', abilityId) : null);
-  }, [game, isProcessing]);
+  }, 400, [game, isProcessing]);
 
   const handleEndDeployment = useCallback(async () => {
     if (!game || isProcessing) return;
@@ -501,9 +515,9 @@ export default function GameBoardScreen() {
   const handleLeave = useCallback(() => {
     Alert.alert('Leave Battle', 'Are you sure you want to forfeit?', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Leave', style: 'destructive', onPress: () => { isMountedRef.current = false; setIsProcessing(false); router.back(); } },
+      { text: 'Leave', style: 'destructive', onPress: () => guardedNavigate(() => { isMountedRef.current = false; setIsProcessing(false); router.back(); }) },
     ]);
-  }, []);
+  }, [guardedNavigate]);
 
   if (!deckQuery.data || !cardsQuery.data || !commandersQuery.data || !game) {
     const loadingContent = (
@@ -874,7 +888,7 @@ export default function GameBoardScreen() {
                   <Ionicons name="refresh" size={16} color="#fff" />
                   <Text style={styles.gameOverBtnText}>Play Again</Text>
                 </Pressable>
-                <Pressable style={styles.gameOverBtnSecondary} onPress={() => router.back()}>
+                <Pressable style={styles.gameOverBtnSecondary} onPress={() => guardedNavigate(() => router.back())}>
                   <Ionicons name="arrow-back" size={16} color="#E2E8F0" />
                   <Text style={styles.gameOverBtnSecText}>Exit</Text>
                 </Pressable>

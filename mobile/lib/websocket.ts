@@ -7,6 +7,7 @@ const TOKEN_KEY = 'wc_jwt_token';
 const RECONNECT_DELAY = 3000;
 const MAX_RECONNECT_DELAY = 30000;
 const HEARTBEAT_INTERVAL = 30000;
+const CONNECT_TIMEOUT = 10000;
 
 type MessageHandler = (data: any) => void;
 
@@ -52,6 +53,8 @@ export function useWebSocket(enabled: boolean = true): WebSocketManager {
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const reconnectDelayRef = useRef(RECONNECT_DELAY);
   const mountedRef = useRef(true);
+  const connectingRef = useRef(false);
+  const connectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const clearTimers = useCallback(() => {
     if (reconnectTimeoutRef.current) {
@@ -61,6 +64,10 @@ export function useWebSocket(enabled: boolean = true): WebSocketManager {
     if (heartbeatRef.current) {
       clearInterval(heartbeatRef.current);
       heartbeatRef.current = null;
+    }
+    if (connectTimeoutRef.current) {
+      clearTimeout(connectTimeoutRef.current);
+      connectTimeoutRef.current = null;
     }
   }, []);
 
@@ -78,16 +85,27 @@ export function useWebSocket(enabled: boolean = true): WebSocketManager {
   const connect = useCallback(async () => {
     if (!mountedRef.current || !enabled) return;
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
+    if (connectingRef.current) return;
+    connectingRef.current = true;
 
     const token = await getToken();
-    if (!token) return;
+    if (!token) { connectingRef.current = false; return; }
 
     try {
       const wsUrl = `${WS_URL}?token=${encodeURIComponent(token)}`;
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 
+      connectTimeoutRef.current = setTimeout(() => {
+        if (ws.readyState === WebSocket.CONNECTING) {
+          ws.close();
+          connectingRef.current = false;
+        }
+      }, CONNECT_TIMEOUT);
+
       ws.onopen = () => {
+        if (connectTimeoutRef.current) { clearTimeout(connectTimeoutRef.current); connectTimeoutRef.current = null; }
+        connectingRef.current = false;
         if (!mountedRef.current) { ws.close(); return; }
         setIsConnected(true);
         reconnectDelayRef.current = RECONNECT_DELAY;
@@ -118,6 +136,8 @@ export function useWebSocket(enabled: boolean = true): WebSocketManager {
       ws.onerror = () => {};
 
       ws.onclose = () => {
+        if (connectTimeoutRef.current) { clearTimeout(connectTimeoutRef.current); connectTimeoutRef.current = null; }
+        connectingRef.current = false;
         setIsConnected(false);
         setIsAuthenticated(false);
         if (heartbeatRef.current) {
@@ -126,13 +146,16 @@ export function useWebSocket(enabled: boolean = true): WebSocketManager {
         }
 
         if (mountedRef.current && enabled) {
+          if (reconnectTimeoutRef.current) { clearTimeout(reconnectTimeoutRef.current); reconnectTimeoutRef.current = null; }
           reconnectTimeoutRef.current = setTimeout(() => {
             reconnectDelayRef.current = Math.min(reconnectDelayRef.current * 1.5, MAX_RECONNECT_DELAY);
             connect();
           }, reconnectDelayRef.current);
         }
       };
-    } catch {}
+    } catch {
+      connectingRef.current = false;
+    }
   }, [enabled, clearTimers, dispatch]);
 
   useEffect(() => {

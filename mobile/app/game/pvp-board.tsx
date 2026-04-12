@@ -16,6 +16,7 @@ import { GameState, GamePhase, DeployedCard, RoundResult, AbilityEffect, PlayerS
 import { useWebSocket } from '@/lib/websocket';
 import { getCardImageUrl } from '@/constants/card-art';
 import AuthImage from '@/components/AuthImage';
+import { useThrottledCallback, useNavigationGuard } from '@/hooks/useThrottledCallback';
 
 function safeHaptic(fn: () => void) { try { fn(); } catch {} }
 
@@ -277,6 +278,8 @@ export default function PvPGameBoardScreen() {
   const [popupCard, setPopupCard] = useState<Card | null>(null);
   const [combatResult, setCombatResult] = useState<RoundResult | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const guardedNavigate = useNavigationGuard();
+  const orientationLockRef = useRef<Promise<void>>(Promise.resolve());
   const [combatPhase, setCombatPhase] = useState<number>(-1);
   const [combatSteps, setCombatSteps] = useState<{ label: string; detail: string; icon: string; color: string }[]>([]);
   const [showGameOver, setShowGameOver] = useState(false);
@@ -331,18 +334,27 @@ export default function PvPGameBoardScreen() {
   useEffect(() => {
     let cancelled = false;
     if (Platform.OS !== 'web') {
-      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE)
+      const lockPromise = orientationLockRef.current
+        .then(() => new Promise<void>(resolve => setTimeout(resolve, 100)))
+        .then(() => {
+          if (cancelled) return;
+          return ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
+        })
         .then(() => {
           if (cancelled) {
-            ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
+            return ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
           }
         })
         .catch(() => {});
+      orientationLockRef.current = lockPromise;
     }
     return () => {
       cancelled = true;
       if (Platform.OS !== 'web') {
-        ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
+        const unlockPromise = orientationLockRef.current
+          .then(() => ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP))
+          .catch(() => {});
+        orientationLockRef.current = unlockPromise;
       }
     };
   }, []);
@@ -490,30 +502,30 @@ export default function PvPGameBoardScreen() {
 
   const targetId = gameId || roomId || '';
 
-  const handleDeploy = useCallback((index: number) => {
+  const handleDeploy = useThrottledCallback((index: number) => {
     if (!gameState || !targetId) return;
     if (gameState.phase !== 'deployment' && gameState.phase !== 'card_draw') return;
     if (gameState.player.deployed.length >= gameState.cardsDeployedPerTurn) return;
     safeHaptic(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light));
     ws.sendGameAction(targetId, { type: 'deploy_card', cardIndex: index });
     setSelectedHandIndex(null);
-  }, [gameState, targetId, ws]);
+  }, 300, [gameState, targetId, ws]);
 
-  const handleUndeploy = useCallback((index: number) => {
+  const handleUndeploy = useThrottledCallback((index: number) => {
     if (!gameState || !targetId) return;
     if (gameState.phase !== 'deployment' && gameState.phase !== 'card_draw') return;
     safeHaptic(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light));
     ws.sendGameAction(targetId, { type: 'undeploy_card', deployIndex: index });
-  }, [gameState, targetId, ws]);
+  }, 300, [gameState, targetId, ws]);
 
-  const handleUseAbility = useCallback((abilityId: string) => {
+  const handleUseAbility = useThrottledCallback((abilityId: string) => {
     if (!gameState || !targetId) return;
     safeHaptic(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium));
     ws.sendGameAction(targetId, { type: 'use_ability', abilityId });
-  }, [gameState, targetId, ws]);
+  }, 400, [gameState, targetId, ws]);
 
-  const handleEndTurn = useCallback(() => {
-    if (!gameState || !targetId) return;
+  const handleEndTurn = useThrottledCallback(() => {
+    if (!gameState || !targetId || isProcessing) return;
     if (gameState.player.deployed.length === 0) {
       Alert.alert('Deploy Cards', 'You must deploy at least 1 card before ending your turn.');
       return;
@@ -522,26 +534,26 @@ export default function PvPGameBoardScreen() {
     ws.sendGameAction(targetId, { type: 'end_turn' });
     setWaitingForOpponent(true);
     setIsProcessing(true);
-  }, [gameState, targetId, ws]);
+  }, 500, [gameState, targetId, ws, isProcessing]);
 
-  const handleRematch = useCallback(() => {
-    if (!targetId) return;
+  const handleRematch = useThrottledCallback(() => {
+    if (!targetId || rematchRequested) return;
     safeHaptic(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy));
     ws.sendGameAction(targetId, { type: 'rematch' });
     setRematchRequested(true);
-  }, [targetId, ws]);
+  }, 500, [targetId, ws, rematchRequested]);
 
   const handleLeave = useCallback(() => {
     Alert.alert('Leave Battle', 'Are you sure you want to forfeit?', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Leave', style: 'destructive', onPress: () => {
+      { text: 'Leave', style: 'destructive', onPress: () => guardedNavigate(() => {
         isMountedRef.current = false;
         if (gameId) ws.leaveGame(gameId);
         else if (roomId) ws.leaveRoom(roomId);
         router.back();
-      }},
+      })},
     ]);
-  }, [roomId, gameId, ws]);
+  }, [roomId, gameId, ws, guardedNavigate]);
 
   if (!gameState) {
     const loadingContent = (
@@ -915,7 +927,7 @@ export default function PvPGameBoardScreen() {
                     {rematchRequested ? 'Requested...' : opponentRematch ? 'Accept Rematch' : 'Rematch'}
                   </Text>
                 </Pressable>
-                <Pressable style={styles.gameOverBtnSecondary} onPress={() => { if (roomId) ws.leaveRoom(roomId); router.back(); }}>
+                <Pressable style={styles.gameOverBtnSecondary} onPress={() => guardedNavigate(() => { if (roomId) ws.leaveRoom(roomId); router.back(); })}>
                   <Ionicons name="arrow-back" size={16} color="#E2E8F0" />
                   <Text style={styles.gameOverBtnSecText}>Exit</Text>
                 </Pressable>
