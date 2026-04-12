@@ -108,3 +108,9 @@ id = "68YGWKkQR3j0j53qZRdfe"
 uri = "file://Wisdom_Chance_TCG_Business_Plan_v7.0.pdf"
 type = "pdf"
 title = "Wisdom & Chance TCG Business Plan v7.0"
+
+[[outputs]]
+id = "eKsYe9GFq763SMQaCnepJ"
+uri = "file://Wisdom_Chance_TCG_Campaign_Summary.pdf"
+type = "pdf"
+title = "Wisdom & Chance TCG — Campaign Summary"
