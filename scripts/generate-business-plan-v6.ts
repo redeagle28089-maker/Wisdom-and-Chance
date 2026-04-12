@@ -126,11 +126,12 @@ function createPDF() {
   }
 
   function sectionTitle(title: string) {
-    const usedOnPage = doc.y - 60;
-    if (usedOnPage > 40) {
+    const spaceNeeded = 120;
+    if (doc.y + spaceNeeded > PAGE_BOTTOM) {
       doc.addPage();
+    } else {
+      doc.moveDown(1);
     }
-    doc.moveDown(0.5);
     doc
       .fontSize(18)
       .fillColor(COLORS.accent)
@@ -1113,22 +1114,34 @@ function createPDF() {
   doc.fontSize(9).fillColor("#666").text("\u00A9 2026 Legraphics Gaming Division. All rights reserved.", { align: "center" });
   doc.fontSize(8).fillColor("#555").text("This document is confidential and intended solely for the addressee.", { align: "center" });
 
-  const totalPages = doc.bufferedPageRange().count;
-  for (let i = 1; i < totalPages; i++) {
+  const range = doc.bufferedPageRange();
+  const footerText = "Wisdom & Chance TCG \u2014 Confidential Business Plan v7.0 \u2014 Legraphics Gaming Division \u2014 April 2026";
+  for (let i = 1; i < range.count; i++) {
     doc.switchToPage(i);
+    const savedY = doc.y;
+    const savedX = doc.x;
+
+    doc.save();
     doc.fontSize(8).fillColor(COLORS.textLight);
-    doc.text(
-      "Wisdom & Chance TCG \u2014 Confidential Business Plan v7.0 \u2014 Legraphics Gaming Division \u2014 April 2026",
-      60,
-      doc.page.height - 55,
-      { align: "center", width: doc.page.width - 120, lineBreak: false }
-    );
-    doc.fontSize(9).fillColor(COLORS.textLight);
-    doc.text(`Page ${i + 1}`, 60, doc.page.height - 40, {
-      align: "center",
-      width: doc.page.width - 120,
+    const footerWidth = doc.page.width - 120;
+    const footerX = 60;
+    const footerTextWidth = doc.widthOfString(footerText);
+    const centeredX = footerX + (footerWidth - footerTextWidth) / 2;
+    doc.text(footerText, centeredX, doc.page.height - 55, {
       lineBreak: false,
     });
+
+    doc.fontSize(9).fillColor(COLORS.textLight);
+    const pageLabel = `Page ${i + 1}`;
+    const pageLabelWidth = doc.widthOfString(pageLabel);
+    const pageCenteredX = footerX + (footerWidth - pageLabelWidth) / 2;
+    doc.text(pageLabel, pageCenteredX, doc.page.height - 40, {
+      lineBreak: false,
+    });
+    doc.restore();
+
+    doc.x = savedX;
+    doc.y = savedY;
   }
 
   doc.end();
