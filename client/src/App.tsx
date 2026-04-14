@@ -11,6 +11,7 @@ import { ThemeProvider } from "@/components/theme-provider";
  */
 import { NavHeader } from "@/components/nav-header";
 import { ConfigProvider } from "@/lib/config";
+import { PasscodeGate } from "@/components/passcode-gate";
 import HomePage from "@/pages/home";
 import RulesPage from "@/pages/rules";
 import CardDatabasePage from "@/pages/card-database";
@@ -97,7 +98,9 @@ function App() {
         <ThemeProvider defaultTheme="dark" storageKey="wisdom-chance-theme">
           <TooltipProvider>
             <Toaster />
-            <AppContent />
+            <PasscodeGate>
+              <AppContent />
+            </PasscodeGate>
           </TooltipProvider>
         </ThemeProvider>
       </ConfigProvider>
