@@ -506,11 +506,12 @@ export async function setupAuth(app: Express) {
   app.get("/api/login", async (req, res) => {
     try {
       const isProduction = process.env.REPLIT_DEPLOYMENT === "1";
-      console.log("[auth] Login initiated from hostname:", req.hostname);
+      const host = req.get("host") || req.hostname;
+      console.log("[auth] Login initiated from host:", host);
       console.log("[auth] Environment:", isProduction ? "production" : "development");
       
       const metadata = await getOIDCMetadata();
-      const callbackUrl = `https://${req.hostname}/api/callback`;
+      const callbackUrl = `https://${host}/api/callback`;
       
       const state = generateState();
       const nonce = generateNonce();
@@ -568,7 +569,8 @@ export async function setupAuth(app: Express) {
 
   app.get("/api/callback", async (req, res) => {
     try {
-      console.log("[auth] Callback received from hostname:", req.hostname);
+      const host = req.get("host") || req.hostname;
+      console.log("[auth] Callback received from host:", host);
       
       const { code, state, error: authError, error_description } = req.query as { 
         code?: string; 
@@ -605,7 +607,7 @@ export async function setupAuth(app: Express) {
       delete req.session.pendingAuth;
       
       const metadata = await getOIDCMetadata();
-      const callbackUrl = `https://${req.hostname}/api/callback`;
+      const callbackUrl = `https://${host}/api/callback`;
       
       // Exchange code for tokens
       const tokens = await exchangeCodeForTokens(metadata, code, pending.codeVerifier, callbackUrl);
@@ -654,7 +656,7 @@ export async function setupAuth(app: Express) {
         if (metadata.end_session_endpoint) {
           const logoutUrl = new URL(metadata.end_session_endpoint);
           logoutUrl.searchParams.set("client_id", process.env.REPL_ID!);
-          logoutUrl.searchParams.set("post_logout_redirect_uri", `https://${req.hostname}`);
+          logoutUrl.searchParams.set("post_logout_redirect_uri", `https://${req.get("host") || req.hostname}`);
           res.redirect(logoutUrl.href);
         } else {
           res.redirect("/");
