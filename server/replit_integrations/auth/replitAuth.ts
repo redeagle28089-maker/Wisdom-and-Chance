@@ -407,7 +407,7 @@ export function getSession() {
 }
 
 async function upsertUser(claims: JWTClaims) {
-  await authStorage.upsertUser({
+  const dbUser = await authStorage.upsertUser({
     id: claims.sub,
     email: claims.email || "",
     firstName: claims.first_name || null,
@@ -417,11 +417,13 @@ async function upsertUser(claims: JWTClaims) {
 
   try {
     const { ensureCurrencies, grantStarterCollection } = await import("../../economyService");
-    await ensureCurrencies(claims.sub);
-    await grantStarterCollection(claims.sub);
+    await ensureCurrencies(dbUser.id);
+    await grantStarterCollection(dbUser.id);
   } catch (e) {
     console.error("[auth] Error granting starter economy:", e);
   }
+
+  return dbUser;
 }
 
 // Exchange authorization code for tokens
