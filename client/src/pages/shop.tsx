@@ -498,6 +498,12 @@ export default function ShopPage() {
   });
 
   useEffect(() => {
+    if (paymentConfig?.betaMode && activeTab === "premium") {
+      setActiveTab("packs");
+    }
+  }, [paymentConfig?.betaMode, activeTab]);
+
+  useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const payment = params.get("payment");
     const sessionId = params.get("session_id");
@@ -764,15 +770,17 @@ export default function ShopPage() {
       </div>
 
       <div className="flex gap-2 mb-6 flex-wrap">
-        <Button
-          variant={activeTab === "premium" ? "default" : "outline"}
-          onClick={() => setActiveTab("premium")}
-          className={activeTab === "premium" ? "bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white" : "border-slate-600 text-slate-300"}
-          data-testid="button-tab-premium"
-        >
-          <Crown className="w-4 h-4 mr-2" />
-          Premium Store
-        </Button>
+        {!paymentConfig?.betaMode && (
+          <Button
+            variant={activeTab === "premium" ? "default" : "outline"}
+            onClick={() => setActiveTab("premium")}
+            className={activeTab === "premium" ? "bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white" : "border-slate-600 text-slate-300"}
+            data-testid="button-tab-premium"
+          >
+            <Crown className="w-4 h-4 mr-2" />
+            Premium Store
+          </Button>
+        )}
         <Button
           variant={activeTab === "packs" ? "default" : "outline"}
           onClick={() => setActiveTab("packs")}
@@ -802,7 +810,7 @@ export default function ShopPage() {
         </Button>
       </div>
 
-      {activeTab === "premium" && (
+      {activeTab === "premium" && !paymentConfig?.betaMode && (
         <div className="space-y-8" data-testid="premium-store-section">
           {gemProducts.length > 0 && (
             <div>
