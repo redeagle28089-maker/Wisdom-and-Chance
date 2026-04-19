@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/use-auth";
 
 const POST_LOGIN_KEY = "wc_post_login";
+const SKIP_AUTO_LOGIN_KEY = "wc_skip_auto_login";
 
 function PostLoginSplash({ onDone }: { onDone: () => void }) {
   const [phase, setPhase] = useState<"hold" | "fadeout">("hold");
@@ -212,12 +213,29 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
   const splashShown = useRef(false);
 
   const { user, isLoading } = useAuth();
+  const [autoRedirecting, setAutoRedirecting] = useState(false);
 
   useEffect(() => {
     if (localStorage.getItem(STORAGE_KEY) === "true") {
       setGranted(true);
     }
   }, []);
+
+  useEffect(() => {
+    if (granted && !isLoading && !user && !autoRedirecting) {
+      const hasAuthError = new URLSearchParams(window.location.search).has("error");
+      const skipFlag = sessionStorage.getItem(SKIP_AUTO_LOGIN_KEY);
+      if (skipFlag === "true") {
+        sessionStorage.removeItem(SKIP_AUTO_LOGIN_KEY);
+        return;
+      }
+      if (hasAuthError) {
+        return;
+      }
+      setAutoRedirecting(true);
+      window.location.href = "/api/login";
+    }
+  }, [granted, isLoading, user, autoRedirecting]);
 
   useEffect(() => {
     if (granted && !isLoading && user && !splashShown.current) {
@@ -254,8 +272,8 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
     }
   }
 
-  // Returning user: already has access grant, waiting for auth to confirm
-  if (granted && isLoading) {
+  // Returning user: already has access grant, waiting for auth to confirm or auto-redirecting
+  if (granted && (isLoading || autoRedirecting)) {
     return (
       <div
         className="min-h-screen flex items-center justify-center"
@@ -266,7 +284,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
             className="w-10 h-10 rounded-full border-4 border-purple-500/30 border-t-purple-400"
             style={{ animation: "spin 0.8s linear infinite" }}
           />
-          <p className="text-purple-300 text-sm">Loading…</p>
+          <p className="text-purple-300 text-sm">{autoRedirecting ? "Signing you in…" : "Loading…"}</p>
           <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
       </div>

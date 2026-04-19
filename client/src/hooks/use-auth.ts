@@ -43,6 +43,7 @@ async function fetchUser(): Promise<User | null> {
 
 async function logout(): Promise<void> {
   setCachedUser(null);
+  sessionStorage.setItem("wc_skip_auto_login", "true");
   window.location.href = "/api/logout";
 }
 
