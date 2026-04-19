@@ -15,9 +15,7 @@ const ELEMENT_COLORS = [
   { label: "Nature", color: "#22c55e" },
 ];
 
-type Phase = "passcode" | "success" | "login";
-
-function StartupShell({ children }: { children: React.ReactNode }) {
+function StartupShell({ children, fading }: { children: React.ReactNode; fading?: boolean }) {
   return (
     <div
       className="min-h-screen flex items-center justify-center p-4"
@@ -25,7 +23,14 @@ function StartupShell({ children }: { children: React.ReactNode }) {
         background: "linear-gradient(135deg, #1e1b4b 0%, #4c1d95 40%, #0f172a 100%)",
       }}
     >
-      <div className="w-full max-w-sm">
+      <div
+        className="w-full max-w-sm"
+        style={{
+          opacity: fading ? 0 : 1,
+          transform: fading ? "translateY(8px)" : "translateY(0)",
+          transition: "opacity 0.3s ease, transform 0.3s ease",
+        }}
+      >
         <div className="flex flex-col items-center mb-8">
           <div
             className="w-24 h-24 rounded-3xl flex items-center justify-center mb-5"
@@ -114,8 +119,12 @@ function PanelCard({ children }: { children: React.ReactNode }) {
   );
 }
 
+type Screen = "passcode" | "success" | "signin";
+
 export function PasscodeGate({ children }: { children: React.ReactNode }) {
-  const [phase, setPhase] = useState<Phase>("passcode");
+  const [granted, setGranted] = useState(false);
+  const [screen, setScreen] = useState<Screen>("passcode");
+  const [visible, setVisible] = useState(true);
   const [input, setInput] = useState("");
   const [error, setError] = useState("");
   const [showCode, setShowCode] = useState(false);
@@ -125,17 +134,26 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (localStorage.getItem(STORAGE_KEY) === "true") {
-      setPhase("login");
+      setGranted(true);
     }
   }, []);
+
+  function transitionTo(next: Screen) {
+    setVisible(false);
+    setTimeout(() => {
+      setScreen(next);
+      setVisible(true);
+    }, 300);
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (input === PASSCODE) {
       localStorage.setItem(STORAGE_KEY, "true");
       setError("");
-      setPhase("success");
-      setTimeout(() => setPhase("login"), 1200);
+      setGranted(true);
+      transitionTo("success");
+      setTimeout(() => transitionTo("signin"), 1200);
     } else {
       setError("Incorrect passcode. Please try again.");
       setShake(true);
@@ -144,13 +162,37 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
     }
   }
 
-  if (phase === "login" && user) {
+  if (granted && !isLoading && user && screen !== "signin" && screen !== "success") {
     return <>{children}</>;
   }
 
-  if (phase === "passcode") {
+  if (screen === "success") {
     return (
-      <StartupShell>
+      <StartupShell fading={!visible}>
+        <div
+          className="rounded-2xl p-8 flex flex-col items-center gap-4"
+          style={{
+            background: "rgba(30, 27, 75, 0.6)",
+            border: "1px solid rgba(34, 197, 94, 0.4)",
+            backdropFilter: "blur(12px)",
+          }}
+        >
+          <CheckCircle2
+            className="check-pop-in"
+            style={{ width: 56, height: 56, color: "#22c55e" }}
+          />
+          <div className="text-center">
+            <p className="text-white font-semibold text-lg mb-1">Access Granted!</p>
+            <p className="text-slate-400 text-sm">Welcome, brave challenger…</p>
+          </div>
+        </div>
+      </StartupShell>
+    );
+  }
+
+  if (!granted) {
+    return (
+      <StartupShell fading={!visible}>
         <PanelCard key="passcode">
           <p className="text-slate-300 text-sm text-center mb-4">
             Closed beta — enter your backer passcode to continue.
@@ -205,32 +247,8 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (phase === "success") {
-    return (
-      <StartupShell>
-        <div
-          className="rounded-2xl p-8 flex flex-col items-center gap-4"
-          style={{
-            background: "rgba(30, 27, 75, 0.6)",
-            border: "1px solid rgba(34, 197, 94, 0.4)",
-            backdropFilter: "blur(12px)",
-          }}
-        >
-          <CheckCircle2
-            className="check-pop-in"
-            style={{ width: 56, height: 56, color: "#22c55e" }}
-          />
-          <div className="text-center">
-            <p className="text-white font-semibold text-lg mb-1">Access Granted!</p>
-            <p className="text-slate-400 text-sm">Welcome, brave challenger…</p>
-          </div>
-        </div>
-      </StartupShell>
-    );
-  }
-
   return (
-    <StartupShell>
+    <StartupShell fading={!visible}>
       <PanelCard key="login">
         <p className="text-slate-300 text-sm text-center mb-6">
           Sign in to enter the arena and start playing.
