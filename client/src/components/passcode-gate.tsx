@@ -1,8 +1,87 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Lock, Eye, EyeOff, LogIn, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/use-auth";
+
+const POST_LOGIN_KEY = "wc_post_login";
+
+function PostLoginSplash({ onDone }: { onDone: () => void }) {
+  const [phase, setPhase] = useState<"hold" | "fadeout">("hold");
+
+  useEffect(() => {
+    const holdTimer = setTimeout(() => setPhase("fadeout"), 900);
+    return () => clearTimeout(holdTimer);
+  }, []);
+
+  useEffect(() => {
+    if (phase === "fadeout") {
+      const doneTimer = setTimeout(onDone, 600);
+      return () => clearTimeout(doneTimer);
+    }
+  }, [phase, onDone]);
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 9999,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "linear-gradient(135deg, #1e1b4b 0%, #4c1d95 40%, #0f172a 100%)",
+        opacity: phase === "fadeout" ? 0 : 1,
+        transition: phase === "fadeout" ? "opacity 0.6s ease" : "none",
+        pointerEvents: phase === "fadeout" ? "none" : "all",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: "20px",
+          animation: "splashFadeIn 0.5s ease both",
+        }}
+      >
+        <div
+          style={{
+            width: 88,
+            height: 88,
+            borderRadius: 24,
+            background: "linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)",
+            boxShadow: "0 0 60px rgba(168, 85, 247, 0.6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" width={44} height={44}>
+            <rect x="4" y="8" width="18" height="26" rx="3" fill="white" fillOpacity="0.95" />
+            <rect x="9" y="13" width="8" height="2" rx="1" fill="#7e22ce" />
+            <rect x="9" y="17" width="6" height="2" rx="1" fill="#7e22ce" fillOpacity="0.6" />
+            <rect x="14" y="8" width="18" height="26" rx="3" fill="white" fillOpacity="0.8" transform="rotate(-8 23 21)" />
+            <rect x="26" y="8" width="18" height="26" rx="3" fill="white" fillOpacity="0.6" transform="rotate(6 35 21)" />
+          </svg>
+        </div>
+        <div style={{ textAlign: "center" }}>
+          <h1 style={{ color: "white", fontSize: 28, fontWeight: 700, letterSpacing: "-0.5px", margin: 0 }}>
+            Welcome to the Arena
+          </h1>
+          <p style={{ color: "#c4b5fd", fontSize: 14, marginTop: 6 }}>Preparing your experience…</p>
+        </div>
+      </div>
+      <style>{`
+        @keyframes splashFadeIn {
+          from { opacity: 0; transform: translateY(16px) scale(0.97); }
+          to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+      `}</style>
+    </div>
+  );
+}
 
 const PASSCODE = "4838";
 const STORAGE_KEY = "wc_access_granted";
@@ -129,6 +208,8 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState("");
   const [showCode, setShowCode] = useState(false);
   const [shake, setShake] = useState(false);
+  const [showSplash, setShowSplash] = useState(false);
+  const splashShown = useRef(false);
 
   const { user, isLoading } = useAuth();
 
@@ -137,6 +218,17 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
       setGranted(true);
     }
   }, []);
+
+  useEffect(() => {
+    if (granted && !isLoading && user && !splashShown.current) {
+      const postLogin = sessionStorage.getItem(POST_LOGIN_KEY);
+      if (postLogin === "true") {
+        sessionStorage.removeItem(POST_LOGIN_KEY);
+        splashShown.current = true;
+        setShowSplash(true);
+      }
+    }
+  }, [granted, isLoading, user]);
 
   function transitionTo(next: Screen) {
     setVisible(false);
@@ -183,7 +275,12 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
 
   // Granted and authenticated — reveal the app
   if (granted && !isLoading && user && screen !== "signin" && screen !== "success") {
-    return <div className="app-reveal">{children}</div>;
+    return (
+      <div className="app-reveal">
+        {showSplash && <PostLoginSplash onDone={() => setShowSplash(false)} />}
+        {children}
+      </div>
+    );
   }
 
   if (screen === "success") {
@@ -279,7 +376,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
           className="w-full h-12 font-semibold text-base text-white"
           style={{ background: "linear-gradient(90deg, #9333ea 0%, #7e22ce 100%)" }}
           disabled={isLoading}
-          onClick={() => { window.location.href = "/api/login"; }}
+          onClick={() => { sessionStorage.setItem(POST_LOGIN_KEY, "true"); window.location.href = "/api/login"; }}
         >
           <LogIn className="w-4 h-4 mr-2" />
           {isLoading ? "Checking…" : "Enter the Arena"}
