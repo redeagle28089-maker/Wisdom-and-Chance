@@ -220,7 +220,7 @@ export function NavHeader() {
                     onClick={() => { window.location.href = "/api/login"; }}
                   >
                     <LogIn className="w-4 h-4 mr-2" />
-                    Sign In with Google
+                    Sign In
                   </Button>
                 </div>
               )}

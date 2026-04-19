@@ -1,10 +1,18 @@
 import { useState, useEffect } from "react";
-import { Shield, Lock, Eye, EyeOff } from "lucide-react";
+import { Lock, Eye, EyeOff, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 const PASSCODE = "4838";
 const STORAGE_KEY = "wc_access_granted";
+
+const ELEMENT_COLORS = [
+  { label: "Fire",   color: "#ef4444" },
+  { label: "Water",  color: "#3b82f6" },
+  { label: "Earth",  color: "#d97706" },
+  { label: "Air",    color: "#94a3b8" },
+  { label: "Nature", color: "#22c55e" },
+];
 
 export function PasscodeGate({ children }: { children: React.ReactNode }) {
   const [granted, setGranted] = useState(false);
@@ -36,73 +44,125 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
   if (granted) return <>{children}</>;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900/30 to-slate-900 flex items-center justify-center p-4">
+    <div
+      className="min-h-screen flex items-center justify-center p-4"
+      style={{
+        background: "linear-gradient(135deg, #1e1b4b 0%, #4c1d95 40%, #0f172a 100%)",
+      }}
+    >
       <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <div className="flex justify-center mb-4">
-            <div className="w-20 h-20 rounded-full bg-purple-600/20 border-2 border-purple-500/50 flex items-center justify-center">
-              <Shield className="w-10 h-10 text-purple-400" />
-            </div>
+
+        <div className="flex flex-col items-center mb-8">
+          <div
+            className="w-24 h-24 rounded-3xl flex items-center justify-center mb-5"
+            style={{
+              background: "linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)",
+              boxShadow: "0 0 40px rgba(168, 85, 247, 0.4)",
+            }}
+          >
+            <svg
+              viewBox="0 0 48 48"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              className="w-12 h-12"
+            >
+              <rect x="4" y="8" width="18" height="26" rx="3" fill="white" fillOpacity="0.95" />
+              <rect x="9" y="13" width="8" height="2" rx="1" fill="#7e22ce" />
+              <rect x="9" y="17" width="6" height="2" rx="1" fill="#7e22ce" fillOpacity="0.6" />
+              <rect x="14" y="8" width="18" height="26" rx="3" fill="white" fillOpacity="0.8" transform="rotate(-8 23 21)" />
+              <rect x="26" y="8" width="18" height="26" rx="3" fill="white" fillOpacity="0.6" transform="rotate(6 35 21)" />
+            </svg>
           </div>
-          <h1 className="text-3xl font-bold text-white mb-1">Wisdom & Chance</h1>
-          <p className="text-purple-300 font-medium">TCG — Beta Access</p>
-          <p className="text-slate-400 text-sm mt-3">
-            This game is currently in closed beta.<br />Enter your access passcode to continue.
+
+          <h1 className="text-4xl font-bold text-white mb-1 tracking-tight">
+            Wisdom &amp; Chance
+          </h1>
+          <p className="text-purple-300 font-medium text-base mb-1">Trading Card Game</p>
+          <p className="text-slate-400 text-sm text-center leading-relaxed">
+            Master the elements. Build your deck. Battle for glory.
           </p>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <div className={`transition-all duration-150 ${shake ? "animate-[shake_0.5s_ease-in-out]" : ""}`}>
-            <div className="relative mb-3">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <Input
-                data-testid="input-passcode"
-                type={showCode ? "text" : "password"}
-                inputMode="numeric"
-                placeholder="Enter passcode"
-                value={input}
-                onChange={(e) => { setInput(e.target.value); setError(""); }}
-                className="pl-10 pr-10 text-center text-xl tracking-[0.5em] bg-slate-800/80 border-slate-600 text-white placeholder:text-slate-500 placeholder:tracking-normal focus:border-purple-500 h-14"
-                maxLength={10}
-                autoFocus
-              />
-              <button
-                type="button"
-                onClick={() => setShowCode(!showCode)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
+        <div className="flex justify-center gap-2 mb-8">
+          {ELEMENT_COLORS.map(({ label, color }) => (
+            <div
+              key={label}
+              title={label}
+              className="w-3 h-3 rounded-full"
+              style={{ backgroundColor: color, boxShadow: `0 0 6px ${color}80` }}
+            />
+          ))}
+        </div>
+
+        <div
+          className="rounded-2xl p-6"
+          style={{
+            background: "rgba(30, 27, 75, 0.6)",
+            border: "1px solid rgba(168, 85, 247, 0.25)",
+            backdropFilter: "blur(12px)",
+          }}
+        >
+          <p className="text-slate-300 text-sm text-center mb-4">
+            Closed beta — enter your backer passcode to continue.
+          </p>
+
+          <form onSubmit={handleSubmit}>
+            <div className={`transition-all duration-150 ${shake ? "animate-[shake_0.5s_ease-in-out]" : ""}`}>
+              <div className="relative mb-3">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Input
+                  data-testid="input-passcode"
+                  type={showCode ? "text" : "password"}
+                  inputMode="numeric"
+                  placeholder="Enter passcode"
+                  value={input}
+                  onChange={(e) => { setInput(e.target.value); setError(""); }}
+                  className="pl-10 pr-10 text-center text-xl tracking-[0.5em] bg-slate-900/80 border-slate-600 text-white placeholder:text-slate-500 placeholder:tracking-normal focus:border-purple-500 h-14"
+                  maxLength={10}
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCode(!showCode)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
+                >
+                  {showCode ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+
+              {error && (
+                <p data-testid="text-passcode-error" className="text-red-400 text-sm text-center mb-3">
+                  {error}
+                </p>
+              )}
+
+              <Button
+                data-testid="button-unlock"
+                type="submit"
+                className="w-full h-12 font-semibold text-base text-white"
+                style={{
+                  background: "linear-gradient(90deg, #9333ea 0%, #7e22ce 100%)",
+                }}
               >
-                {showCode ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
+                <LogIn className="w-4 h-4 mr-2" />
+                Enter the Arena
+              </Button>
             </div>
+          </form>
 
-            {error && (
-              <p data-testid="text-passcode-error" className="text-red-400 text-sm text-center mb-3">
-                {error}
-              </p>
-            )}
-
-            <Button
-              data-testid="button-unlock"
-              type="submit"
-              className="w-full h-12 bg-purple-600 hover:bg-purple-500 text-white font-semibold text-base"
-            >
-              Unlock Access
-            </Button>
-          </div>
-        </form>
-
-        <p className="text-slate-500 text-xs text-center mt-6">
-          Passcodes are available to Kickstarter backers pledging $10+
-        </p>
+          <p className="text-slate-500 text-xs text-center mt-4">
+            Passcodes are available to Kickstarter backers pledging $10+
+          </p>
+        </div>
       </div>
 
       <style>{`
         @keyframes shake {
           0%, 100% { transform: translateX(0); }
-          20% { transform: translateX(-8px); }
-          40% { transform: translateX(8px); }
-          60% { transform: translateX(-6px); }
-          80% { transform: translateX(6px); }
+          20%  { transform: translateX(-8px); }
+          40%  { transform: translateX(8px); }
+          60%  { transform: translateX(-6px); }
+          80%  { transform: translateX(6px); }
         }
       `}</style>
     </div>

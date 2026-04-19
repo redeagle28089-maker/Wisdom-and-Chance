@@ -1,9 +1,11 @@
 import { Switch, Route, useLocation } from "wouter";
+import { useState, useEffect } from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
+import { X, Smartphone } from "lucide-react";
 /**
  * DROPDOWN NAVIGATION HEADER
  * TO REVERT TO SIDEBAR: Replace NavHeader with GameSidebar + SidebarProvider setup
@@ -46,12 +48,61 @@ import NotFound from "@/pages/not-found";
  * FULL-WIDTH LAYOUT WITH DROPDOWN NAVIGATION
  * TO REVERT TO SIDEBAR: See game-sidebar.tsx for original SidebarProvider setup
  */
+function MobileBanner() {
+  const [dismissed, setDismissed] = useState(() =>
+    sessionStorage.getItem("mobile_banner_dismissed") === "true"
+  );
+
+  const isMobileBrowser =
+    typeof navigator !== "undefined" &&
+    /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+
+  useEffect(() => {
+    if (dismissed) sessionStorage.setItem("mobile_banner_dismissed", "true");
+  }, [dismissed]);
+
+  if (!isMobileBrowser || dismissed) return null;
+
+  return (
+    <div
+      className="flex items-center justify-between gap-2 px-4 py-2 text-sm text-white"
+      style={{
+        background: "linear-gradient(90deg, #7e22ce 0%, #9333ea 100%)",
+        minHeight: "44px",
+      }}
+    >
+      <div className="flex items-center gap-2 flex-1">
+        <Smartphone className="w-4 h-4 shrink-0" />
+        <span>
+          Using a phone?{" "}
+          <a
+            href="/mobile-app"
+            className="underline font-semibold hover:text-purple-200"
+            data-testid="link-mobile-app-banner"
+          >
+            Try the Wisdom &amp; Chance mobile app →
+          </a>
+        </span>
+      </div>
+      <button
+        onClick={() => setDismissed(true)}
+        className="p-1 rounded hover:bg-white/20 transition-colors shrink-0"
+        aria-label="Dismiss banner"
+        data-testid="button-dismiss-mobile-banner"
+      >
+        <X className="w-4 h-4" />
+      </button>
+    </div>
+  );
+}
+
 function AppContent() {
   const [location] = useLocation();
   const isGameBoard = location.startsWith("/game/");
 
   return (
     <div className="flex flex-col h-screen w-full bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900">
+      <MobileBanner />
       {!isGameBoard && <NavHeader />}
       <main className="flex-1 overflow-auto">
         <Switch>

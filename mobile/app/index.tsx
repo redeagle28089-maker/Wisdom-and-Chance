@@ -9,7 +9,6 @@ import { router } from 'expo-router';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/lib/auth-context';
-import { signInWithGoogle, GoogleAuthError } from '@/lib/google-auth';
 
 let Animated: any;
 let FadeInDown: any;
@@ -33,7 +32,6 @@ export default function LoginScreen() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState('');
   const firstNameRef = useRef<RNTextInput>(null);
   const lastNameRef = useRef<RNTextInput>(null);
@@ -53,30 +51,6 @@ export default function LoginScreen() {
   }
 
   if (isAuthenticated) return null;
-
-  async function handleGoogleSignIn() {
-    setError('');
-    setIsGoogleLoading(true);
-    try {
-      const profile = await signInWithGoogle();
-      await login(profile.email, profile.firstName || undefined, profile.lastName || undefined);
-      router.replace('/(tabs)');
-    } catch (e: unknown) {
-      if (e instanceof GoogleAuthError) {
-        if (e.code === 'cancelled') {
-          setError('Sign-in was cancelled.');
-        } else if (e.code === 'missing_client_id') {
-          setError('Google sign-in is not configured yet. Use email sign-in below.');
-        } else {
-          setError(e.message);
-        }
-      } else {
-        setError('Google sign-in failed. Please try again or use email below.');
-      }
-    } finally {
-      setIsGoogleLoading(false);
-    }
-  }
 
   async function handleLogin() {
     if (!email.trim()) {
@@ -127,7 +101,7 @@ export default function LoginScreen() {
                 <MaterialCommunityIcons name="cards-playing-outline" size={48} color="#fff" />
               </LinearGradient>
             </View>
-            <Text style={styles.title}>Wisdom and Chance Mobile</Text>
+            <Text style={styles.title}>Wisdom &amp; Chance</Text>
             <Text style={styles.subtitle}>Master the elements. Build your deck. Battle for glory.</Text>
           </Animated.View>
 
@@ -140,45 +114,10 @@ export default function LoginScreen() {
               <View style={[styles.elementDot, { backgroundColor: Colors.nature }]} />
             </View>
 
-            {/* Google Sign-In */}
-            <Pressable
-              style={({ pressed }) => [
-                styles.googleButton,
-                pressed && styles.googleButtonPressed,
-                isGoogleLoading && styles.googleButtonDisabled,
-              ]}
-              onPress={handleGoogleSignIn}
-              disabled={isGoogleLoading || isSubmitting}
-            >
-              {isGoogleLoading ? (
-                <ActivityIndicator size="small" color="#1f2937" />
-              ) : (
-                <>
-                  <MaterialCommunityIcons name="google" size={20} color="#EA4335" />
-                  <Text style={styles.googleButtonText}>Sign in with Google</Text>
-                </>
-              )}
-            </Pressable>
-
-            {/* Divider */}
-            <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or sign in with email</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            {/* Email hint */}
-            <View style={styles.hintBox}>
-              <Ionicons name="information-circle-outline" size={16} color={Colors.primary} />
-              <Text style={styles.hintText}>
-                Use the same email address linked to your Google account on the web version.
-              </Text>
-            </View>
-
             <View style={styles.inputGroup}>
               <TextInput
                 style={styles.input}
-                placeholder="Your Google account email"
+                placeholder="Email address"
                 placeholderTextColor={Colors.textMuted}
                 value={email}
                 onChangeText={setEmail}
@@ -230,7 +169,7 @@ export default function LoginScreen() {
                 isSubmitting && styles.loginButtonDisabled,
               ]}
               onPress={handleLogin}
-              disabled={isSubmitting || isGoogleLoading}
+              disabled={isSubmitting}
             >
               <LinearGradient
                 colors={[Colors.primary, Colors.primaryDark]}
@@ -285,70 +224,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     gap: 8,
-    marginBottom: 20,
+    marginBottom: 28,
   },
-  elementDot: { width: 8, height: 8, borderRadius: 4 },
-
-  googleButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    backgroundColor: '#ffffff',
-    borderRadius: 14,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 3,
-    marginBottom: 20,
-  },
-  googleButtonPressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
-  googleButtonDisabled: { opacity: 0.6 },
-  googleButtonText: {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 16,
-    color: '#1f2937',
-  },
-
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 20,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: Colors.surfaceBorder,
-  },
-  dividerText: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 13,
-    color: Colors.textMuted,
-  },
-
-  hintBox: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-    backgroundColor: Colors.primary + '15',
-    borderWidth: 1,
-    borderColor: Colors.primary + '30',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    marginBottom: 20,
-  },
-  hintText: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 13,
-    color: Colors.textSecondary,
-    flex: 1,
-    lineHeight: 18,
-  },
+  elementDot: { width: 10, height: 10, borderRadius: 5 },
 
   inputGroup: { gap: 10, marginBottom: 16 },
   inputRow: { flexDirection: 'row', gap: 12 },
