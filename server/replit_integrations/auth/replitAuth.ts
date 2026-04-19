@@ -737,6 +737,17 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
     user.access_token = tokens.access_token;
     user.refresh_token = tokens.refresh_token || refreshToken;
     user.expires_at = claims.exp;
+
+    // Persist the refreshed tokens back to the session so the next
+    // request doesn't have to refresh again immediately.
+    await new Promise<void>((resolve) => {
+      req.session.save((saveErr) => {
+        if (saveErr) {
+          console.error("[auth] Failed to save session after token refresh:", saveErr);
+        }
+        resolve();
+      });
+    });
     
     return next();
   } catch (error: any) {
