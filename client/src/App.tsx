@@ -102,7 +102,6 @@ function AppContent() {
 
   return (
     <div className="flex flex-col h-screen w-full bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900">
-      <MobileBanner />
       {!isGameBoard && <NavHeader />}
       <main className="flex-1 overflow-auto">
         <Switch>
@@ -149,6 +148,7 @@ function App() {
         <ThemeProvider defaultTheme="dark" storageKey="wisdom-chance-theme">
           <TooltipProvider>
             <Toaster />
+            <MobileBanner />
             <PasscodeGate>
               <AppContent />
             </PasscodeGate>
