@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Lock, Eye, EyeOff, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useAuth } from "@/hooks/use-auth";
 
 const PASSCODE = "4838";
 const STORAGE_KEY = "wc_access_granted";
@@ -14,35 +15,7 @@ const ELEMENT_COLORS = [
   { label: "Nature", color: "#22c55e" },
 ];
 
-export function PasscodeGate({ children }: { children: React.ReactNode }) {
-  const [granted, setGranted] = useState(false);
-  const [input, setInput] = useState("");
-  const [error, setError] = useState("");
-  const [showCode, setShowCode] = useState(false);
-  const [shake, setShake] = useState(false);
-
-  useEffect(() => {
-    if (localStorage.getItem(STORAGE_KEY) === "true") {
-      setGranted(true);
-    }
-  }, []);
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (input === PASSCODE) {
-      localStorage.setItem(STORAGE_KEY, "true");
-      setGranted(true);
-      setError("");
-    } else {
-      setError("Incorrect passcode. Please try again.");
-      setShake(true);
-      setInput("");
-      setTimeout(() => setShake(false), 600);
-    }
-  }
-
-  if (granted) return <>{children}</>;
-
+function StartupShell({ children }: { children: React.ReactNode }) {
   return (
     <div
       className="min-h-screen flex items-center justify-center p-4"
@@ -51,7 +24,6 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
       }}
     >
       <div className="w-full max-w-sm">
-
         <div className="flex flex-col items-center mb-8">
           <div
             className="w-24 h-24 rounded-3xl flex items-center justify-center mb-5"
@@ -94,6 +66,58 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
           ))}
         </div>
 
+        {children}
+      </div>
+
+      <style>{`
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          20%  { transform: translateX(-8px); }
+          40%  { transform: translateX(8px); }
+          60%  { transform: translateX(-6px); }
+          80%  { transform: translateX(6px); }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+export function PasscodeGate({ children }: { children: React.ReactNode }) {
+  const [granted, setGranted] = useState(false);
+  const [input, setInput] = useState("");
+  const [error, setError] = useState("");
+  const [showCode, setShowCode] = useState(false);
+  const [shake, setShake] = useState(false);
+
+  const { user, isLoading } = useAuth();
+
+  useEffect(() => {
+    if (localStorage.getItem(STORAGE_KEY) === "true") {
+      setGranted(true);
+    }
+  }, []);
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (input === PASSCODE) {
+      localStorage.setItem(STORAGE_KEY, "true");
+      setGranted(true);
+      setError("");
+    } else {
+      setError("Incorrect passcode. Please try again.");
+      setShake(true);
+      setInput("");
+      setTimeout(() => setShake(false), 600);
+    }
+  }
+
+  if (granted && user) {
+    return <>{children}</>;
+  }
+
+  if (!granted) {
+    return (
+      <StartupShell>
         <div
           className="rounded-2xl p-6"
           style={{
@@ -144,8 +168,7 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
                   background: "linear-gradient(90deg, #9333ea 0%, #7e22ce 100%)",
                 }}
               >
-                <LogIn className="w-4 h-4 mr-2" />
-                Enter the Arena
+                Unlock Access
               </Button>
             </div>
           </form>
@@ -154,17 +177,41 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
             Passcodes are available to Kickstarter backers pledging $10+
           </p>
         </div>
-      </div>
+      </StartupShell>
+    );
+  }
 
-      <style>{`
-        @keyframes shake {
-          0%, 100% { transform: translateX(0); }
-          20%  { transform: translateX(-8px); }
-          40%  { transform: translateX(8px); }
-          60%  { transform: translateX(-6px); }
-          80%  { transform: translateX(6px); }
-        }
-      `}</style>
-    </div>
+  return (
+    <StartupShell>
+      <div
+        className="rounded-2xl p-6"
+        style={{
+          background: "rgba(30, 27, 75, 0.6)",
+          border: "1px solid rgba(168, 85, 247, 0.25)",
+          backdropFilter: "blur(12px)",
+        }}
+      >
+        <p className="text-slate-300 text-sm text-center mb-6">
+          Sign in to enter the arena and start playing.
+        </p>
+
+        <Button
+          data-testid="button-enter-arena"
+          className="w-full h-12 font-semibold text-base text-white"
+          style={{
+            background: "linear-gradient(90deg, #9333ea 0%, #7e22ce 100%)",
+          }}
+          disabled={isLoading}
+          onClick={() => { window.location.href = "/api/login"; }}
+        >
+          <LogIn className="w-4 h-4 mr-2" />
+          {isLoading ? "Checking…" : "Enter the Arena"}
+        </Button>
+
+        <p className="text-slate-500 text-xs text-center mt-4">
+          Sign in with your Replit account to continue.
+        </p>
+      </div>
+    </StartupShell>
   );
 }
