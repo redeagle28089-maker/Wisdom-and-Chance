@@ -564,3 +564,12 @@
 .animate-fade-in {
   animation: fade-in 0.5s ease-out;
 }
+
+@keyframes appReveal {
+  0%   { opacity: 0; transform: translateY(28px) scale(0.982); }
+  100% { opacity: 1; transform: translateY(0)    scale(1);     }
+}
+
+.app-reveal {
+  animation: appReveal 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}

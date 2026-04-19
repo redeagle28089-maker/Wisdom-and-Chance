@@ -162,8 +162,28 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
     }
   }
 
+  // Returning user: already has access grant, waiting for auth to confirm
+  if (granted && isLoading) {
+    return (
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ background: "linear-gradient(135deg, #1e1b4b 0%, #4c1d95 40%, #0f172a 100%)" }}
+      >
+        <div className="flex flex-col items-center gap-4">
+          <div
+            className="w-10 h-10 rounded-full border-4 border-purple-500/30 border-t-purple-400"
+            style={{ animation: "spin 0.8s linear infinite" }}
+          />
+          <p className="text-purple-300 text-sm">Loading…</p>
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        </div>
+      </div>
+    );
+  }
+
+  // Granted and authenticated — reveal the app
   if (granted && !isLoading && user && screen !== "signin" && screen !== "success") {
-    return <>{children}</>;
+    return <div className="app-reveal">{children}</div>;
   }
 
   if (screen === "success") {
