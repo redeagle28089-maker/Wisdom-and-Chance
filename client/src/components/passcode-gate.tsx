@@ -376,7 +376,15 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
           className="w-full h-12 font-semibold text-base text-white"
           style={{ background: "linear-gradient(90deg, #9333ea 0%, #7e22ce 100%)" }}
           disabled={isLoading}
-          onClick={() => { sessionStorage.setItem(POST_LOGIN_KEY, "true"); window.location.href = "/api/login"; }}
+          onClick={() => {
+            sessionStorage.setItem(POST_LOGIN_KEY, "true");
+            const isInIframe = window.self !== window.top;
+            if (isInIframe) {
+              window.open("/api/login", "_blank");
+            } else {
+              window.location.href = "/api/login";
+            }
+          }}
         >
           <LogIn className="w-4 h-4 mr-2" />
           {isLoading ? "Checking…" : "Enter the Arena"}
