@@ -223,13 +223,11 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (granted && !isLoading && !user && !autoRedirecting) {
+      const isInIframe = window.self !== window.top;
       const hasAuthError = new URLSearchParams(window.location.search).has("error");
       const skipFlag = sessionStorage.getItem(SKIP_AUTO_LOGIN_KEY);
-      if (skipFlag === "true") {
-        sessionStorage.removeItem(SKIP_AUTO_LOGIN_KEY);
-        return;
-      }
-      if (hasAuthError) {
+      if (isInIframe || skipFlag === "true" || hasAuthError) {
+        if (skipFlag === "true") sessionStorage.removeItem(SKIP_AUTO_LOGIN_KEY);
         return;
       }
       setAutoRedirecting(true);
