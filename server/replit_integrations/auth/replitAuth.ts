@@ -638,7 +638,10 @@ export async function setupAuth(app: Express) {
           return res.redirect("/?error=auth_failed");
         }
         console.log("[auth] Login successful for user:", effectiveUserId);
-        res.redirect("/");
+        // Route mobile browser users to the mobile app page, PC users to the web app
+        const ua = req.headers["user-agent"] || "";
+        const isMobileBrowser = /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
+        res.redirect(isMobileBrowser ? "/mobile-app" : "/");
       });
     } catch (error: any) {
       console.error("[auth] Callback error:", error);
