@@ -93,6 +93,7 @@ declare module "express-session" {
       nonce: string;
       codeVerifier: string;
       createdAt: number;
+      redirectTarget?: "web" | "mobile";
     };
   }
 }
@@ -519,10 +520,14 @@ export async function setupAuth(app: Express) {
       const codeChallenge = generateCodeChallenge(codeVerifier);
       
       // Store pending auth in session (not global Map)
+      // Accept an explicit redirect target so the callback knows where to send the user
+      // without relying on user-agent sniffing.
+      const redirectTarget = req.query.redirect === "mobile" ? "mobile" : "web";
       req.session.pendingAuth = {
         nonce,
         codeVerifier,
         createdAt: Date.now(),
+        redirectTarget,
       };
       
       // Save session before redirecting
@@ -602,6 +607,9 @@ export async function setupAuth(app: Express) {
         return res.redirect("/?error=auth_failed&message=" + encodeURIComponent("Session expired. Please try again."));
       }
       
+      // Capture redirect target before clearing pending auth
+      const redirectTarget = pending.redirectTarget ?? "web";
+      
       // Clear pending auth
       delete req.session.pendingAuth;
       
@@ -638,10 +646,7 @@ export async function setupAuth(app: Express) {
           return res.redirect("/?error=auth_failed");
         }
         console.log("[auth] Login successful for user:", effectiveUserId);
-        // Route mobile browser users to the mobile app page, PC users to the web app
-        const ua = req.headers["user-agent"] || "";
-        const isMobileBrowser = /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
-        res.redirect(isMobileBrowser ? "/mobile-app" : "/");
+        res.redirect(redirectTarget === "mobile" ? "/mobile-app" : "/");
       });
     } catch (error: any) {
       console.error("[auth] Callback error:", error);
