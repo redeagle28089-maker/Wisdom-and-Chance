@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import passport from "passport";
+import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import session from "express-session";
 import type { Express, RequestHandler } from "express";
 import connectPg from "connect-pg-simple";
@@ -655,6 +656,91 @@ export async function setupAuth(app: Express) {
     }
   });
 
+  // ── Google OAuth 2.0 ──────────────────────────────────────────────────────
+  if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+    passport.use(
+      new GoogleStrategy(
+        {
+          clientID: process.env.GOOGLE_CLIENT_ID,
+          clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+          callbackURL: "/api/callback/google",
+          proxy: true,
+        },
+        async (_accessToken, _refreshToken, profile, done) => {
+          // This verify callback is only called during the OAuth round-trip;
+          // we complete user creation in the /api/callback/google route handler
+          // where we also have access to req.session for the redirect target.
+          done(null, profile);
+        }
+      )
+    );
+
+    app.get("/api/login/google", (req, res, next) => {
+      const redirectTarget = req.query.redirect === "mobile" ? "mobile" : "web";
+      req.session.pendingAuth = {
+        nonce: "",
+        codeVerifier: "",
+        createdAt: Date.now(),
+        redirectTarget,
+      };
+      req.session.save((err) => {
+        if (err) console.error("[google] Session save error before login:", err);
+        passport.authenticate("google", { scope: ["profile", "email"] })(req, res, next);
+      });
+    });
+
+    app.get(
+      "/api/callback/google",
+      passport.authenticate("google", { failureRedirect: "/?error=auth_failed", session: false }),
+      async (req, res) => {
+        try {
+          const profile = req.user as any;
+
+          const googleClaims: JWTClaims = {
+            sub: `google:${profile.id}`,
+            email: profile.emails?.[0]?.value || "",
+            first_name: profile.name?.givenName || undefined,
+            last_name: profile.name?.familyName || undefined,
+            profile_image_url: profile.photos?.[0]?.value || undefined,
+          };
+
+          const dbUser = await upsertUser(googleClaims);
+
+          try {
+            const { seedStarterDecks } = await import("../starter-decks");
+            await seedStarterDecks(dbUser.id);
+          } catch (e) {
+            console.warn("[google] Failed to seed starter decks:", e);
+          }
+
+          const sessionUser = {
+            claims: { sub: dbUser.id, email: dbUser.email },
+            access_token: "",
+            refresh_token: null,
+            expires_at: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60,
+            provider: "google",
+          };
+
+          req.login(sessionUser, (err) => {
+            if (err) {
+              console.error("[google] Login error:", err);
+              return res.redirect("/?error=auth_failed");
+            }
+            const redirectTarget = req.session.pendingAuth?.redirectTarget ?? "web";
+            delete req.session.pendingAuth;
+            console.log("[google] Login successful for user:", dbUser.id);
+            res.redirect(redirectTarget === "mobile" ? "/mobile-app" : "/");
+          });
+        } catch (error: any) {
+          console.error("[google] Callback error:", error);
+          res.redirect("/?error=auth_failed&message=" + encodeURIComponent("Google sign-in failed. Please try again."));
+        }
+      }
+    );
+  } else {
+    console.log("[google] GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET not set — Google login disabled");
+  }
+
   app.get("/api/logout", async (req, res) => {
     try {
       const metadata = await getOIDCMetadata();
@@ -722,6 +808,11 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
   const now = Math.floor(Date.now() / 1000);
   if (now <= user.expires_at) {
     return next();
+  }
+
+  // Google sessions don't use Replit OIDC refresh tokens
+  if (user.provider === "google") {
+    return res.status(401).json({ message: "Unauthorized" });
   }
 
   const refreshToken = user.refresh_token;
