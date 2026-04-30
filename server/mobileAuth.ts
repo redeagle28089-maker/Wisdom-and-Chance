@@ -122,11 +122,16 @@ export function registerMobileAuthRoutes(app: Express) {
 
   app.post("/api/mobile/auth/refresh", isMobileAuthenticated, async (req: Request, res: Response) => {
     const mobileUser = (req as any).mobileUser as JWTPayload;
-    const token = generateToken({ userId: mobileUser.userId, email: mobileUser.email });
-    if (!token) {
-      return res.status(503).json({ error: "Mobile auth is not configured" });
+    try {
+      const token = generateToken({ userId: mobileUser.userId, email: mobileUser.email });
+      if (!token) {
+        return res.status(503).json({ error: "Mobile auth is not configured" });
+      }
+      res.json({ token });
+    } catch (error: any) {
+      console.error("[mobile-auth] Token refresh error:", error);
+      res.status(500).json({ error: "Token refresh failed" });
     }
-    res.json({ token });
   });
 
   app.get("/api/mobile/auth/me", isMobileAuthenticated, async (req: Request, res: Response) => {
