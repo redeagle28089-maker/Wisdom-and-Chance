@@ -4,7 +4,7 @@ import { Strategy as GoogleStrategy, type Profile as GoogleProfile } from "passp
 import session from "express-session";
 import type { Express, RequestHandler } from "express";
 import connectPg from "connect-pg-simple";
-import { authStorage } from "./storage";
+import { authStorage, ensureUserProvidersTable, ProviderConflictError } from "./storage";
 
 // Simple retry utility (replaces p-retry to avoid ESM bundling issues)
 async function retry<T>(
@@ -409,14 +409,17 @@ export function getSession() {
   });
 }
 
-async function upsertUser(claims: JWTClaims) {
-  const dbUser = await authStorage.upsertUser({
-    id: claims.sub,
-    email: claims.email || "",
-    firstName: claims.first_name || null,
-    lastName: claims.last_name || null,
-    profileImageUrl: claims.profile_image_url || null,
-  });
+async function upsertUser(claims: JWTClaims, provider: "replit" | "google") {
+  const dbUser = await authStorage.upsertUser(
+    {
+      id: claims.sub,
+      email: claims.email || "",
+      firstName: claims.first_name || null,
+      lastName: claims.last_name || null,
+      profileImageUrl: claims.profile_image_url || null,
+    },
+    { provider, providerSub: claims.sub }
+  );
 
   try {
     const { ensureCurrencies, grantStarterCollection } = await import("../../economyService");
@@ -498,6 +501,9 @@ async function refreshAccessToken(
 }
 
 export async function setupAuth(app: Express) {
+  // Ensure the user_providers table exists before any auth code runs.
+  await ensureUserProvidersTable();
+
   app.set("trust proxy", 1);
   app.use(getSession());
   app.use(passport.initialize());
@@ -623,8 +629,18 @@ export async function setupAuth(app: Express) {
       
       // Verify ID token with full signature and claim validation
       const claims = await verifyAndDecodeJWT(tokens.id_token, metadata, pending.nonce);
+
+      // Reject logins where the provider didn't supply an email — we require
+      // email to enable cross-platform account linking.
+      if (!claims.email) {
+        console.error("[auth] Replit OIDC callback: provider returned no email for sub:", claims.sub);
+        return res.redirect(
+          "/?error=auth_failed&message=" +
+          encodeURIComponent("Your Replit account did not provide an email address. Please ensure your Replit account has a verified email.")
+        );
+      }
       
-      const dbUser = await upsertUser(claims);
+      const dbUser = await upsertUser(claims, "replit");
       const effectiveUserId = dbUser.id;
 
       try {
@@ -650,9 +666,20 @@ export async function setupAuth(app: Express) {
         console.log("[auth] Login successful for user:", effectiveUserId);
         res.redirect(redirectTarget === "mobile" ? "/mobile-app" : "/");
       });
-    } catch (error: any) {
-      console.error("[auth] Callback error:", error);
-      console.error("[auth] Callback error stack:", error?.stack);
+    } catch (error: unknown) {
+      if (error instanceof ProviderConflictError) {
+        console.error("[auth] Provider identity conflict in callback:", error.message);
+        return res.redirect(
+          "/?error=auth_failed&message=" +
+          encodeURIComponent(
+            "This Replit account is already linked to a different user account. " +
+            "Please sign in with the account you originally used."
+          )
+        );
+      }
+      const err = error as Error;
+      console.error("[auth] Callback error:", err.message ?? error);
+      console.error("[auth] Callback error stack:", err.stack);
       res.redirect("/?error=auth_failed&message=" + encodeURIComponent("Authentication failed. Please try again."));
     }
   });
@@ -728,7 +755,7 @@ export async function setupAuth(app: Express) {
             profile_image_url: profile.photos?.[0]?.value || undefined,
           };
 
-          const dbUser = await upsertUser(googleClaims);
+          const dbUser = await upsertUser(googleClaims, "google");
 
           try {
             const { seedStarterDecks } = await import("../starter-decks");
@@ -755,8 +782,19 @@ export async function setupAuth(app: Express) {
             console.log("[google] Login successful for user:", dbUser.id);
             res.redirect(redirectTarget === "mobile" ? "/mobile-app" : "/");
           });
-        } catch (error: any) {
-          console.error("[google] Callback error:", error);
+        } catch (error: unknown) {
+          if (error instanceof ProviderConflictError) {
+            console.error("[google] Provider identity conflict:", error.message);
+            return res.redirect(
+              "/?error=auth_failed&message=" +
+              encodeURIComponent(
+                "This Google account is already linked to a different user account. " +
+                "Please sign in with the account you originally used."
+              )
+            );
+          }
+          const err = error as Error;
+          console.error("[google] Callback error:", err.message ?? error);
           res.redirect("/?error=auth_failed&message=" + encodeURIComponent("Google sign-in failed. Please try again."));
         }
       }
@@ -851,8 +889,22 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
     
     // Verify the refreshed ID token as well
     const claims = await verifyAndDecodeJWT(tokens.id_token, metadata);
+
+    // Preserve the canonical user ID: look up the provider link so that
+    // linked accounts (e.g. mobile-first users whose id is a UUID, not the
+    // Replit sub) keep the correct sub in session after token refresh.
+    const canonicalUser = await authStorage.upsertUser(
+      {
+        id: claims.sub,
+        email: claims.email || "",
+        firstName: claims.first_name || null,
+        lastName: claims.last_name || null,
+        profileImageUrl: claims.profile_image_url || null,
+      },
+      { provider: "replit", providerSub: claims.sub }
+    );
     
-    user.claims = claims;
+    user.claims = { ...claims, sub: canonicalUser.id };
     user.access_token = tokens.access_token;
     user.refresh_token = tokens.refresh_token || refreshToken;
     user.expires_at = claims.exp;
@@ -869,19 +921,26 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
     });
     
     return next();
-  } catch (error: any) {
-    const isNetworkError = error?.message?.includes("getaddrinfo") || 
-                           error?.message?.includes("ENOTFOUND") ||
-                           error?.message?.includes("EAI_AGAIN");
-    
+  } catch (error: unknown) {
+    const err = error as Error;
+    if (error instanceof ProviderConflictError) {
+      console.error("[auth] Provider conflict during token refresh:", err.message);
+      res.status(401).json({ message: "Unauthorized" });
+      return;
+    }
+    const isNetworkError =
+      err.message?.includes("getaddrinfo") ||
+      err.message?.includes("ENOTFOUND") ||
+      err.message?.includes("EAI_AGAIN");
+
     if (isNetworkError) {
-      console.error("[auth] Token refresh failed due to service unavailability:", error?.message);
-      res.status(503).json({ 
+      console.error("[auth] Token refresh failed due to service unavailability:", err.message);
+      res.status(503).json({
         message: "Authentication service temporarily unavailable. Please try again.",
-        retryable: true 
+        retryable: true,
       });
     } else {
-      console.error("[auth] Token refresh failed:", error?.message);
+      console.error("[auth] Token refresh failed:", err.message);
       res.status(401).json({ message: "Unauthorized" });
     }
     return;

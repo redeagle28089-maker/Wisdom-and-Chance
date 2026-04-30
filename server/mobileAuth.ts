@@ -2,8 +2,9 @@ import type { Express, Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { db } from "./db";
 import { users } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { seedStarterDecks } from "./starter-decks";
+import { upsertProviderLink, ProviderConflictError } from "./replit_integrations/auth/storage";
 
 const JWT_SECRET = process.env.SESSION_SECRET;
 if (!JWT_SECRET) {
@@ -54,36 +55,62 @@ export function registerMobileAuthRoutes(app: Express) {
       const { email, provider, providerToken, firstName, lastName, profileImageUrl } = req.body;
 
       if (!email) {
-        return res.status(400).json({ error: "Email is required" });
+        return res.status(400).json({ error: "Email is required — email is needed for cross-platform account linking" });
       }
 
-      let [user] = await db.select().from(users).where(eq(users.email, email));
+      // Normalize email to lowercase for consistent cross-platform matching.
+      // This also handles legacy accounts that were stored with mixed-case emails.
+      const normalizedEmail: string = email.trim().toLowerCase();
+
+      // Case-insensitive lookup so existing mixed-case emails in the DB are matched correctly.
+      let [user] = await db
+        .select()
+        .from(users)
+        .where(sql`lower(${users.email}) = ${normalizedEmail}`);
 
       if (!user) {
         const [newUser] = await db
           .insert(users)
           .values({
-            email,
+            email: normalizedEmail,
             firstName: firstName || null,
             lastName: lastName || null,
             profileImageUrl: profileImageUrl || null,
           })
           .returning();
         user = newUser;
+        console.log(`[mobile-auth:login] Created new account — userId=${user.id} email=${normalizedEmail}`);
       } else {
-        if (firstName || lastName || profileImageUrl) {
-          const [updated] = await db
-            .update(users)
-            .set({
-              ...(firstName && { firstName }),
-              ...(lastName && { lastName }),
-              ...(profileImageUrl && { profileImageUrl }),
-              updatedAt: new Date(),
-            })
-            .where(eq(users.id, user.id))
-            .returning();
-          user = updated;
+        console.log(`[mobile-auth:login] Found existing account — userId=${user.id} email=${normalizedEmail}`);
+        // Normalize stored email to lowercase and update profile fields if provided.
+        const updates: Record<string, unknown> = { email: normalizedEmail, updatedAt: new Date() };
+        if (firstName) updates.firstName = firstName;
+        if (lastName) updates.lastName = lastName;
+        if (profileImageUrl) updates.profileImageUrl = profileImageUrl;
+        const [updated] = await db
+          .update(users)
+          .set(updates)
+          .where(eq(users.id, user.id))
+          .returning();
+        user = updated;
+      }
+
+      // Record the mobile provider link so /api/auth/identity can report it.
+      // The provider sub for mobile logins is the normalized email (stable identifier
+      // since mobile accounts are keyed on email). A ProviderConflictError here
+      // would mean the same email is now claimed by two different user rows, which
+      // should not happen given the case-insensitive lookup above; log and surface
+      // it as an auth failure rather than silently continuing.
+      try {
+        await upsertProviderLink(user.id, { provider: "mobile", providerSub: normalizedEmail });
+      } catch (linkError) {
+        if (linkError instanceof ProviderConflictError) {
+          console.error("[mobile-auth:login] Provider link conflict:", linkError.message);
+          return res.status(409).json({
+            error: "This email is already linked to a different account. Please contact support.",
+          });
         }
+        throw linkError;
       }
 
       try {
@@ -100,7 +127,7 @@ export function registerMobileAuthRoutes(app: Express) {
         console.warn("[mobile-auth] Failed to grant starter economy:", error);
       }
 
-      const token = generateToken({ userId: user.id, email: user.email || email });
+      const token = generateToken({ userId: user.id, email: user.email || normalizedEmail });
       if (!token) {
         return res.status(503).json({ error: "Mobile auth is not configured" });
       }

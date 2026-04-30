@@ -304,4 +304,15 @@ export const api = {
 
   healthCheck: () =>
     apiRequest<{ status: string }>('/api/health'),
+
+  getIdentity: () =>
+    apiRequest<{
+      id: string;
+      email: string | null;
+      firstName: string | null;
+      lastName: string | null;
+      profileImageUrl: string | null;
+      linkedProviders: string[];
+      createdAt: string;
+    }>('/api/auth/identity', { auth: true }),
 };

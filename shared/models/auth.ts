@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { index, jsonb, pgTable, timestamp, varchar, text } from "drizzle-orm/pg-core";
+import { index, jsonb, pgTable, timestamp, varchar, text, unique } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -29,6 +29,24 @@ export const users = pgTable("users", {
 
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
+
+// Provider identity links — maps external provider identities to canonical users.
+// Allows the same user to be recognized regardless of which platform they sign in from.
+export const userProviders = pgTable(
+  "user_providers",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    userId: varchar("user_id").notNull().references(() => users.id),
+    provider: varchar("provider").notNull(), // 'replit' | 'google' | 'mobile'
+    providerSub: varchar("provider_sub").notNull(), // provider's stable identifier for this user
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => [
+    unique("uq_user_providers_provider_sub").on(table.provider, table.providerSub),
+  ]
+);
+
+export type UserProvider = typeof userProviders.$inferSelect;
 
 // User decks table for storing saved decks
 export const userDecks = pgTable("user_decks", {
