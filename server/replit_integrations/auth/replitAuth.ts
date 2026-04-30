@@ -4,7 +4,7 @@ import { Strategy as GoogleStrategy, type Profile as GoogleProfile } from "passp
 import session from "express-session";
 import type { Express, RequestHandler } from "express";
 import connectPg from "connect-pg-simple";
-import { authStorage, ensureUserProvidersTable, ProviderConflictError } from "./storage";
+import { authStorage, ensureUserProvidersTable, backfillProviderLinks, ProviderConflictError } from "./storage";
 
 // Simple retry utility (replaces p-retry to avoid ESM bundling issues)
 async function retry<T>(
@@ -503,6 +503,10 @@ async function refreshAccessToken(
 export async function setupAuth(app: Express) {
   // Ensure the user_providers table exists before any auth code runs.
   await ensureUserProvidersTable();
+
+  // Backfill provider links for legacy accounts created before user_providers tracking.
+  // Runs at startup; idempotent and safe to re-run on every deploy.
+  await backfillProviderLinks();
 
   app.set("trust proxy", 1);
   app.use(getSession());

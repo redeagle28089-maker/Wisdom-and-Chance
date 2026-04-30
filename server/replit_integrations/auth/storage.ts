@@ -1,6 +1,6 @@
 import { users, userProviders, type User, type UpsertUser } from "@shared/models/auth";
 import { db } from "../../db";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, count } from "drizzle-orm";
 
 // Normalize email to lowercase for consistent cross-platform matching.
 export function normalizeEmail(email: string | null | undefined): string | null {
@@ -50,6 +50,102 @@ export async function ensureUserProvidersTable(): Promise<void> {
       CONSTRAINT uq_user_providers_provider_sub UNIQUE (provider, provider_sub)
     )
   `);
+}
+
+// Backfill provider links for legacy accounts that predate the user_providers table.
+// Infers the provider from the user id format:
+//   - id starts with 'google:' → provider='google', sub=id
+//   - id is a UUID (mobile auto-generated) → provider='mobile', sub=email (skipped if no email)
+//   - otherwise → provider='replit', sub=id
+// Only inserts rows for users that have no provider link at all. Idempotent.
+export async function backfillProviderLinks(): Promise<void> {
+  const uuidPattern = "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$";
+
+  // Count users needing backfill per provider type first, for accurate logging.
+  const [{ replitPending }] = await db
+    .select({ replitPending: count() })
+    .from(users)
+    .where(
+      sql`${users.id} NOT LIKE 'google:%'
+        AND ${users.id} !~ ${uuidPattern}
+        AND NOT EXISTS (SELECT 1 FROM user_providers up WHERE up.user_id = ${users.id})`
+    );
+
+  const [{ googlePending }] = await db
+    .select({ googlePending: count() })
+    .from(users)
+    .where(
+      sql`${users.id} LIKE 'google:%'
+        AND NOT EXISTS (SELECT 1 FROM user_providers up WHERE up.user_id = ${users.id})`
+    );
+
+  const [{ mobilePending }] = await db
+    .select({ mobilePending: count() })
+    .from(users)
+    .where(
+      sql`${users.id} ~ ${uuidPattern}
+        AND ${users.email} IS NOT NULL
+        AND NOT EXISTS (SELECT 1 FROM user_providers up WHERE up.user_id = ${users.id})`
+    );
+
+  const total = replitPending + googlePending + mobilePending;
+  if (total === 0) {
+    console.log("[auth:backfill] No legacy accounts needed backfilling");
+    return;
+  }
+
+  // Backfill Replit accounts (non-UUID, non-google: prefix)
+  await db.execute(sql`
+    INSERT INTO user_providers (id, user_id, provider, provider_sub)
+    SELECT gen_random_uuid(), u.id, 'replit', u.id
+    FROM users u
+    WHERE u.id NOT LIKE 'google:%'
+      AND u.id !~ ${uuidPattern}
+      AND NOT EXISTS (SELECT 1 FROM user_providers up WHERE up.user_id = u.id)
+    ON CONFLICT (provider, provider_sub) DO NOTHING
+  `);
+
+  // Backfill Google accounts (id starts with 'google:')
+  await db.execute(sql`
+    INSERT INTO user_providers (id, user_id, provider, provider_sub)
+    SELECT gen_random_uuid(), u.id, 'google', u.id
+    FROM users u
+    WHERE u.id LIKE 'google:%'
+      AND NOT EXISTS (SELECT 1 FROM user_providers up WHERE up.user_id = u.id)
+    ON CONFLICT (provider, provider_sub) DO NOTHING
+  `);
+
+  // Backfill mobile accounts (UUID id) that have an email to use as the stable sub.
+  await db.execute(sql`
+    INSERT INTO user_providers (id, user_id, provider, provider_sub)
+    SELECT gen_random_uuid(), u.id, 'mobile', lower(u.email)
+    FROM users u
+    WHERE u.id ~ ${uuidPattern}
+      AND u.email IS NOT NULL
+      AND NOT EXISTS (SELECT 1 FROM user_providers up WHERE up.user_id = u.id)
+    ON CONFLICT (provider, provider_sub) DO NOTHING
+  `);
+
+  console.log(
+    `[auth:backfill] Backfilled provider links — replit=${replitPending} google=${googlePending} mobile=${mobilePending}`
+  );
+
+  // Report any UUID accounts without email that could not be backfilled.
+  // These will have linkedProviders=[] until they log in via a tracked flow.
+  const [{ uuidNoEmail }] = await db
+    .select({ uuidNoEmail: count() })
+    .from(users)
+    .where(
+      sql`${users.id} ~ ${uuidPattern}
+        AND ${users.email} IS NULL
+        AND NOT EXISTS (SELECT 1 FROM user_providers up WHERE up.user_id = ${users.id})`
+    );
+  if (uuidNoEmail > 0) {
+    console.warn(
+      `[auth:backfill] ${uuidNoEmail} UUID account(s) with no email could not be backfilled — ` +
+      `linkedProviders will be empty until they log in again`
+    );
+  }
 }
 
 // Record a provider identity link for a canonical user.

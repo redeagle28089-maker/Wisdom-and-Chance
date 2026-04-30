@@ -85,16 +85,6 @@ export function registerAuthRoutes(app: Express): void {
 
       const linkedProviders = providerLinks.map((p) => p.provider);
 
-      // If no provider links recorded yet (legacy account), infer from id format.
-      if (linkedProviders.length === 0) {
-        if (userId.startsWith("google:")) {
-          linkedProviders.push("google");
-        } else {
-          const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-          linkedProviders.push(uuidPattern.test(userId) ? "mobile" : "replit");
-        }
-      }
-
       res.json({
         id: user.id,
         email: user.email,
