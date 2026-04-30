@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import passport from "passport";
-import { Strategy as GoogleStrategy } from "passport-google-oauth20";
+import { Strategy as GoogleStrategy, type Profile as GoogleProfile } from "passport-google-oauth20";
 import session from "express-session";
 import type { Express, RequestHandler } from "express";
 import connectPg from "connect-pg-simple";
@@ -95,6 +95,7 @@ declare module "express-session" {
       codeVerifier: string;
       createdAt: number;
       redirectTarget?: "web" | "mobile";
+      googleState?: string;
     };
   }
 }
@@ -677,28 +678,51 @@ export async function setupAuth(app: Express) {
 
     app.get("/api/login/google", (req, res, next) => {
       const redirectTarget = req.query.redirect === "mobile" ? "mobile" : "web";
+      const googleState = crypto.randomBytes(20).toString("hex");
       req.session.pendingAuth = {
         nonce: "",
         codeVerifier: "",
         createdAt: Date.now(),
         redirectTarget,
+        googleState,
       };
       req.session.save((err) => {
         if (err) console.error("[google] Session save error before login:", err);
-        passport.authenticate("google", { scope: ["profile", "email"] })(req, res, next);
+        passport.authenticate("google", { scope: ["profile", "email"], state: googleState })(req, res, next);
       });
     });
 
     app.get(
       "/api/callback/google",
+      // State validation — must run before passport to prevent login-CSRF
+      (req, res, next) => {
+        const receivedState = req.query.state as string | undefined;
+        const pending = req.session.pendingAuth;
+        if (
+          !pending ||
+          !pending.googleState ||
+          !receivedState ||
+          receivedState !== pending.googleState
+        ) {
+          console.error("[google] State mismatch — possible CSRF attempt");
+          return res.redirect("/?error=auth_failed&message=" + encodeURIComponent("Session expired. Please try again."));
+        }
+        next();
+      },
       passport.authenticate("google", { failureRedirect: "/?error=auth_failed", session: false }),
       async (req, res) => {
         try {
-          const profile = req.user as any;
+          const profile = req.user as GoogleProfile;
+          const email = profile.emails?.[0]?.value;
+
+          if (!email) {
+            console.error("[google] No verified email in Google profile");
+            return res.redirect("/?error=auth_failed&message=" + encodeURIComponent("Google account has no accessible email."));
+          }
 
           const googleClaims: JWTClaims = {
             sub: `google:${profile.id}`,
-            email: profile.emails?.[0]?.value || "",
+            email,
             first_name: profile.name?.givenName || undefined,
             last_name: profile.name?.familyName || undefined,
             profile_image_url: profile.photos?.[0]?.value || undefined,
