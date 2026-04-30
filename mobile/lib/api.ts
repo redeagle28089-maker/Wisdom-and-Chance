@@ -305,6 +305,9 @@ export const api = {
   healthCheck: () =>
     apiRequest<{ status: string }>('/api/health'),
 
+  // Uses the shared /api/auth/identity endpoint (supports both session-cookie
+  // and Bearer JWT auth) rather than /api/mobile/auth/me so a single endpoint
+  // serves both web and mobile, keeping provider data in sync across platforms.
   getIdentity: () =>
     apiRequest<{
       id: string;
@@ -313,6 +316,7 @@ export const api = {
       lastName: string | null;
       profileImageUrl: string | null;
       linkedProviders: string[];
+      providerDetails: { provider: string; providerSub: string }[];
       createdAt: string;
     }>('/api/auth/identity', { auth: true }),
 };
