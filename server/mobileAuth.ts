@@ -2,9 +2,9 @@ import type { Express, Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { db } from "./db";
 import { users } from "@shared/schema";
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { seedStarterDecks } from "./starter-decks";
-import { upsertProviderLink, ProviderConflictError } from "./replit_integrations/auth/storage";
+import { authStorage, ProviderConflictError } from "./replit_integrations/auth";
 
 const JWT_SECRET = process.env.SESSION_SECRET;
 if (!JWT_SECRET) {
@@ -62,55 +62,30 @@ export function registerMobileAuthRoutes(app: Express) {
       // This also handles legacy accounts that were stored with mixed-case emails.
       const normalizedEmail: string = email.trim().toLowerCase();
 
-      // Case-insensitive lookup so existing mixed-case emails in the DB are matched correctly.
-      let [user] = await db
-        .select()
-        .from(users)
-        .where(sql`lower(${users.email}) = ${normalizedEmail}`);
-
-      if (!user) {
-        const [newUser] = await db
-          .insert(users)
-          .values({
-            email: normalizedEmail,
-            firstName: firstName || null,
-            lastName: lastName || null,
-            profileImageUrl: profileImageUrl || null,
-          })
-          .returning();
-        user = newUser;
-        console.log(`[mobile-auth:login] Created new account — userId=${user.id} email=${normalizedEmail}`);
-      } else {
-        console.log(`[mobile-auth:login] Found existing account — userId=${user.id} email=${normalizedEmail}`);
-        // Normalize stored email to lowercase and update profile fields if provided.
-        const updates: Record<string, unknown> = { email: normalizedEmail, updatedAt: new Date() };
-        if (firstName) updates.firstName = firstName;
-        if (lastName) updates.lastName = lastName;
-        if (profileImageUrl) updates.profileImageUrl = profileImageUrl;
-        const [updated] = await db
-          .update(users)
-          .set(updates)
-          .where(eq(users.id, user.id))
-          .returning();
-        user = updated;
-      }
-
-      // Record the mobile provider link so /api/auth/identity can report it.
-      // The provider sub for mobile logins is the normalized email (stable identifier
-      // since mobile accounts are keyed on email). A ProviderConflictError here
-      // would mean the same email is now claimed by two different user rows, which
-      // should not happen given the case-insensitive lookup above; log and surface
-      // it as an auth failure rather than silently continuing.
+      // Delegate user lookup, creation, update, and provider linking to the shared
+      // authStorage.upsertUser() so all account logic lives in one place.
+      // Resolution order (inherited from upsertUser): provider link first, then
+      // case-insensitive email, then create. This matches web auth precedence and
+      // is intentionally different from the old mobile-only path (email-first).
+      let user;
       try {
-        await upsertProviderLink(user.id, { provider: "mobile", providerSub: normalizedEmail });
-      } catch (linkError) {
-        if (linkError instanceof ProviderConflictError) {
-          console.error("[mobile-auth:login] Provider link conflict:", linkError.message);
+        user = await authStorage.upsertUser(
+          {
+            email: normalizedEmail,
+            ...(firstName ? { firstName } : {}),
+            ...(lastName ? { lastName } : {}),
+            ...(profileImageUrl ? { profileImageUrl } : {}),
+          },
+          { provider: "mobile", providerSub: normalizedEmail }
+        );
+      } catch (upsertError) {
+        if (upsertError instanceof ProviderConflictError) {
+          console.error("[mobile-auth:login] Provider link conflict:", upsertError.message);
           return res.status(409).json({
             error: "This email is already linked to a different account. Please contact support.",
           });
         }
-        throw linkError;
+        throw upsertError;
       }
 
       try {
