@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Smartphone, QrCode, ExternalLink, Download, Wifi } from "lucide-react";
@@ -6,6 +8,15 @@ import { SiExpo, SiApple, SiGoogleplay } from "react-icons/si";
 const EXPO_PROJECT_URL = "https://expo.dev/accounts/redeagle2808/projects/wisdom-chance-tcg";
 
 export default function MobileLinkPage() {
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+    if (!isMobile) {
+      setLocation("/");
+    }
+  }, [setLocation]);
+
   return (
     <div className="min-h-full p-4 md:p-8 max-w-4xl mx-auto" data-testid="page-mobile-link">
       <div className="text-center mb-8">

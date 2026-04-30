@@ -378,11 +378,13 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
           disabled={isLoading}
           onClick={() => {
             sessionStorage.setItem(POST_LOGIN_KEY, "true");
+            const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+            const loginUrl = `/api/login?redirect=${isMobile ? "mobile" : "web"}`;
             const isInIframe = window.self !== window.top;
             if (isInIframe) {
-              window.open("/api/login", "_blank");
+              window.open(loginUrl, "_blank");
             } else {
-              window.location.href = "/api/login";
+              window.location.href = loginUrl;
             }
           }}
         >
