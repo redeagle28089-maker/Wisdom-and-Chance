@@ -43,10 +43,12 @@ export default function ProfileScreen() {
   const achievementsQuery = useQuery({ queryKey: ['achievements'], queryFn: () => api.getAchievements() });
   const playerAchQuery = useQuery({ queryKey: ['player-achievements'], queryFn: () => api.getPlayerAchievements(), retry: false });
   const gamesQuery = useQuery({ queryKey: ['games'], queryFn: () => api.getGames(), retry: false });
+  const identityQuery = useQuery({ queryKey: ['identity'], queryFn: () => api.getIdentity(), retry: false });
 
   const stats = statsQuery.data;
   const rating = ratingQuery.data?.rating ?? 1000;
   const decks = decksQuery.data ?? [];
+  const linkedProviders: string[] = identityQuery.data?.linkedProviders ?? [];
   const achievements = achievementsQuery.data ?? [];
   const playerAch = playerAchQuery.data ?? [];
   const games = gamesQuery.data ?? [];
@@ -91,7 +93,7 @@ export default function ProfileScreen() {
       <ScrollView
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 100 + (Platform.OS === 'web' ? 34 : 0) }}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={false} onRefresh={() => { statsQuery.refetch(); ratingQuery.refetch(); gamesQuery.refetch(); }} tintColor={Colors.primary} />}
+        refreshControl={<RefreshControl refreshing={false} onRefresh={() => { statsQuery.refetch(); ratingQuery.refetch(); gamesQuery.refetch(); identityQuery.refetch(); }} tintColor={Colors.primary} />}
       >
         <LinearGradient
           colors={[Colors.primaryDark + '50', Colors.primary + '25', 'transparent']}
@@ -147,6 +149,40 @@ export default function ProfileScreen() {
           <View style={styles.achBar}>
             <View style={[styles.achFill, { width: `${achievements.length > 0 ? (completedAch / achievements.length) * 100 : 0}%` }]} />
           </View>
+        </View>
+
+        <View style={styles.card} testID="card-connected-accounts">
+          <Text style={styles.cardTitle}>Connected Accounts</Text>
+          {identityQuery.isLoading ? (
+            <View style={styles.providerStatusRow} testID="identity-loading">
+              <ActivityIndicator size="small" color={Colors.primary} />
+              <Text style={styles.providerStatus}>Loading connected accounts…</Text>
+            </View>
+          ) : identityQuery.isError ? (
+            <Text style={[styles.providerStatus, { color: Colors.error }]} testID="identity-error">
+              Unable to load connected accounts. Pull to refresh.
+            </Text>
+          ) : (
+            [
+              { key: 'replit', label: 'Replit', icon: 'code-slash' as IoniconsName, color: '#F26207' },
+              { key: 'google', label: 'Google', icon: 'logo-google' as IoniconsName, color: '#4285F4' },
+              { key: 'mobile', label: 'Mobile / Email', icon: 'phone-portrait-outline' as IoniconsName, color: Colors.success },
+            ].map(({ key, label, icon, color }) => {
+              const connected = linkedProviders.includes(key);
+              return (
+                <View key={key} style={[styles.providerRow, { backgroundColor: connected ? color + '18' : Colors.surfaceLight, borderColor: connected ? color + '50' : Colors.surfaceBorder }]} testID={`connected-account-${key}`}>
+                  <View style={[styles.providerIconWrap, { backgroundColor: connected ? color + '30' : Colors.surface }]}>
+                    <Ionicons name={icon} size={18} color={connected ? color : Colors.textMuted} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.providerLabel, { color: connected ? Colors.text : Colors.textMuted }]}>{label}</Text>
+                    <Text style={styles.providerStatus}>{connected ? 'Connected' : 'Not connected'}</Text>
+                  </View>
+                  {connected && <Ionicons name="checkmark-circle" size={20} color={Colors.success} testID={`icon-connected-${key}`} />}
+                </View>
+              );
+            })
+          )}
         </View>
 
         {favElement && (
@@ -223,4 +259,12 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: Colors.surfaceBorder,
   },
   actionBtnText: { fontFamily: 'Inter_500Medium', fontSize: 14, color: Colors.text },
+  providerRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12,
+    borderRadius: 10, borderWidth: 1,
+  },
+  providerIconWrap: { width: 36, height: 36, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  providerLabel: { fontFamily: 'Inter_500Medium', fontSize: 14 },
+  providerStatus: { fontFamily: 'Inter_400Regular', fontSize: 12, color: Colors.textMuted, marginTop: 2 },
+  providerStatusRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
 });

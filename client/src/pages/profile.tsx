@@ -18,11 +18,22 @@ import {
   TrendingUp,
   Target,
   History,
-  LogIn
+  LogIn,
+  Smartphone,
+  Link2,
+  CheckCircle2,
 } from "lucide-react";
+import { SiGoogle, SiReplit } from "react-icons/si";
 import { Link } from "wouter";
 import type { Deck, Commander, Game, Element } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
+
+interface IdentityResponse {
+  id: string;
+  email: string;
+  linkedProviders: string[];
+  providerDetails: { provider: string; providerSub: string }[];
+}
 
 const elementConfig: Record<Element, { icon: typeof Flame; color: string; bgColor: string }> = {
   Fire: { icon: Flame, color: "text-red-500", bgColor: "bg-red-600" },
@@ -51,6 +62,11 @@ export default function ProfilePage() {
 
   const { data: games = [] } = useQuery<Game[]>({
     queryKey: ["/api/games"],
+    enabled: !!user,
+  });
+
+  const { data: identity, isLoading: identityLoading, isError: identityError } = useQuery<IdentityResponse>({
+    queryKey: ["/api/auth/identity"],
     enabled: !!user,
   });
 
@@ -276,6 +292,76 @@ export default function ProfilePage() {
             </CardContent>
           </Card>
         </div>
+
+        <Card className="bg-slate-800/50 border-purple-500/20 mt-6" data-testid="card-connected-accounts">
+          <CardHeader>
+            <CardTitle className="text-white flex items-center gap-2">
+              <Link2 className="w-5 h-5 text-purple-400" />
+              Connected Accounts
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {identityLoading ? (
+              <div className="flex items-center gap-2 text-purple-400 py-2" data-testid="identity-loading">
+                <div className="w-4 h-4 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
+                <span className="text-sm">Loading connected accounts…</span>
+              </div>
+            ) : identityError ? (
+              <p className="text-sm text-slate-400 py-2" data-testid="identity-error">
+                Unable to load connected accounts. Try refreshing the page.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {[
+                  {
+                    key: "replit",
+                    label: "Replit",
+                    icon: <SiReplit className="w-5 h-5" />,
+                    color: "text-orange-400",
+                    bgColor: "bg-orange-500/20",
+                    borderColor: "border-orange-500/30",
+                  },
+                  {
+                    key: "google",
+                    label: "Google",
+                    icon: <SiGoogle className="w-5 h-5" />,
+                    color: "text-blue-400",
+                    bgColor: "bg-blue-500/20",
+                    borderColor: "border-blue-500/30",
+                  },
+                  {
+                    key: "mobile",
+                    label: "Mobile / Email",
+                    icon: <Smartphone className="w-5 h-5" />,
+                    color: "text-green-400",
+                    bgColor: "bg-green-500/20",
+                    borderColor: "border-green-500/30",
+                  },
+                ].map(({ key, label, icon, color, bgColor, borderColor }) => {
+                  const connected = identity?.linkedProviders?.includes(key) ?? false;
+                  return (
+                    <div
+                      key={key}
+                      className={`flex items-center gap-3 p-3 rounded-lg border ${connected ? `${bgColor} ${borderColor}` : "bg-slate-900/50 border-slate-700/50"}`}
+                      data-testid={`connected-account-${key}`}
+                    >
+                      <div className={`${color} flex items-center justify-center w-9 h-9 rounded-lg ${connected ? bgColor : "bg-slate-800"}`}>
+                        {icon}
+                      </div>
+                      <div className="flex-1">
+                        <p className={`font-medium ${connected ? "text-white" : "text-slate-400"}`}>{label}</p>
+                        <p className="text-xs text-purple-400/70">{connected ? "Connected" : "Not connected"}</p>
+                      </div>
+                      {connected && (
+                        <CheckCircle2 className="w-5 h-5 text-green-400" data-testid={`icon-connected-${key}`} />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {inProgress > 0 && (
           <Card className="bg-gradient-to-r from-yellow-600/30 to-orange-600/30 border-yellow-500/40 mt-6">
