@@ -672,7 +672,7 @@ export async function setupAuth(app: Express) {
           return res.redirect("/?error=auth_failed");
         }
         console.log("[auth] Login successful for user:", effectiveUserId);
-        res.redirect(redirectTarget === "mobile" ? "/mobile-app" : "/");
+        res.redirect("/");
       });
     } catch (error: unknown) {
       if (error instanceof ProviderConflictError) {
@@ -785,10 +785,9 @@ export async function setupAuth(app: Express) {
               console.error("[google] Login error:", err);
               return res.redirect("/?error=auth_failed");
             }
-            const redirectTarget = req.session.pendingAuth?.redirectTarget ?? "web";
             delete req.session.pendingAuth;
             console.log("[google] Login successful for user:", dbUser.id);
-            res.redirect(redirectTarget === "mobile" ? "/mobile-app" : "/");
+            res.redirect("/");
           });
         } catch (error: unknown) {
           if (error instanceof ProviderConflictError) {
