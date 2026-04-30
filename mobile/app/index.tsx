@@ -181,7 +181,7 @@ export default function LoginScreen() {
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
                   <>
-                    <Text style={styles.loginButtonText}>Enter the Arena</Text>
+                    <Text style={styles.loginButtonText}>Sign In</Text>
                     <Ionicons name="arrow-forward" size={20} color="#fff" />
                   </>
                 )}

@@ -76,9 +76,9 @@ function PostLoginSplash({ onDone }: { onDone: () => void }) {
         </div>
         <div style={{ textAlign: "center" }}>
           <h1 style={{ color: "white", fontSize: 28, fontWeight: 700, letterSpacing: "-0.5px", margin: 0 }}>
-            Welcome to the Arena
+            You're in!
           </h1>
-          <p style={{ color: "#c4b5fd", fontSize: 14, marginTop: 6 }}>Preparing your experience…</p>
+          <p style={{ color: "#c4b5fd", fontSize: 14, marginTop: 6 }}>Loading your account…</p>
         </div>
       </div>
       <style>{`
