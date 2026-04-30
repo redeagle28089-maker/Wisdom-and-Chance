@@ -1,8 +1,5 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import { db } from "./db";
-import { users } from "@shared/schema";
-import { eq } from "drizzle-orm";
 import { seedStarterDecks } from "./starter-decks";
 import { authStorage, ProviderConflictError } from "./replit_integrations/auth";
 
@@ -135,7 +132,7 @@ export function registerMobileAuthRoutes(app: Express) {
   app.get("/api/mobile/auth/me", isMobileAuthenticated, async (req: Request, res: Response) => {
     const mobileUser = (req as any).mobileUser as JWTPayload;
 
-    const [user] = await db.select().from(users).where(eq(users.id, mobileUser.userId));
+    const user = await authStorage.getUser(mobileUser.userId);
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
