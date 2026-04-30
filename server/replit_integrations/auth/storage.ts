@@ -431,6 +431,15 @@ export async function migrateEmailsToLowercase(): Promise<void> {
   }
 }
 
+// Return the list of provider names linked to a given user (e.g. ["mobile", "google"]).
+export async function getLinkedProviders(userId: string): Promise<string[]> {
+  const rows = await db
+    .select({ provider: userProviders.provider })
+    .from(userProviders)
+    .where(eq(userProviders.userId, userId));
+  return rows.map((r) => r.provider);
+}
+
 // Record a provider identity link for a canonical user.
 // Throws ProviderConflictError if the provider+sub is already linked to a DIFFERENT user.
 export async function upsertProviderLink(userId: string, providerInfo: ProviderInfo): Promise<void> {

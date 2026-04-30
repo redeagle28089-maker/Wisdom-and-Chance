@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { seedStarterDecks } from "./starter-decks";
-import { authStorage, ProviderConflictError } from "./replit_integrations/auth";
+import { authStorage, ProviderConflictError, getLinkedProviders } from "./replit_integrations/auth";
 
 const JWT_SECRET = process.env.SESSION_SECRET;
 if (!JWT_SECRET) {
@@ -137,12 +137,15 @@ export function registerMobileAuthRoutes(app: Express) {
       return res.status(404).json({ error: "User not found" });
     }
 
+    const linkedProviders = await getLinkedProviders(user.id);
+
     res.json({
       id: user.id,
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
       profileImageUrl: user.profileImageUrl,
+      linkedProviders,
     });
   });
 }
