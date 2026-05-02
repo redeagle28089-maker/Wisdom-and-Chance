@@ -1,8 +1,10 @@
-import { Link, useSearch } from "wouter";
+import { Link, useSearch, useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Swords, BookOpen, Layers, Database, Flame, Droplet, Mountain, Wind, Leaf, AlertTriangle, X } from "lucide-react";
+import { Swords, BookOpen, Layers, Database, Flame, Droplet, Mountain, Wind, Leaf, AlertTriangle, X, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useAuth } from "@/hooks/use-auth";
 
 const features = [
   {
@@ -45,19 +47,44 @@ const elements = [
 
 export default function HomePage() {
   const search = useSearch();
+  const [, setLocation] = useLocation();
+  const { isAuthenticated } = useAuth();
   const [authError, setAuthError] = useState<string | null>(null);
-  
+
+  const { data: adminCheck, isLoading: adminLoading } = useQuery<{ isAdmin: boolean }>({
+    queryKey: ["/api/admin/check"],
+    enabled: isAuthenticated,
+  });
+
   useEffect(() => {
     const params = new URLSearchParams(search);
     const error = params.get("error");
     const message = params.get("message");
-    
+
     if (error) {
       setAuthError(message || "Authentication failed. Please try again.");
-      // Clear the URL parameters after reading them
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, [search]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    if (adminLoading) return;
+    if (adminCheck && adminCheck.isAdmin === false) {
+      setLocation("/lobby");
+    }
+  }, [isAuthenticated, adminLoading, adminCheck, setLocation]);
+
+  if (isAuthenticated && (adminLoading || (adminCheck && !adminCheck.isAdmin))) {
+    return (
+      <div
+        className="min-h-full flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900/30 to-slate-900"
+        data-testid="home-admin-gate-loading"
+      >
+        <Loader2 className="w-8 h-8 text-purple-400 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-full bg-gradient-to-br from-slate-900 via-purple-900/30 to-slate-900">
