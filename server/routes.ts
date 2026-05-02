@@ -2117,6 +2117,45 @@ Return ONLY a raw JSON array, no prose, no markdown fences. Each element shape:
     res.json({ effects: ALLOWED_ABILITY_EFFECTS });
   });
 
+  // Generate cover art for a single AI-generated candidate. Reads optional
+  // written art-reference (free text) and an optional uploaded reference image
+  // (base64 data URL) from the request and feeds both into the existing
+  // generateImage pipeline.
+  const generateCandidateArtSchema = z.object({
+    kind: z.enum(["unit", "commander"]),
+    name: z.string().min(1).max(120),
+    element: z.enum(ELEMENTS),
+    description: z.string().max(500).optional(),
+    title: z.string().max(120).optional(),
+    artReferenceText: z.string().max(800).optional(),
+    artReferenceImageBase64: z.string().max(8_000_000).optional(),
+  });
+
+  app.post("/api/admin/generated-cards/generate-art", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const parseResult = generateCandidateArtSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ error: parseResult.error.flatten().fieldErrors });
+      }
+      const { kind, name, element, description, title, artReferenceText, artReferenceImageBase64 } = parseResult.data;
+
+      const subject = kind === "commander"
+        ? `the commander "${name}"${title ? `, the ${title}` : ""}`
+        : `the unit "${name}"`;
+      const desc = description ? ` ${description}` : "";
+      const artRef = artReferenceText ? ` Art-direction notes: ${artReferenceText}.` : "";
+      const refImageNote = artReferenceImageBase64 ? " Use the attached reference image as a strong stylistic and compositional anchor." : "";
+
+      const fullPrompt = `Create a fantasy trading card game artwork depicting ${subject}, themed around the ${element} element.${desc}${artRef}${refImageNote} Style: high-quality fantasy digital art, dramatic lighting, epic composition, single focal subject, no text, no UI elements, no card frame.`;
+
+      const imageDataUrl = await generateImage(fullPrompt, artReferenceImageBase64);
+      res.json({ imageUrl: imageDataUrl });
+    } catch (error) {
+      console.error("[ai-generator] Art generation error:", error);
+      res.status(500).json({ error: "Failed to generate art" });
+    }
+  });
+
   // Swap image from image database to a card
   app.post("/api/admin/swap-card-image", isAuthenticated, isAdmin, async (req, res) => {
     try {

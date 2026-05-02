@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Loader2, Wand2, Sparkles, Save, Check, X, ChevronDown, Shield, LogIn } from "lucide-react";
+import { Loader2, Wand2, Sparkles, Save, Check, X, ChevronDown, Shield, LogIn, Image as ImageIcon, Upload, Palette } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -28,43 +28,73 @@ type GenerateResponse = {
 };
 
 type SavedState = "idle" | "saving" | "saved" | "discarded" | "error";
+type ArtState = "idle" | "generating" | "done" | "error";
 
 function CandidateActions({
   index,
   state,
+  artState,
+  hasArt,
   onSave,
   onDiscard,
+  onGenerateArt,
 }: {
   index: number;
   state: SavedState;
+  artState: ArtState;
+  hasArt: boolean;
   onSave: () => void;
   onDiscard: () => void;
+  onGenerateArt: () => void;
 }) {
+  const generatingArt = artState === "generating";
   return (
-    <div className="flex gap-2">
+    <div className="space-y-2">
       <Button
         size="sm"
-        className="flex-1"
-        onClick={onSave}
-        disabled={state === "saving" || state === "saved" || state === "discarded"}
-        data-testid={`button-save-${index}`}
+        variant="secondary"
+        className="w-full"
+        onClick={onGenerateArt}
+        disabled={generatingArt || state === "saved" || state === "discarded"}
+        data-testid={`button-generate-art-${index}`}
       >
-        {state === "saving" && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}
-        {state === "saved" && <Check className="w-3 h-3 mr-1" />}
-        {state !== "saving" && state !== "saved" && <Save className="w-3 h-3 mr-1" />}
-        {state === "saved" ? "Saved" : state === "saving" ? "Saving…" : "Save"}
+        {generatingArt ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Palette className="w-3 h-3 mr-1" />}
+        {generatingArt ? "Generating art…" : hasArt ? "Regenerate art" : "Generate art"}
       </Button>
-      <Button
-        size="sm"
-        variant="outline"
-        onClick={onDiscard}
-        disabled={state === "saved" || state === "discarded"}
-        data-testid={`button-discard-${index}`}
-      >
-        <X className="w-3 h-3" />
-      </Button>
+      <div className="flex gap-2">
+        <Button
+          size="sm"
+          className="flex-1"
+          onClick={onSave}
+          disabled={state === "saving" || state === "saved" || state === "discarded"}
+          data-testid={`button-save-${index}`}
+        >
+          {state === "saving" && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}
+          {state === "saved" && <Check className="w-3 h-3 mr-1" />}
+          {state !== "saving" && state !== "saved" && <Save className="w-3 h-3 mr-1" />}
+          {state === "saved" ? "Saved" : state === "saving" ? "Saving…" : "Save"}
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={onDiscard}
+          disabled={state === "saved" || state === "discarded"}
+          data-testid={`button-discard-${index}`}
+        >
+          <X className="w-3 h-3" />
+        </Button>
+      </div>
     </div>
   );
+}
+
+async function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
 }
 
 export default function AdminAiGeneratorPage() {
@@ -84,8 +114,32 @@ export default function AdminAiGeneratorPage() {
   const [costMin, setCostMin] = useState<number>(0);
   const [costMax, setCostMax] = useState<number>(2);
   const [stylePrompt, setStylePrompt] = useState("");
+  const [artReferenceText, setArtReferenceText] = useState("");
+  const [artReferenceImage, setArtReferenceImage] = useState<string | null>(null);
+  const [artReferenceImageName, setArtReferenceImageName] = useState<string | null>(null);
   const [candidateStates, setCandidateStates] = useState<Record<number, SavedState>>({});
+  const [artStates, setArtStates] = useState<Record<number, ArtState>>({});
+  const [generatedArt, setGeneratedArt] = useState<Record<number, string>>({});
   const [results, setResults] = useState<GenerateResponse | null>(null);
+
+  const handleReferenceImageChange = async (file: File | null) => {
+    if (!file) {
+      setArtReferenceImage(null);
+      setArtReferenceImageName(null);
+      return;
+    }
+    if (file.size > 6 * 1024 * 1024) {
+      toast({ title: "Image too large", description: "Reference image must be under 6 MB.", variant: "destructive" });
+      return;
+    }
+    try {
+      const dataUrl = await fileToDataUrl(file);
+      setArtReferenceImage(dataUrl);
+      setArtReferenceImageName(file.name);
+    } catch {
+      toast({ title: "Could not read image", variant: "destructive" });
+    }
+  };
 
   const generateMutation = useMutation({
     mutationFn: async () => {
