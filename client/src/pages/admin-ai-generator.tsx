@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Loader2, Wand2, Sparkles, Save, Check, X, ChevronDown, Shield, LogIn, Image as ImageIcon, Upload, Palette } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
@@ -117,6 +118,7 @@ export default function AdminAiGeneratorPage() {
   const [artReferenceText, setArtReferenceText] = useState("");
   const [artReferenceImage, setArtReferenceImage] = useState<string | null>(null);
   const [artReferenceImageName, setArtReferenceImageName] = useState<string | null>(null);
+  const [autoGenerateArt, setAutoGenerateArt] = useState(false);
   const [candidateStates, setCandidateStates] = useState<Record<number, SavedState>>({});
   const [artStates, setArtStates] = useState<Record<number, ArtState>>({});
   const [generatedArt, setGeneratedArt] = useState<Record<number, string>>({});
@@ -141,6 +143,33 @@ export default function AdminAiGeneratorPage() {
     }
   };
 
+  const runArtGeneration = async (
+    index: number,
+    payload: InsertCard | InsertCommander,
+    candidateKind: Kind,
+  ): Promise<{ ok: true; index: number; imageUrl: string } | { ok: false; index: number; error: any }> => {
+    setArtStates((s) => ({ ...s, [index]: "generating" }));
+    try {
+      const body: any = {
+        kind: candidateKind,
+        name: (payload as any).name,
+        element: (payload as any).element,
+        description: (payload as any).description,
+      };
+      if (candidateKind === "commander") body.title = (payload as InsertCommander).title;
+      if (artReferenceText.trim()) body.artReferenceText = artReferenceText.trim();
+      if (artReferenceImage) body.artReferenceImageBase64 = artReferenceImage;
+      const res = await apiRequest("POST", "/api/admin/generated-cards/generate-art", body);
+      const data = (await res.json()) as { imageUrl: string };
+      setArtStates((s) => ({ ...s, [index]: "done" }));
+      setGeneratedArt((g) => ({ ...g, [index]: data.imageUrl }));
+      return { ok: true, index, imageUrl: data.imageUrl };
+    } catch (err: any) {
+      setArtStates((s) => ({ ...s, [index]: "error" }));
+      return { ok: false, index, error: err };
+    }
+  };
+
   const generateMutation = useMutation({
     mutationFn: async () => {
       const body: any = {
@@ -157,7 +186,7 @@ export default function AdminAiGeneratorPage() {
       const res = await apiRequest("POST", "/api/admin/generate-cards", body);
       return (await res.json()) as GenerateResponse;
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       setResults(data);
       setCandidateStates({});
       setArtStates({});
@@ -166,6 +195,25 @@ export default function AdminAiGeneratorPage() {
         title: "Generation complete",
         description: `${data.candidates.length} valid candidate(s) of ${data.totalReturnedByAi} returned (${data.rejectedCount} rejected by schema)`,
       });
+
+      if (autoGenerateArt && data.candidates.length > 0) {
+        toast({
+          title: "Generating art for all candidates…",
+          description: `Fanning out ${data.candidates.length} parallel image jobs.`,
+        });
+        const outcomes = await Promise.all(
+          data.candidates.map((payload, i) => runArtGeneration(i, payload, data.kind)),
+        );
+        const okCount = outcomes.filter((o) => o.ok).length;
+        const failCount = outcomes.length - okCount;
+        toast({
+          title: "Auto-art finished",
+          description: failCount === 0
+            ? `Generated art for ${okCount} candidate(s).`
+            : `Generated ${okCount} / ${outcomes.length}. ${failCount} failed — retry individually.`,
+          variant: failCount > 0 ? "destructive" : undefined,
+        });
+      }
     },
     onError: (error: any) => {
       toast({
@@ -209,27 +257,16 @@ export default function AdminAiGeneratorPage() {
 
   const artMutation = useMutation({
     mutationFn: async (args: { index: number; payload: InsertCard | InsertCommander }) => {
-      setArtStates((s) => ({ ...s, [args.index]: "generating" }));
-      const body: any = {
-        kind,
-        name: (args.payload as any).name,
-        element: (args.payload as any).element,
-        description: (args.payload as any).description,
-      };
-      if (kind === "commander") body.title = (args.payload as InsertCommander).title;
-      if (artReferenceText.trim()) body.artReferenceText = artReferenceText.trim();
-      if (artReferenceImage) body.artReferenceImageBase64 = artReferenceImage;
-      const res = await apiRequest("POST", "/api/admin/generated-cards/generate-art", body);
-      const data = (await res.json()) as { imageUrl: string };
-      return { index: args.index, imageUrl: data.imageUrl };
+      const outcome = await runArtGeneration(args.index, args.payload, kind);
+      if (!outcome.ok) {
+        throw outcome.error instanceof Error ? outcome.error : new Error("Could not generate art");
+      }
+      return outcome;
     },
-    onSuccess: ({ index, imageUrl }) => {
-      setArtStates((s) => ({ ...s, [index]: "done" }));
-      setGeneratedArt((g) => ({ ...g, [index]: imageUrl }));
+    onSuccess: () => {
       toast({ title: "Art generated", description: "Click Save to attach it to this candidate." });
     },
-    onError: (error: any, vars) => {
-      setArtStates((s) => ({ ...s, [vars.index]: "error" }));
+    onError: (error: any) => {
       toast({
         title: "Art generation failed",
         description: error?.message || "Could not generate art",
@@ -452,6 +489,23 @@ export default function AdminAiGeneratorPage() {
                   <span className="text-slate-400 text-xs truncate">{artReferenceImageName}</span>
                 </div>
               )}
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3 rounded-lg border border-purple-500/30 bg-slate-950/40 p-3">
+            <Switch
+              id="auto-generate-art"
+              checked={autoGenerateArt}
+              onCheckedChange={setAutoGenerateArt}
+              data-testid="switch-auto-generate-art"
+            />
+            <div className="space-y-0.5">
+              <Label htmlFor="auto-generate-art" className="text-white text-sm cursor-pointer">
+                Generate art now
+              </Label>
+              <p className="text-slate-400 text-xs">
+                After candidates are generated, fan out one parallel image job per candidate using the art-reference fields above. You can still regenerate art per-candidate afterwards.
+              </p>
             </div>
           </div>
 
