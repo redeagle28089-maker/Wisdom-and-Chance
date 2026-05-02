@@ -176,6 +176,7 @@ export const commanderAbilityEffectSchema = z
     const spec = ABILITY_EFFECT_BY_TYPE[effect.type];
     if (!spec) return;
 
+    // ----- value -----
     if (spec.acceptsValue) {
       if (effect.value === undefined || effect.value < 1) {
         ctx.addIssue({
@@ -184,17 +185,38 @@ export const commanderAbilityEffectSchema = z
           message: `Effect '${effect.type}' requires a positive integer value (1-20).`,
         });
       }
+    } else if (effect.value !== undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["value"],
+        message: `Effect '${effect.type}' does not accept a value field.`,
+      });
     }
 
-    if (spec.targetMode === "element" && effect.target !== undefined) {
-      const t = effect.target.toLowerCase();
-      if (!(ELEMENT_TARGETS as readonly string[]).includes(t)) {
+    // ----- target -----
+    if (spec.targetMode === "element") {
+      if (effect.target === undefined || effect.target === "") {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["target"],
-          message: `Effect '${effect.type}' target must be one of: ${ELEMENT_TARGETS.join(", ")}.`,
+          message: `Effect '${effect.type}' requires a target element (one of: ${ELEMENT_TARGETS.join(", ")}).`,
         });
+      } else {
+        const t = effect.target.toLowerCase();
+        if (!(ELEMENT_TARGETS as readonly string[]).includes(t)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["target"],
+            message: `Effect '${effect.type}' target must be one of: ${ELEMENT_TARGETS.join(", ")}.`,
+          });
+        }
       }
+    } else if (spec.targetMode === "none" && effect.target !== undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["target"],
+        message: `Effect '${effect.type}' does not accept a target field.`,
+      });
     }
   });
 

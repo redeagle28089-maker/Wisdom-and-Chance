@@ -29,6 +29,44 @@ type GenerateResponse = {
 
 type SavedState = "idle" | "saving" | "saved" | "discarded" | "error";
 
+function CandidateActions({
+  index,
+  state,
+  onSave,
+  onDiscard,
+}: {
+  index: number;
+  state: SavedState;
+  onSave: () => void;
+  onDiscard: () => void;
+}) {
+  return (
+    <div className="flex gap-2">
+      <Button
+        size="sm"
+        className="flex-1"
+        onClick={onSave}
+        disabled={state === "saving" || state === "saved" || state === "discarded"}
+        data-testid={`button-save-${index}`}
+      >
+        {state === "saving" && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}
+        {state === "saved" && <Check className="w-3 h-3 mr-1" />}
+        {state !== "saving" && state !== "saved" && <Save className="w-3 h-3 mr-1" />}
+        {state === "saved" ? "Saved" : state === "saving" ? "Saving…" : "Save"}
+      </Button>
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={onDiscard}
+        disabled={state === "saved" || state === "discarded"}
+        data-testid={`button-discard-${index}`}
+      >
+        <X className="w-3 h-3" />
+      </Button>
+    </div>
+  );
+}
+
 export default function AdminAiGeneratorPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
@@ -330,9 +368,9 @@ export default function AdminAiGeneratorPage() {
           <CardContent>
             {results.candidates.length === 0 ? (
               <p className="text-slate-400 text-sm">No valid candidates this batch — try generating again.</p>
-            ) : (
+            ) : results.kind === "unit" ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {results.candidates.map((payload, i) => {
+                {(results.candidates as InsertCard[]).map((payload, i) => {
                   const state = candidateStates[i] || "idle";
                   return (
                     <div
@@ -341,43 +379,53 @@ export default function AdminAiGeneratorPage() {
                       data-testid={`candidate-${i}`}
                     >
                       <div className="flex justify-center mb-3">
-                        {results.kind === "unit" ? (
-                          <CardWithPopup card={previewCard(payload as InsertCard, i)} size="xl" />
-                        ) : (
-                          <CommanderWithPopup commander={previewCommander(payload as InsertCommander, i)} size="xl" />
-                        )}
+                        <CardWithPopup card={previewCard(payload, i)} size="xl" />
                       </div>
                       <div className="text-center mb-3">
                         <div className="text-white font-semibold text-sm truncate" data-testid={`candidate-name-${i}`}>
-                          {(payload as any).name}
+                          {payload.name}
                         </div>
                         <div className="text-slate-400 text-xs">
-                          {(payload as any).element}{results.kind === "commander" ? ` • ${(payload as InsertCommander).abilities.length} abilities` : ` • Power ${(payload as InsertCard).power}`}
+                          {payload.element} • Power {payload.power}
                         </div>
                       </div>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          className="flex-1"
-                          onClick={() => saveMutation.mutate({ index: i, payload })}
-                          disabled={state === "saving" || state === "saved" || state === "discarded"}
-                          data-testid={`button-save-${i}`}
-                        >
-                          {state === "saving" && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}
-                          {state === "saved" && <Check className="w-3 h-3 mr-1" />}
-                          {state !== "saving" && state !== "saved" && <Save className="w-3 h-3 mr-1" />}
-                          {state === "saved" ? "Saved" : state === "saving" ? "Saving…" : "Save"}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleDiscard(i)}
-                          disabled={state === "saved" || state === "discarded"}
-                          data-testid={`button-discard-${i}`}
-                        >
-                          <X className="w-3 h-3" />
-                        </Button>
+                      <CandidateActions
+                        index={i}
+                        state={state}
+                        onSave={() => saveMutation.mutate({ index: i, payload })}
+                        onDiscard={() => handleDiscard(i)}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {(results.candidates as InsertCommander[]).map((payload, i) => {
+                  const state = candidateStates[i] || "idle";
+                  return (
+                    <div
+                      key={i}
+                      className={`p-3 rounded-lg border ${state === "saved" ? "border-emerald-500/60 bg-emerald-900/20" : state === "discarded" ? "border-slate-700 bg-slate-900/30 opacity-50" : "border-slate-700 bg-slate-800/40"}`}
+                      data-testid={`candidate-${i}`}
+                    >
+                      <div className="flex justify-center mb-3">
+                        <CommanderWithPopup commander={previewCommander(payload, i)} size="xl" />
                       </div>
+                      <div className="text-center mb-3">
+                        <div className="text-white font-semibold text-sm truncate" data-testid={`candidate-name-${i}`}>
+                          {payload.name}
+                        </div>
+                        <div className="text-slate-400 text-xs">
+                          {payload.element} • {payload.abilities.length} abilities
+                        </div>
+                      </div>
+                      <CandidateActions
+                        index={i}
+                        state={state}
+                        onSave={() => saveMutation.mutate({ index: i, payload })}
+                        onDiscard={() => handleDiscard(i)}
+                      />
                     </div>
                   );
                 })}
