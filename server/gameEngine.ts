@@ -112,7 +112,15 @@ interface ActivePvPGame {
   disconnectTimers: Map<string, NodeJS.Timeout>;
   disconnectedPlayers: Set<string>;
   combatResolving: boolean;
+  seq: number;
+  turnTimer: NodeJS.Timeout | null;
+  turnDeadline: number | null;
+  consecutiveTimeouts: Map<string, number>;
+  recentActionIds: Map<string, Set<string>>;
+  broadcastHandler?: (eventType: string, payload: any) => void;
 }
+
+type EngineBroadcastHandler = (eventType: string, payload: any) => void;
 
 export interface SanitizedGameState {
   myHand: string[];
@@ -159,6 +167,10 @@ export interface SanitizedGameState {
   opponentNegateAndHalve?: boolean;
   protectedElement?: string;
   opponentProtectedElement?: string;
+  seq: number;
+  turnDeadline: number | null;
+  responsiblePlayerIds: string[];
+  consecutiveTimeouts: { player1: number; player2: number };
 }
 
 export interface CombatResult {
@@ -228,7 +240,19 @@ class ServerGameEngine {
       disconnectTimers: new Map(),
       disconnectedPlayers: new Set(),
       combatResolving: false,
+      seq: 0,
+      turnTimer: null,
+      turnDeadline: null,
+      consecutiveTimeouts: new Map(),
+      recentActionIds: new Map(),
     });
+    // Start the inactivity turn timer for the initial phase.
+    this.scheduleTurnTimer(game.id);
+  }
+
+  setBroadcastHandler(gameId: string, handler: EngineBroadcastHandler): void {
+    const active = this.activeGames.get(gameId);
+    if (active) active.broadcastHandler = handler;
   }
 
   getActiveGame(gameId: string): ActivePvPGame | undefined {
@@ -241,7 +265,206 @@ class ServerGameEngine {
       for (const timer of active.disconnectTimers.values()) {
         clearTimeout(timer);
       }
+      if (active.turnTimer) {
+        clearTimeout(active.turnTimer);
+        active.turnTimer = null;
+      }
       this.activeGames.delete(gameId);
+    }
+  }
+
+  /**
+   * Idempotency check for client-supplied action ids. Returns true if the
+   * (playerId, clientActionId) pair was already seen — in which case the
+   * caller should silently no-op rather than re-execute the action.
+   * Cap retained ids per player at 32 to avoid unbounded growth.
+   */
+  markActionSeen(gameId: string, playerId: string, clientActionId?: string): boolean {
+    if (!clientActionId) return false;
+    const active = this.activeGames.get(gameId);
+    if (!active) return false;
+    let set = active.recentActionIds.get(playerId);
+    if (!set) {
+      set = new Set();
+      active.recentActionIds.set(playerId, set);
+    }
+    if (set.has(clientActionId)) return true;
+    set.add(clientActionId);
+    if (set.size > 32) {
+      const first = set.values().next().value;
+      if (first) set.delete(first);
+    }
+    return false;
+  }
+
+  /**
+   * Reset the consecutive-timeout counter for a player who took a manual
+   * action — they're clearly not AFK.
+   */
+  noteManualAction(gameId: string, playerId: string): void {
+    const active = this.activeGames.get(gameId);
+    if (!active) return;
+    active.consecutiveTimeouts.set(playerId, 0);
+  }
+
+  /**
+   * Bump the monotonic state-change sequence and re-arm the per-game turn
+   * inactivity timer. Call this after every successful state mutation so the
+   * client can drop stale updates and so AFK detection stays current.
+   */
+  private bumpSeqAndReschedule(gameId: string): void {
+    const active = this.activeGames.get(gameId);
+    if (!active) return;
+    active.seq += 1;
+    this.scheduleTurnTimer(gameId);
+  }
+
+  /**
+   * Compute which player ids are currently expected to act for the active
+   * phase. Used both to render the UI ("opponent's turn — thinking…") and
+   * to know whose timeout counter to bump on inactivity.
+   */
+  private getResponsiblePlayerIds(active: ActivePvPGame): string[] {
+    const game = active.game;
+    if (game.status !== "in_progress") return [];
+    const p1 = game.player1Id;
+    const p2 = game.player2Id;
+    if (!p2) return [];
+    switch (game.currentPhase) {
+      case "draw":
+        return [
+          ...(active.player1DrawnThisTurn ? [] : [p1]),
+          ...(active.player2DrawnThisTurn ? [] : [p2]),
+        ];
+      case "deployment":
+        return [
+          ...(active.player1Deployed ? [] : [p1]),
+          ...(active.player2Deployed ? [] : [p2]),
+        ];
+      case "combat":
+        return [
+          ...(active.player1TurnEnded ? [] : [p1]),
+          ...(active.player2TurnEnded ? [] : [p2]),
+        ];
+      default:
+        return [];
+    }
+  }
+
+  private scheduleTurnTimer(gameId: string): void {
+    const active = this.activeGames.get(gameId);
+    if (!active) return;
+    if (active.turnTimer) {
+      clearTimeout(active.turnTimer);
+      active.turnTimer = null;
+    }
+    if (active.game.status !== "in_progress") {
+      active.turnDeadline = null;
+      return;
+    }
+    const responsible = this.getResponsiblePlayerIds(active);
+    if (responsible.length === 0) {
+      active.turnDeadline = null;
+      return;
+    }
+    const ms = Number(process.env.MP_TURN_TIMEOUT_MS) || 60_000;
+    active.turnDeadline = Date.now() + ms;
+    active.turnTimer = setTimeout(() => {
+      this.onTurnTimeout(gameId).catch((err) => {
+        console.error(`[gameEngine] turn-timer error for ${gameId}:`, err);
+      });
+    }, ms);
+  }
+
+  /**
+   * Auto-advance the game when a turn-timer expires:
+   *   - increment each responsible player's consecutive-timeout strike
+   *   - if any player hits 3 strikes, forfeit them
+   *   - otherwise, auto-execute their pending action (auto-draw, auto-deploy,
+   *     auto-end-turn) so the game keeps moving
+   * Then re-arm the timer for whatever phase we land in.
+   */
+  private async onTurnTimeout(gameId: string): Promise<void> {
+    const active = this.activeGames.get(gameId);
+    if (!active) return;
+    if (active.game.status !== "in_progress") return;
+
+    active.turnTimer = null;
+    active.turnDeadline = null;
+
+    const responsible = this.getResponsiblePlayerIds(active);
+    if (responsible.length === 0) return;
+
+    // First, count strikes and check for any 3-strike forfeit.
+    for (const pid of responsible) {
+      const next = (active.consecutiveTimeouts.get(pid) || 0) + 1;
+      active.consecutiveTimeouts.set(pid, next);
+      if (next >= 3) {
+        const result = await this.forfeitGame(gameId, pid, "turn_timeout_forfeit");
+        if (result.success && result.type === "game_over") {
+          active.broadcastHandler?.("turn_timeout_forfeit", {
+            gameId,
+            forfeitedPlayerId: pid,
+            winnerId: result.winnerId,
+          });
+          active.broadcastHandler?.("game_over_from_timeout", {
+            gameId,
+            winnerId: result.winnerId,
+            reason: result.reason,
+          });
+        }
+        return;
+      }
+    }
+
+    // No forfeit yet — auto-execute each responsible player's pending action.
+    active.broadcastHandler?.("turn_timeout", {
+      gameId,
+      players: responsible.slice(),
+      strikes: responsible.map((pid) => ({
+        playerId: pid,
+        consecutive: active.consecutiveTimeouts.get(pid) || 0,
+      })),
+    });
+
+    for (const pid of responsible) {
+      try {
+        await this.autoActionForPlayer(gameId, pid);
+      } catch (err) {
+        console.error(`[gameEngine] auto-action failed for ${pid}:`, err);
+      }
+    }
+
+    // After auto-actions, broadcast latest state and re-arm.
+    active.broadcastHandler?.("state_advance", { gameId });
+    this.scheduleTurnTimer(gameId);
+  }
+
+  private async autoActionForPlayer(gameId: string, playerId: string): Promise<void> {
+    const active = this.activeGames.get(gameId);
+    if (!active) return;
+    const game = active.game;
+    if (game.status !== "in_progress") return;
+    const isP1 = this.isPlayer1(game, playerId);
+    const phase = game.currentPhase;
+
+    if (phase === "draw") {
+      const drawn = isP1 ? active.player1DrawnThisTurn : active.player2DrawnThisTurn;
+      if (!drawn) await this.processDrawPhase(gameId, playerId);
+    } else if (phase === "deployment") {
+      const deployed = isP1 ? active.player1Deployed : active.player2Deployed;
+      if (!deployed) {
+        const gs = game.gameState;
+        const hand = isP1 ? gs.player1Hand : gs.player2Hand;
+        const modeConfig = this.getGameMode(game);
+        const extra = (isP1 ? gs.player1ExtraDeploy : gs.player2ExtraDeploy) || 0;
+        const want = Math.min(modeConfig.cardsToDeploy + extra, hand.length);
+        const cardIds = hand.slice(0, want);
+        await this.processDeployment(gameId, playerId, cardIds);
+      }
+    } else if (phase === "combat") {
+      const ended = isP1 ? active.player1TurnEnded : active.player2TurnEnded;
+      if (!ended) await this.processEndTurn(gameId, playerId);
     }
   }
 
@@ -1187,6 +1410,13 @@ class ServerGameEngine {
       opponentNegateAndHalve: isP1 ? gs.player2NegateAndHalve : gs.player1NegateAndHalve,
       protectedElement: isP1 ? gs.player1ProtectedElement : gs.player2ProtectedElement,
       opponentProtectedElement: isP1 ? gs.player2ProtectedElement : gs.player1ProtectedElement,
+      seq: active.seq,
+      turnDeadline: active.turnDeadline,
+      responsiblePlayerIds: this.getResponsiblePlayerIds(active),
+      consecutiveTimeouts: {
+        player1: active.consecutiveTimeouts.get(game.player1Id) || 0,
+        player2: active.consecutiveTimeouts.get(game.player2Id || "") || 0,
+      },
     };
   }
 
@@ -1262,6 +1492,10 @@ class ServerGameEngine {
       winnerId: game.winnerId,
       gameState: game.gameState,
     });
+    // Stamp a monotonic seq on every successful state mutation and
+    // re-arm the inactivity turn timer for whatever phase we landed in.
+    // Clients use seq to drop stale game_state messages after reconnect.
+    this.bumpSeqAndReschedule(game.id);
   }
 }
 

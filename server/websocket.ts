@@ -19,6 +19,13 @@ interface ConnectedUser {
   roomId?: string;
   gameId?: string;
   displayName?: string;
+  isAlive?: boolean;
+  lastPongAt?: number;
+}
+
+const HEARTBEAT_INTERVAL_MS = 15_000;
+function getHeartbeatTimeoutMs(): number {
+  return Number(process.env.MP_HEARTBEAT_TIMEOUT_MS) || 45_000;
 }
 
 interface WSMessage {
@@ -38,10 +45,52 @@ class GameWebSocketServer {
   private rooms: Map<string, Set<string>> = new Map();
   private games: Map<string, Set<string>> = new Map();
 
+  private heartbeatInterval: NodeJS.Timeout | null = null;
+
   constructor(server: Server) {
     this.wss = new WebSocketServer({ server, path: "/ws" });
     this.setupHandlers();
+    this.startHeartbeatLoop();
     log("WebSocket server initialized on /ws", "websocket");
+  }
+
+  /**
+   * Per-connection heartbeat watchdog (lag handling, task #63). Every
+   * HEARTBEAT_INTERVAL_MS we send a low-level WS ping frame to each socket.
+   * The native pong handler stamps lastPongAt. Any socket whose pong is
+   * older than MP_HEARTBEAT_TIMEOUT_MS (default 45s) is force-terminated so
+   * the close handler runs (triggering the disconnect-forfeit timer) and
+   * the client reconnects fresh — preventing "ghost players" on stalled
+   * NAT/proxy connections.
+   */
+  private startHeartbeatLoop() {
+    if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
+    this.heartbeatInterval = setInterval(() => this.runHeartbeatTickOnce(), HEARTBEAT_INTERVAL_MS);
+  }
+
+  /**
+   * One heartbeat iteration — exposed publicly so an admin test endpoint
+   * can fire it on demand instead of waiting up to HEARTBEAT_INTERVAL_MS
+   * (15 s) for the natural tick (lag handling, task #63). Pass a
+   * `targetUserId` to scope the iteration to a single connection (used by
+   * the hardening test so a shortened timeout doesn't take out unrelated
+   * live test clients whose pong is older than the test threshold).
+   */
+  public runHeartbeatTickOnce(targetUserId?: string) {
+    const now = Date.now();
+    const timeoutMs = getHeartbeatTimeoutMs();
+    for (const [userId, user] of Array.from(this.users.entries())) {
+      if (targetUserId && userId !== targetUserId) continue;
+      const ws = user.ws;
+      if (ws.readyState !== WebSocket.OPEN) continue;
+      const lastPong = user.lastPongAt ?? now;
+      if (now - lastPong > timeoutMs) {
+        log(`Heartbeat timeout for user ${userId} — terminating socket`, "websocket");
+        try { ws.terminate(); } catch {}
+        continue;
+      }
+      try { ws.ping(); } catch {}
+    }
   }
 
   private parseSessionFromRequest(req: IncomingMessage): Promise<AuthenticatedSession | null> {
@@ -199,10 +248,25 @@ class GameWebSocketServer {
       const userId = session.userId;
       const displayName = session.displayName || "Player";
       
-      this.users.set(userId, { id: userId, ws, displayName });
+      this.users.set(userId, {
+        id: userId,
+        ws,
+        displayName,
+        isAlive: true,
+        lastPongAt: Date.now(),
+      });
       this.broadcastPresence(userId, "online");
       log(`User ${userId} (${displayName}) authenticated`, "websocket");
-      
+
+      // Heartbeat: stamp lastPongAt whenever the client responds to a WS
+      // ping frame (sent by startHeartbeatLoop). The legacy app-level
+      // {type:"ping"} → {type:"pong"} handler below remains for older
+      // clients that don't speak native ping/pong.
+      ws.on("pong", () => {
+        const u = this.users.get(userId);
+        if (u) u.lastPongAt = Date.now();
+      });
+
       ws.send(JSON.stringify({ type: "auth_success", payload: { userId, displayName } }));
 
       ws.on("message", async (data: Buffer) => {
@@ -332,7 +396,13 @@ class GameWebSocketServer {
               break;
 
             case "ping":
-              ws.send(JSON.stringify({ type: "pong" }));
+              // Treat an app-level ping as proof of life as well, so the
+              // client's heartbeat code path also keeps lastPongAt fresh.
+              {
+                const u = this.users.get(userId);
+                if (u) u.lastPongAt = Date.now();
+              }
+              ws.send(JSON.stringify({ type: "pong", payload: { ts: Date.now() } }));
               break;
           }
         } catch (error) {
@@ -449,6 +519,7 @@ class GameWebSocketServer {
       const game = await storage.getGame(gameId);
       if (game && game.gameType === "multiplayer" && game.status === "in_progress") {
         await gameEngine.registerGame(game);
+        this.installEngineBroadcastHandler(gameId);
         const sanitized = gameEngine.getGameStateForPlayer(gameId, userId);
         if (sanitized) {
           this.sendToUser(userId, {
@@ -484,14 +555,69 @@ class GameWebSocketServer {
     log(`User ${userId} left game ${gameId}`, "websocket");
   }
 
+  /**
+   * Hook the engine's broadcast handler so timer-driven events (turn_timeout,
+   * auto-action state advance, timeout-forfeit game_over) reach connected
+   * players. Installed once per game registration.
+   */
+  /**
+   * Install the engine→WS broadcast bridge for a game. Public so the
+   * room `/start` route (which pre-registers the game in the engine
+   * before any client `join_game` arrives) can hook engine-initiated
+   * events (turn_timeout, state_advance, game_over_from_timeout) up to
+   * the websocket layer immediately. Otherwise the engine's turn-timer
+   * would fire into a no-op `active.broadcastHandler?.(...)`.
+   */
+  public ensureEngineBroadcastHandler(gameId: string): void {
+    this.installEngineBroadcastHandler(gameId);
+  }
+
+  private installEngineBroadcastHandler(gameId: string) {
+    gameEngine.setBroadcastHandler(gameId, async (eventType, eventPayload) => {
+      try {
+        if (eventType === "turn_timeout") {
+          this.broadcastToGame(gameId, { type: "turn_timeout", payload: eventPayload });
+          this.sendGameStateToPlayers(gameId);
+        } else if (eventType === "turn_timeout_forfeit") {
+          this.broadcastToGame(gameId, { type: "turn_timeout_forfeit", payload: eventPayload });
+        } else if (eventType === "state_advance") {
+          this.sendGameStateToPlayers(gameId);
+        } else if (eventType === "game_over_from_timeout") {
+          const active = gameEngine.getActiveGame(gameId);
+          this.broadcastToGame(gameId, {
+            type: "game_over",
+            payload: {
+              gameId,
+              winnerId: eventPayload.winnerId,
+              reason: eventPayload.reason,
+            },
+          });
+          if (active) {
+            handleGameEndRewards(
+              eventPayload.winnerId,
+              active.game.player1Id,
+              active.game.player2Id,
+              eventPayload.reason,
+            );
+          }
+          this.sendGameStateToPlayers(gameId);
+          gameEngine.removeGame(gameId);
+        }
+      } catch (e) {
+        log(`Engine broadcast handler error: ${e}`, "websocket");
+      }
+    });
+  }
+
   private async handleGameAction(userId: string, payload: any) {
-    const { gameId, action, data } = payload;
+    const { gameId, action, data, clientActionId } = payload;
 
     const activeGame = gameEngine.getActiveGame(gameId);
     if (!activeGame) {
       const game = await storage.getGame(gameId);
       if (game && game.gameType === "multiplayer" && game.status === "in_progress") {
         await gameEngine.registerGame(game);
+        this.installEngineBroadcastHandler(gameId);
       } else {
         this.broadcastToGame(gameId, {
           type: "game_update",
@@ -529,6 +655,21 @@ class GameWebSocketServer {
       });
       return;
     }
+
+    // Idempotency: if the client retried with the same clientActionId, ack
+    // by re-sending the latest state but don't re-execute the action. This
+    // makes "send → reconnect → resend the buffered message" safe (task #63).
+    if (clientActionId && gameEngine.markActionSeen(gameId, userId, String(clientActionId))) {
+      this.sendGameStateToPlayers(gameId);
+      this.sendToUser(userId, {
+        type: "action_ack",
+        payload: { gameId, clientActionId, duplicate: true },
+      });
+      return;
+    }
+
+    // Reset this player's consecutive-timeout counter — they're not AFK.
+    gameEngine.noteManualAction(gameId, userId);
 
     let result;
     switch (action) {
@@ -612,6 +753,15 @@ class GameWebSocketServer {
     }
 
     this.sendGameStateToPlayers(gameId);
+
+    // Acknowledge the action so the client can clear its "Sending…" badge
+    // even when the broadcast game_state doesn't visually change anything.
+    if (clientActionId) {
+      this.sendToUser(userId, {
+        type: "action_ack",
+        payload: { gameId, clientActionId, duplicate: false },
+      });
+    }
   }
 
   private sendGameStateToPlayers(gameId: string) {

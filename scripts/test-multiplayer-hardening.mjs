@@ -883,6 +883,143 @@ async function main() {
   });
 
   // ===========================================================================
+  // Lag handling (task #63): heartbeat watchdog, turn timer, idempotency
+  // ===========================================================================
+  await checkpoint("Reconnect P2 for lag-handling tests", async () => {
+    p2.events = [];
+    await p2.connectWS();
+  });
+
+  await checkpoint("Heartbeat watchdog terminates a dead WS connection", async () => {
+    // Use a brand-new client whose WS we can pause without breaking the
+    // reusable p1/p2/admin connections.
+    const dead = new TestClient("DEAD");
+    await dead.login(`${TEST_EMAIL_PREFIX}dead-${STAMP}@test.local`, "DeadSocket");
+    await dead.connectWS();
+    // Shorten the heartbeat-pong timeout, then pause the underlying socket
+    // so the ws library can no longer auto-respond to pings, then trigger
+    // one watchdog iteration and expect the server to ws.terminate() us.
+    await api("/api/admin/test/heartbeat-timeout", "POST", { ms: 200 }, admin.token);
+    dead.ws.pause();
+    await sleep(400);
+    // Scope the watchdog tick to ONLY the dead client so we don't take
+    // down the other live test connections whose lastPongAt is also older
+    // than 200 ms (the natural 15 s loop hasn't pinged them yet either).
+    await api("/api/admin/test/trigger-heartbeat", "POST", { userId: dead.userId }, admin.token);
+    await new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error("WS not terminated within 2s")), 2000);
+      if (dead.wsClosed) { clearTimeout(timer); resolve(); return; }
+      dead.ws.once("close", () => { clearTimeout(timer); resolve(); });
+    });
+    // Restore default heartbeat timeout
+    await api("/api/admin/test/heartbeat-timeout", "POST", { ms: 45000 }, admin.token);
+  });
+
+  let game3Id, room3Id;
+  await checkpoint("Setup game #3 for turn-timer auto-forfeit test", async () => {
+    // Shorten the per-turn timeout BEFORE the game is created so
+    // gameEngine.registerGame() picks up the test value when it arms the
+    // first turn timer. Setting it after the game starts would leave the
+    // already-scheduled 60 s timeout in flight and the test would hang.
+    await api("/api/admin/test/turn-timeout", "POST", { ms: 500 }, admin.token);
+    const room = await api("/api/rooms", "POST", { name: `hard-tt ${STAMP}` }, p1.token);
+    room3Id = room.id;
+    await api(`/api/rooms/${room3Id}/join`, "POST", {}, p2.token);
+    await api(`/api/rooms/${room3Id}/ready`, "POST", { ready: true, deckId: p1.deck.id }, p1.token);
+    await api(`/api/rooms/${room3Id}/ready`, "POST", { ready: true, deckId: p2.deck.id }, p2.token);
+    const game = await api(`/api/rooms/${room3Id}/start`, "POST", {}, p1.token);
+    game3Id = game.id;
+    p1.send("join_game", { gameId: game3Id });
+    p2.send("join_game", { gameId: game3Id });
+    await Promise.all([
+      p1.waitForAfter(p1.mark() - 1, (e) => e.type === "game_state" && e.payload.gameId === game3Id, 3000, "P1 g3 state"),
+      p2.waitForAfter(p2.mark() - 1, (e) => e.type === "game_state" && e.payload.gameId === game3Id, 3000, "P2 g3 state"),
+    ]);
+  });
+
+  await checkpoint("Turn timer auto-passes inactive players (turn_timeout fires)", async () => {
+    const m1 = p1.mark();
+    await p1.waitForAfter(
+      m1,
+      (e) => e.type === "turn_timeout" && e.payload?.gameId === game3Id,
+      4000,
+      "turn_timeout #1",
+    );
+  });
+
+  await checkpoint("3 consecutive turn timeouts → auto-forfeit + game_over", async () => {
+    // Continue not acting; engine should escalate to forfeit on the 3rd strike.
+    const ev = await p1.waitForAfter(
+      p1.mark() - 1,
+      (e) =>
+        e.type === "game_over" &&
+        e.payload?.gameId === game3Id &&
+        e.payload?.reason === "turn_timeout_forfeit",
+      6000,
+      "game_over via turn_timeout_forfeit",
+    );
+    if (!ev.payload.winnerId) throw new Error("missing winnerId on timeout forfeit");
+  });
+
+  let game4Id, room4Id;
+  await checkpoint("Setup game #4 for clientActionId idempotency test", async () => {
+    // Restore the default turn timeout BEFORE creating game4 so its
+    // initial timer is armed at the normal 60 s and doesn't auto-forfeit
+    // mid-test.
+    await api("/api/admin/test/turn-timeout", "POST", { ms: 60000 }, admin.token);
+    const room = await api("/api/rooms", "POST", { name: `hard-idem ${STAMP}` }, p1.token);
+    room4Id = room.id;
+    await api(`/api/rooms/${room4Id}/join`, "POST", {}, p2.token);
+    await api(`/api/rooms/${room4Id}/ready`, "POST", { ready: true, deckId: p1.deck.id }, p1.token);
+    await api(`/api/rooms/${room4Id}/ready`, "POST", { ready: true, deckId: p2.deck.id }, p2.token);
+    const game = await api(`/api/rooms/${room4Id}/start`, "POST", {}, p1.token);
+    game4Id = game.id;
+    p1.send("join_game", { gameId: game4Id });
+    p2.send("join_game", { gameId: game4Id });
+    await Promise.all([
+      p1.waitForAfter(p1.mark() - 1, (e) => e.type === "game_state" && e.payload.gameId === game4Id, 3000, "P1 g4 state"),
+      p2.waitForAfter(p2.mark() - 1, (e) => e.type === "game_state" && e.payload.gameId === game4Id, 3000, "P2 g4 state"),
+    ]);
+  });
+
+  await checkpoint("Duplicate clientActionId is idempotent (action_ack { duplicate: true })", async () => {
+    const actionId = `idem-${STAMP}-1`;
+    const m1 = p1.mark();
+    p1.send("game_action", { gameId: game4Id, action: "draw", clientActionId: actionId });
+    // First ack: duplicate=false; state should reflect myHasDrawn=true.
+    const firstAck = await p1.waitForAfter(
+      m1,
+      (e) => e.type === "action_ack" && e.payload?.clientActionId === actionId,
+      3000,
+      "first action_ack",
+    );
+    if (firstAck.payload.duplicate !== false) {
+      throw new Error(`expected duplicate=false on first send, got ${firstAck.payload.duplicate}`);
+    }
+    const drawnState = p1.events
+      .slice(m1)
+      .find((e) => e.type === "game_state" && e.payload?.gameId === game4Id && e.payload?.myHasDrawn === true);
+    if (!drawnState) throw new Error("expected game_state with myHasDrawn=true after first draw");
+    // Resend with the same clientActionId — must NOT execute, must ack
+    // duplicate=true, must NOT trigger an "already drawn" game_error.
+    const m2 = p1.mark();
+    p1.send("game_action", { gameId: game4Id, action: "draw", clientActionId: actionId });
+    const dupAck = await p1.waitForAfter(
+      m2,
+      (e) => e.type === "action_ack" && e.payload?.clientActionId === actionId,
+      3000,
+      "duplicate action_ack",
+    );
+    if (dupAck.payload.duplicate !== true) {
+      throw new Error(`expected duplicate=true on resend, got ${dupAck.payload.duplicate}`);
+    }
+    const errAfter = p1.events
+      .slice(m2)
+      .find((e) => e.type === "game_error" && /already drawn/i.test(e.payload?.error || ""));
+    if (errAfter) throw new Error("idempotency failed: server re-executed and emitted 'already drawn'");
+  });
+
+  // ===========================================================================
   // Cleanup
   // ===========================================================================
   await checkpoint("Restore default disconnect timeout", async () => {
@@ -903,12 +1040,14 @@ async function main() {
 
 main().catch(async (e) => {
   console.error("Fatal:", e);
-  // Best-effort: if we logged in as admin and shortened the disconnect timeout,
-  // restore the default before exiting so subsequent runs (or the dev server
-  // itself) don't keep the 800ms test value.
+  // Best-effort: if we logged in as admin and shortened any test-only
+  // timeouts, restore the defaults before exiting so subsequent runs (or
+  // the dev server itself) don't keep the test values.
   try {
     if (admin?.token) {
       await api("/api/admin/test/disconnect-timeout", "POST", { ms: 60000 }, admin.token);
+      await api("/api/admin/test/turn-timeout", "POST", { ms: 60000 }, admin.token);
+      await api("/api/admin/test/heartbeat-timeout", "POST", { ms: 45000 }, admin.token);
     }
   } catch {}
   try { await deleteTestData(); } catch {}

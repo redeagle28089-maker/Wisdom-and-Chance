@@ -561,6 +561,12 @@ export function registerMultiplayerRoutes(app: Express) {
       .where(eq(gameRooms.id, id));
 
     const wsServer = getWebSocketServer();
+    // Install the engine→WS broadcast bridge NOW so engine-initiated
+    // events (turn_timeout / state_advance / game_over_from_timeout)
+    // reach clients even before any player sends `join_game`. Without
+    // this, the turn-inactivity timer that registerGame just armed
+    // would fire into a no-op handler. (Lag handling, task #63.)
+    wsServer?.ensureEngineBroadcastHandler(game.id);
     wsServer?.sendToRoom(id, {
       type: "game_start",
       payload: { roomId: id, gameId: game.id },

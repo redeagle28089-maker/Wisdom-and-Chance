@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute, useLocation } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -1952,8 +1952,38 @@ export default function GameBoardPage() {
   const [waitingForOpponent, setWaitingForOpponent] = useState(false);
   const disconnectTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Lag handling (task #63):
+  // - sendingActionId: clientActionId of the most recent in-flight game_action.
+  //   Cleared on matching action_ack, and force-cleared after a 5 s safety
+  //   timeout in case the ack never arrives. Powers the "Sending…" badge.
+  // - turnDeadlineCountdown: derived seconds remaining until server-side
+  //   turn timeout, computed from serverState.turnDeadline.
+  // - isAIProcessing: true while the practice/AI executeAITurn() is mid-flight.
+  //   Disables player input and powers the "AI is thinking…" badge.
+  const [sendingActionId, setSendingActionId] = useState<string | null>(null);
+  const sendingActionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [turnDeadlineCountdown, setTurnDeadlineCountdown] = useState<number | null>(null);
+  const [isAIProcessing, setIsAIProcessing] = useState(false);
+
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
-  const { joinGame, leaveGame, subscribe, sendGameMessage, sendGameAction } = useWebSocket();
+  const { joinGame, leaveGame, subscribe, sendGameMessage, sendGameAction, isConnected: wsConnected, pendingCount: wsPendingCount } = useWebSocket();
+
+  /**
+   * Wrap sendGameAction so we can track the clientActionId for the
+   * "Sending…" badge. Returns the same id the underlying hook uses, so the
+   * matching action_ack message clears it. A 5 s safety timer also clears
+   * the badge in case the ack is dropped.
+   */
+  const trackedSendGameAction = useCallback((action: string, data: any): string | null => {
+    if (!gameId) return null;
+    const id = sendGameAction(gameId, action, data);
+    setSendingActionId(id);
+    if (sendingActionTimeoutRef.current) clearTimeout(sendingActionTimeoutRef.current);
+    sendingActionTimeoutRef.current = setTimeout(() => {
+      setSendingActionId((cur) => (cur === id ? null : cur));
+    }, 5000);
+    return id;
+  }, [gameId, sendGameAction]);
 
   const { data: game, isLoading, refetch: refetchGame } = useQuery<Game>({
     queryKey: ["/api/games", gameId],
@@ -1997,6 +2027,38 @@ export default function GameBoardPage() {
         setServerState(msg.payload);
         setWaitingForOpponent(false);
       }
+    }));
+
+    // Lag handling (task #63): clear the "Sending…" badge as soon as the
+    // server acknowledges the action.
+    unsubs.push(subscribe("action_ack", (msg) => {
+      if (msg.payload?.gameId !== gameId) return;
+      const ackId = msg.payload?.clientActionId;
+      setSendingActionId((cur) => (cur && cur === ackId ? null : cur));
+    }));
+
+    // Engine raised a turn-timeout — surface as a toast so the player
+    // understands why the state advanced without their input.
+    unsubs.push(subscribe("turn_timeout", (msg) => {
+      if (msg.payload?.gameId !== gameId) return;
+      const responsible: string[] = msg.payload?.responsiblePlayerIds || [];
+      const isMine = user?.id ? responsible.includes(user.id) : false;
+      toast({
+        title: isMine ? "Turn skipped due to inactivity" : "Opponent timed out",
+        description: isMine
+          ? "You took too long — the engine auto-advanced your turn."
+          : "Your opponent didn't act in time. The game continues.",
+        variant: isMine ? "destructive" : "default",
+      });
+    }));
+
+    unsubs.push(subscribe("turn_timeout_forfeit", (msg) => {
+      if (msg.payload?.gameId !== gameId) return;
+      toast({
+        title: "Game ended due to repeated inactivity",
+        description: "Three consecutive turn timeouts triggered an auto-forfeit.",
+        variant: "destructive",
+      });
     }));
 
     unsubs.push(subscribe("combat_result", (msg) => {
@@ -2114,7 +2176,33 @@ export default function GameBoardPage() {
     }));
 
     return () => unsubs.forEach(u => u());
-  }, [subscribe, gameId, user?.id, allCards, refetchGame, serverState?.isPlayer1]);
+  }, [subscribe, gameId, user?.id, allCards, refetchGame, serverState?.isPlayer1, toast]);
+
+  // Lag handling (task #63): per-second countdown derived from the
+  // server-stamped turnDeadline. Stops when the deadline elapses or there's
+  // no active deadline. Single interval, cleaned up on unmount.
+  useEffect(() => {
+    const deadline = serverState?.turnDeadline;
+    if (!deadline) {
+      setTurnDeadlineCountdown(null);
+      return;
+    }
+    const update = () => {
+      const remaining = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+      setTurnDeadlineCountdown(remaining);
+    };
+    update();
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
+  }, [serverState?.turnDeadline]);
+
+  // Lag handling (task #63): clear any pending Sending… badge timer on
+  // unmount to avoid setState-after-unmount warnings.
+  useEffect(() => {
+    return () => {
+      if (sendingActionTimeoutRef.current) clearTimeout(sendingActionTimeoutRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     const unsubscribe = subscribe("game_message", (msg) => {
@@ -2293,13 +2381,28 @@ export default function GameBoardPage() {
     if (updateGameMutation.isPending) return;
     
     aiExecutingRef.current = phaseKey;
+    // Lag handling (task #63): lock player input + show "AI is thinking…"
+    // badge for the full duration of the AI's turn (including stagger and
+    // combat-step pauses below).
+    setIsAIProcessing(true);
     
     const aiDifficulty = game.aiDifficulty || "medium";
     
     const executeAITurn = async () => {
       const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
       
-      await delay(800);
+      // Initial "thinking" beat. Combat-resolution phases get a longer
+      // 700 ms pause so the player can read the ability log and combat
+      // breakdown that's already on screen before the next state mutation
+      // fires (lag handling, task #63).
+      const PHASE_PAUSE: Record<string, number> = {
+        draw: 800,
+        deployment: 600,
+        combat: 700,
+        calculation: 700,
+        end: 700,
+      };
+      await delay(PHASE_PAUSE[game.currentPhase] ?? 700);
       
       if (game.currentPhase === "draw") {
         const aiDeck = [...game.gameState.player2Deck];
@@ -2382,7 +2485,12 @@ export default function GameBoardPage() {
           cardId,
           faceDown: true,
         }));
-        
+
+        // Lag handling (task #63): stagger ~250 ms per deployed card so the
+        // player perceives the AI thinking instead of all cards appearing in
+        // the same frame. The badge stays up until the mutation completes.
+        await delay(250 * Math.max(1, selectedCardIds.length));
+
         const newGameState = {
           ...game.gameState,
           player2Hand: newHand,
@@ -2714,7 +2822,12 @@ export default function GameBoardPage() {
       }
     };
     
-    executeAITurn();
+    executeAITurn().finally(() => {
+      // Lag handling (task #63): release the input lock once the phase's
+      // mutation has been queued. The aiExecutingRef guard prevents the
+      // next phase from re-entering before this useEffect re-runs.
+      setIsAIProcessing(false);
+    });
   }, [game, gameId, allCards, allCommanders, updateGameMutation, updateGameMutation.isPending, toast]);
 
   // Cleanup timers on unmount
@@ -2827,7 +2940,7 @@ export default function GameBoardPage() {
         toast({ title: "Not enough points to use this ability!", variant: "destructive" });
         return;
       }
-      sendGameAction(gameId, "use_ability", { abilityId: ability.id });
+      trackedSendGameAction("use_ability", { abilityId: ability.id });
       toast({ title: `Used ${ability.name}!` });
       return;
     }
@@ -3192,7 +3305,7 @@ export default function GameBoardPage() {
         toast({ title: "You already drew this turn!", variant: "destructive" });
         return;
       }
-      sendGameAction(gameId, "draw", {});
+      trackedSendGameAction("draw", {});
       toast({ title: `Drawing cards...` });
       return;
     }
@@ -3252,7 +3365,7 @@ export default function GameBoardPage() {
     }
 
     if (isMultiplayer && gameId) {
-      sendGameAction(gameId, "deploy", { cardIds: selectedCards });
+      trackedSendGameAction("deploy", { cardIds: selectedCards });
       setSelectedCards([]);
       setWaitingForOpponent(true);
       toast({ title: "Cards deployed! Waiting for opponent..." });
@@ -3345,7 +3458,7 @@ export default function GameBoardPage() {
 
   const handleEndTurnMultiplayer = () => {
     if (!isMultiplayer || !gameId) return;
-    sendGameAction(gameId, "end_turn", {});
+    trackedSendGameAction("end_turn", {});
     setWaitingForOpponent(true);
     toast({ title: "Turn ended. Waiting for opponent..." });
   };
@@ -3771,8 +3884,48 @@ export default function GameBoardPage() {
                   </span>
                 </div>
               )}
+              {/* Lag handling (task #63): "Sending…", "Reconnecting…", and
+                  per-turn deadline indicators for multiplayer; "AI is
+                  thinking…" badge for practice mode. */}
+              {isMultiplayer && !wsConnected && (
+                <div className="flex items-center gap-2 text-amber-300" data-testid="text-reconnecting">
+                  <div className="animate-pulse w-2 h-2 rounded-full bg-amber-400"></div>
+                  <span className="text-sm">
+                    Reconnecting{wsPendingCount > 0 ? ` (${wsPendingCount} queued)` : ""}…
+                  </span>
+                </div>
+              )}
+              {isMultiplayer && wsConnected && sendingActionId && (
+                <div className="flex items-center gap-2 text-cyan-300" data-testid="text-sending-action">
+                  <div className="animate-pulse w-2 h-2 rounded-full bg-cyan-400"></div>
+                  <span className="text-sm">Sending…</span>
+                </div>
+              )}
+              {isMultiplayer && useServerState && turnDeadlineCountdown !== null && !opponentDisconnected && (
+                <div
+                  className={`flex items-center gap-2 ${turnDeadlineCountdown <= 10 ? "text-red-300" : "text-slate-300"}`}
+                  data-testid="text-turn-deadline"
+                >
+                  <span className="text-sm">
+                    {serverState?.isMyTurn
+                      ? `Your turn — ${turnDeadlineCountdown}s left`
+                      : `Opponent's turn — thinking… ${turnDeadlineCountdown}s`}
+                  </span>
+                </div>
+              )}
+              {!isMultiplayer && isAIProcessing && (
+                <div className="flex items-center gap-2 text-amber-300" data-testid="text-ai-thinking">
+                  <div className="animate-pulse w-2 h-2 rounded-full bg-amber-400"></div>
+                  <span className="text-sm">AI is thinking…</span>
+                </div>
+              )}
               {effectivePhase === "draw" && (isMyTurn || isMultiplayer) && !(useServerState && serverState.myHasDrawn) && (
-                <Button onClick={handleDraw} className="bg-gradient-to-r from-cyan-600 to-blue-600" data-testid="button-draw">
+                <Button
+                  onClick={handleDraw}
+                  disabled={isAIProcessing || (isMultiplayer && !wsConnected)}
+                  className="bg-gradient-to-r from-cyan-600 to-blue-600"
+                  data-testid="button-draw"
+                >
                   <ArrowRight className="w-4 h-4 mr-2" />
                   Draw Cards
                 </Button>
@@ -3780,7 +3933,7 @@ export default function GameBoardPage() {
               {effectivePhase === "deployment" && (isMyTurn || (isMultiplayer && !(useServerState && serverState.myHasDeployed))) && (
                 <Button 
                   onClick={handleDeploy} 
-                  disabled={selectedCards.length !== cardsToDeploy}
+                  disabled={selectedCards.length !== cardsToDeploy || isAIProcessing || (isMultiplayer && !wsConnected)}
                   className="bg-gradient-to-r from-purple-600 to-pink-600"
                   data-testid="button-deploy"
                 >
@@ -3802,6 +3955,7 @@ export default function GameBoardPage() {
                   )}
                   <Button 
                     onClick={game.gameType === "practice" && combatPhaseTimerActive ? skipCombatPhaseTimer : handleCombat} 
+                    disabled={isAIProcessing || (isMultiplayer && !wsConnected)}
                     className="bg-gradient-to-r from-red-600 to-orange-600" 
                     data-testid="button-combat"
                   >

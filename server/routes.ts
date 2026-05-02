@@ -1502,6 +1502,41 @@ IMPORTANT:
     res.json({ disconnectTimeoutMs: ms });
   });
 
+  // Test-mode helper: admins can shorten the per-turn inactivity timer at
+  // runtime so integration tests don't have to wait 60s for a turn-timeout.
+  // Future scheduleTurnTimer() invocations read this env var fresh.
+  app.post("/api/admin/test/turn-timeout", isAuthenticated, isAdmin, async (req, res) => {
+    const ms = Number(req.body?.ms);
+    if (!Number.isFinite(ms) || ms < 100 || ms > 600_000) {
+      return res.status(400).json({ message: "ms must be a number between 100 and 600000" });
+    }
+    process.env.MP_TURN_TIMEOUT_MS = String(ms);
+    res.json({ turnTimeoutMs: ms });
+  });
+
+  // Test-mode helper: admins can shorten the WebSocket heartbeat-pong
+  // timeout at runtime so integration tests can verify heartbeat-loss
+  // termination without waiting 45s.
+  app.post("/api/admin/test/heartbeat-timeout", isAuthenticated, isAdmin, async (req, res) => {
+    const ms = Number(req.body?.ms);
+    if (!Number.isFinite(ms) || ms < 100 || ms > 600_000) {
+      return res.status(400).json({ message: "ms must be a number between 100 and 600000" });
+    }
+    process.env.MP_HEARTBEAT_TIMEOUT_MS = String(ms);
+    res.json({ heartbeatTimeoutMs: ms });
+  });
+
+  // Test-mode helper: fire one iteration of the heartbeat watchdog on
+  // demand instead of waiting the natural 15 s interval. Used by the
+  // hardening test to verify the watchdog terminates dead sockets.
+  app.post("/api/admin/test/trigger-heartbeat", isAuthenticated, isAdmin, async (req, res) => {
+    const wss = getWebSocketServer();
+    if (!wss) return res.status(503).json({ message: "WebSocket server not initialized" });
+    const userId = typeof req.body?.userId === "string" ? req.body.userId : undefined;
+    wss.runHeartbeatTickOnce(userId);
+    res.json({ ok: true, scopedTo: userId ?? null });
+  });
+
   app.get("/api/admin/feature-flags", isAuthenticated, isAdmin, async (_req, res) => {
     try {
       const flags = await db.select().from(featureFlags);

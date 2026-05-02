@@ -768,6 +768,15 @@ export default function GameBoardScreen() {
               <Text style={[styles.handToggleText, handView === 'abilities' && { color: '#FDE68A' }]}>Abilities</Text>
             </Pressable>
           </View>
+          {/* AI thinking badge (lag handling, task #63) — shown during the
+              brief AI deployment + combat resolution window so the player
+              sees that the game is in fact progressing rather than stuck. */}
+          {isProcessing && !isDeployPhase && (
+            <View style={styles.aiThinkingBadge}>
+              <ActivityIndicator size="small" color="#FBBF24" />
+              <Text style={styles.aiThinkingText}>AI is thinking…</Text>
+            </View>
+          )}
           {isDeployPhase && (
             <Pressable
               style={[styles.battleButton, isProcessing && { opacity: 0.5 }]}
@@ -775,7 +784,10 @@ export default function GameBoardScreen() {
               onPress={handleEndDeployment}
             >
               {isProcessing ? (
-                <ActivityIndicator size="small" color="#fff" />
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <ActivityIndicator size="small" color="#fff" />
+                  <Text style={styles.battleButtonText}>AI thinking…</Text>
+                </View>
               ) : (
                 <>
                   <MaterialCommunityIcons name="sword-cross" size={12} color="#fff" />
@@ -1336,6 +1348,14 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   battleButtonText: { fontFamily: 'Inter_700Bold', fontSize: 10, color: '#fff' },
+
+  aiThinkingBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: 'rgba(251, 191, 36, 0.18)',
+    borderColor: 'rgba(251, 191, 36, 0.55)', borderWidth: 1,
+    paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6,
+  },
+  aiThinkingText: { fontFamily: 'Inter_700Bold', fontSize: 9, color: '#FBBF24' },
 
   handCardArea: { overflow: 'hidden' },
   handHorizontalContent: { gap: 4, alignItems: 'center', paddingVertical: 2 },
