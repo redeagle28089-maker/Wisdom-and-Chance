@@ -65,6 +65,7 @@ interface ActivePvPGame {
   usedAbilities: Set<string>;
   disconnectTimers: Map<string, NodeJS.Timeout>;
   disconnectedPlayers: Set<string>;
+  combatResolving: boolean;
 }
 
 export interface SanitizedGameState {
@@ -180,6 +181,7 @@ class ServerGameEngine {
       usedAbilities: new Set(),
       disconnectTimers: new Map(),
       disconnectedPlayers: new Set(),
+      combatResolving: false,
     });
   }
 
@@ -663,11 +665,22 @@ class ServerGameEngine {
     else active.player2TurnEnded = true;
 
     if (active.player1TurnEnded && active.player2TurnEnded) {
-      const combatResult = await this.resolveCombat(gameId);
-      if (combatResult) {
-        return { success: true, type: "combat_result", combatResult };
+      // Guard against duplicate / racing end_turn messages re-entering combat
+      // resolution while the first invocation is still awaiting (resolveCombat
+      // has many awaits before it flips currentPhase off "combat").
+      if (active.combatResolving) {
+        return { success: false, error: "Combat is already resolving" };
       }
-      return { success: false, error: "Failed to resolve combat" };
+      active.combatResolving = true;
+      try {
+        const combatResult = await this.resolveCombat(gameId);
+        if (combatResult) {
+          return { success: true, type: "combat_result", combatResult };
+        }
+        return { success: false, error: "Failed to resolve combat" };
+      } finally {
+        active.combatResolving = false;
+      }
     }
 
     await this.persistGame(game);

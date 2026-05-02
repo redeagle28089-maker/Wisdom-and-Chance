@@ -335,6 +335,28 @@ async function main() {
     if (errs.length) throw new Error("WS join_room error: " + JSON.stringify(errs));
   });
 
+  await checkpoint("Spectator receives room_message broadcasts", async () => {
+    const ms = spec.mark();
+    const m2 = p2.mark();
+    const text = `hello-spec-${STAMP}`;
+    p1.send("room_message", { roomId, message: text });
+    // Spec must see it
+    const got = await spec.waitForAfter(
+      ms,
+      (e) => e.type === "room_message" && e.payload?.message?.includes(text) && e.payload?.senderId === p1.userId,
+      2000,
+      "spec room_message",
+    );
+    if (got.payload.roomId !== roomId) throw new Error("wrong roomId on spec broadcast");
+    // P2 (the other player) should also see it
+    await p2.waitForAfter(
+      m2,
+      (e) => e.type === "room_message" && e.payload?.message?.includes(text),
+      2000,
+      "P2 room_message",
+    );
+  });
+
   await checkpoint("Both ready and P1 starts the game", async () => {
     await api(`/api/rooms/${roomId}/ready`, "POST", { ready: true, deckId: p1.deck.id }, p1.token);
     await api(`/api/rooms/${roomId}/ready`, "POST", { ready: true, deckId: p2.deck.id }, p2.token);
@@ -398,6 +420,16 @@ async function main() {
     const m1 = p1.mark();
     p1.send("game_action", { gameId, action: "deploy", data: { cardIds: [s1.myHand[0], "not-a-real-card::99"] } });
     await p1.expectErrorAfter(m1, "not in hand", 2000, "deploy invalid card");
+  });
+
+  await checkpoint("Reject deploy with too few cards (< required)", async () => {
+    // requiredDeploy = min(maxDeploy, hand.length); when hand has >= 2 cards,
+    // requiredDeploy is 2 — sending only 1 must be rejected.
+    const s1 = p1.latestState();
+    if (s1.myHand.length < 2) throw new Error("precondition failed: hand < 2");
+    const m1 = p1.mark();
+    p1.send("game_action", { gameId, action: "deploy", data: { cardIds: [s1.myHand[0]] } });
+    await p1.expectErrorAfter(m1, "must deploy exactly", 2000, "deploy too few");
   });
 
   await checkpoint("Reject deploy with too many cards (> max)", async () => {
@@ -506,12 +538,31 @@ async function main() {
   // We're already in combat phase (turn 1) from the concurrency test.
   // Resolve turn 1 first.
   let traitObserved = { "Quick Strike": false, "Guardian": false, "Care Package": false };
-  await checkpoint("Resolve combat that already has cards on the field (turn 1)", async () => {
-    const r = await playThroughCombat();
+  await checkpoint("Concurrent end_turn → exactly one combat resolution (turn 1)", async () => {
+    // Fire 4 end_turn messages back-to-back: 2 from each player. Server must
+    // resolve combat exactly once; duplicates must be dropped (not produce a
+    // second combat_result, not double-resolve damage).
+    const m1 = p1.mark(), m2 = p2.mark();
+    p1.send("game_action", { gameId, action: "end_turn" });
+    p2.send("game_action", { gameId, action: "end_turn" });
+    p1.send("game_action", { gameId, action: "end_turn" });
+    p2.send("game_action", { gameId, action: "end_turn" });
+    const first = await p1.waitForAfter(m1, (e) => e.type === "combat_result", 5000, "combat_result");
+    // Wait a beat to catch any second resolution.
+    await sleep(400);
+    const combatsP1 = p1.events.slice(m1).filter((e) => e.type === "combat_result");
+    const combatsP2 = p2.events.slice(m2).filter((e) => e.type === "combat_result");
+    if (combatsP1.length !== 1) throw new Error(`P1 saw ${combatsP1.length} combat_results, expected 1`);
+    if (combatsP2.length !== 1) throw new Error(`P2 saw ${combatsP2.length} combat_results, expected 1`);
+    const r = first.payload;
     log("COMBAT", `t1 winner=${r.winner} dmg=${r.damage} P1QS=${r.combatSummary?.player1QuickStrikeDamage} P2QS=${r.combatSummary?.player2QuickStrikeDamage}`);
     if (r.combatSummary?.player1QuickStrikeDamage > 0 || r.combatSummary?.player2QuickStrikeDamage > 0) traitObserved["Quick Strike"] = true;
     if (r.combatSummary?.player1GuardianBlocked > 0 || r.combatSummary?.player2GuardianBlocked > 0) traitObserved["Guardian"] = true;
     if (r.combatSummary?.player1CardsDrawn > 0 || r.combatSummary?.player2CardsDrawn > 0) traitObserved["Care Package"] = true;
+    // Duplicate end_turn after combat resolves must be rejected with phase error
+    const me = p1.mark();
+    p1.send("game_action", { gameId, action: "end_turn" });
+    await p1.expectErrorAfter(me, "phase", 2000, "duplicate end_turn after combat");
   });
 
   await checkpoint("Trait observation across multiple turns", async () => {
@@ -804,19 +855,31 @@ async function main() {
   // ===========================================================================
   // Host promotion: when host leaves a waiting room with a guest, guest is promoted.
   // ===========================================================================
+  let promoRoomId;
   await checkpoint("Host promotion when host leaves a waiting room", async () => {
-    // P2 needs a fresh WS to call API; api uses HTTP so it's already fine via token.
     const room = await api("/api/rooms", "POST", { name: `hard-promo ${STAMP}` }, p1.token);
-    const r3Id = room.id;
-    await api(`/api/rooms/${r3Id}/join`, "POST", {}, p2.token);
-    let cur = await api(`/api/rooms/${r3Id}`, "GET", null, p1.token);
+    promoRoomId = room.id;
+    await api(`/api/rooms/${promoRoomId}/join`, "POST", {}, p2.token);
+    let cur = await api(`/api/rooms/${promoRoomId}`, "GET", null, p1.token);
     if (cur.hostId !== p1.userId || cur.guestId !== p2.userId) throw new Error("initial host/guest wrong");
-    await api(`/api/rooms/${r3Id}/leave`, "POST", {}, p1.token);
-    cur = await api(`/api/rooms/${r3Id}`, "GET", null, p2.token);
+    await api(`/api/rooms/${promoRoomId}/leave`, "POST", {}, p1.token);
+    cur = await api(`/api/rooms/${promoRoomId}`, "GET", null, p2.token);
     if (cur.hostId !== p2.userId) throw new Error(`expected P2 promoted to host, got hostId=${cur.hostId}`);
     if (cur.guestId !== null) throw new Error(`expected guestId null, got ${cur.guestId}`);
-    // Cleanup
-    await api(`/api/rooms/${r3Id}/leave`, "POST", {}, p2.token);
+  });
+
+  await checkpoint("Last occupant leaves → room is deleted", async () => {
+    // P2 (now sole host) leaves — room should be removed entirely.
+    await api(`/api/rooms/${promoRoomId}/leave`, "POST", {}, p2.token);
+    let threw = false;
+    try {
+      await api(`/api/rooms/${promoRoomId}`, "GET", null, p2.token);
+    } catch (e) {
+      threw = /404/.test(e.message);
+    }
+    if (!threw) throw new Error("room should have been deleted (404 expected)");
+    const dbRow = await pgClient.query(`SELECT id FROM game_rooms WHERE id = $1`, [promoRoomId]);
+    if (dbRow.rowCount !== 0) throw new Error("room still present in DB after both left");
   });
 
   // ===========================================================================
