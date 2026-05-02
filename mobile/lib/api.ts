@@ -60,13 +60,17 @@ const REMOTE_URL = 'https://wisdom-and-chance-2.replit.app';
 function getBaseUrl(): string {
   if (Platform.OS !== 'web') return REMOTE_URL;
 
-  if (typeof window !== 'undefined' && window.location) {
-    const { protocol, hostname } = window.location;
-    return `${protocol}//${hostname}:5000`;
-  }
-
   if (process.env.EXPO_PUBLIC_DOMAIN) {
     return `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
+  }
+
+  if (typeof window !== 'undefined' && window.location) {
+    const { protocol, hostname } = window.location;
+    // The web app is exposed on the canonical bare-domain (externalPort=80).
+    // When mobile-web is opened on the Expo subdomain (e.g. `<repl>.expo.picard.replit.dev`)
+    // or on `:8080`, strip the `expo.` prefix and any port to reach the web app's API.
+    const apiHost = hostname.replace(/^expo\./, '');
+    return `${protocol}//${apiHost}`;
   }
 
   return 'http://localhost:5000';

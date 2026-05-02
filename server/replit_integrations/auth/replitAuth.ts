@@ -541,10 +541,12 @@ export async function setupAuth(app: Express) {
 
   // Resolve the public hostname Replit OIDC was registered with. The workspace
   // canvas iframe sends a host header containing the dev port (`...replit.dev:5000`)
-  // which Replit's OIDC client does NOT have whitelisted as a callback URL —
-  // that produces the "This screen doesn't exist" page after sign-in. Prefer
-  // REPLIT_DOMAINS (canonical, port-less) whenever the request host carries a
-  // non-standard port. In production, REPLIT_DOMAINS is also set and is correct.
+  // which Replit's OIDC client does NOT have whitelisted as a callback URL.
+  // Prefer REPLIT_DOMAINS (canonical, port-less) whenever the request host
+  // carries a non-standard port. The .replit port mapping is configured so that
+  // localPort=5000 (web app) is exposed on externalPort=80, meaning the canonical
+  // bare-domain routes back to the web app's /api/callback after sign-in.
+  // In production, REPLIT_DOMAINS is also set and is correct.
   function resolveOidcHost(req: import("express").Request): string {
     const rawHost = req.get("host") || req.hostname;
     const hasNonStandardPort = /:\d+$/.test(rawHost) && !/:(80|443)$/.test(rawHost);
