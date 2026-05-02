@@ -196,7 +196,9 @@ export function PasscodeGate({ children }: { children: React.ReactNode }) {
   function handleLogin(provider: "replit" | "google") {
     sessionStorage.setItem(POST_LOGIN_KEY, "true");
     const base = provider === "google" ? "/api/login/google" : "/api/login";
-    const loginUrl = `${base}?redirect=web`;
+    // PC → web app, phones → mobile install page (server reads ?redirect=
+    // and routes the post-auth landing accordingly).
+    const loginUrl = `${base}?redirect=${isMobile ? "mobile" : "web"}`;
     const isInIframe = window.self !== window.top;
     if (isInIframe) {
       window.open(loginUrl, "_blank");

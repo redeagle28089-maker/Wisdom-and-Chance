@@ -539,11 +539,27 @@ export async function setupAuth(app: Express) {
   passport.serializeUser((user: Express.User, cb) => cb(null, user));
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
+  // Resolve the public hostname Replit OIDC was registered with. The workspace
+  // canvas iframe sends a host header containing the dev port (`...replit.dev:5000`)
+  // which Replit's OIDC client does NOT have whitelisted as a callback URL —
+  // that produces the "This screen doesn't exist" page after sign-in. Prefer
+  // REPLIT_DOMAINS (canonical, port-less) whenever the request host carries a
+  // non-standard port. In production, REPLIT_DOMAINS is also set and is correct.
+  function resolveOidcHost(req: import("express").Request): string {
+    const rawHost = req.get("host") || req.hostname;
+    const hasNonStandardPort = /:\d+$/.test(rawHost) && !/:(80|443)$/.test(rawHost);
+    if (hasNonStandardPort && process.env.REPLIT_DOMAINS) {
+      const canonical = process.env.REPLIT_DOMAINS.split(",")[0].trim();
+      if (canonical) return canonical;
+    }
+    return rawHost.replace(/:(80|443)$/, "");
+  }
+
   app.get("/api/login", async (req, res) => {
     try {
       const isProduction = process.env.REPLIT_DEPLOYMENT === "1";
-      const host = req.get("host") || req.hostname;
-      console.log("[auth] Login initiated from host:", host);
+      const host = resolveOidcHost(req);
+      console.log("[auth] Login initiated from host:", host, "(raw:", req.get("host"), ")");
       console.log("[auth] Environment:", isProduction ? "production" : "development");
       
       const metadata = await getOIDCMetadata();
@@ -608,8 +624,8 @@ export async function setupAuth(app: Express) {
 
   app.get("/api/callback", async (req, res) => {
     try {
-      const host = req.get("host") || req.hostname;
-      console.log("[auth] Callback received from host:", host);
+      const host = resolveOidcHost(req);
+      console.log("[auth] Callback received from host:", host, "(raw:", req.get("host"), ")");
       
       const { code, state, error: authError, error_description } = req.query as { 
         code?: string; 
@@ -690,8 +706,10 @@ export async function setupAuth(app: Express) {
           console.error("[auth] Login error after callback:", err);
           return res.redirect("/?error=auth_failed");
         }
-        console.log("[auth] Login successful for user:", effectiveUserId);
-        res.redirect("/");
+        console.log("[auth] Login successful for user:", effectiveUserId, "→ redirect:", redirectTarget);
+        // Honor the device hint captured at /api/login: PC users land on the
+        // web app ("/"), mobile users on the Expo download page ("/mobile-app").
+        res.redirect(redirectTarget === "mobile" ? "/mobile-app" : "/");
       });
     } catch (error: unknown) {
       if (error instanceof ProviderConflictError) {
@@ -799,14 +817,16 @@ export async function setupAuth(app: Express) {
             provider: "google",
           };
 
+          const googleRedirectTarget = req.session.pendingAuth?.redirectTarget ?? "web";
           req.login(sessionUser, (err) => {
             if (err) {
               console.error("[google] Login error:", err);
               return res.redirect("/?error=auth_failed");
             }
             delete req.session.pendingAuth;
-            console.log("[google] Login successful for user:", dbUser.id);
-            res.redirect("/");
+            console.log("[google] Login successful for user:", dbUser.id, "→ redirect:", googleRedirectTarget);
+            // Match Replit OIDC: PC → web app, mobile → Expo install page.
+            res.redirect(googleRedirectTarget === "mobile" ? "/mobile-app" : "/");
           });
         } catch (error: unknown) {
           if (error instanceof ProviderConflictError) {
