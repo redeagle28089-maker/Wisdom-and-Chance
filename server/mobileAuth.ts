@@ -31,33 +31,45 @@ function verifyToken(token: string): JWTPayload | null {
 }
 
 export function isMobileAuthenticated(req: Request, res: Response, next: NextFunction) {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res.status(401).json({ error: "Missing or invalid Authorization header" });
-  }
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      console.warn("[mobile-auth] Auth rejected: missing or malformed Authorization header");
+      return res.status(401).json({ error: "Missing or invalid Authorization header" });
+    }
 
-  const token = authHeader.split(" ")[1];
-  const payload = verifyToken(token);
-  if (!payload) {
-    return res.status(401).json({ error: "Invalid or expired token" });
-  }
+    const token = authHeader.split(" ")[1];
+    const payload = verifyToken(token);
+    if (!payload) {
+      console.warn("[mobile-auth] Auth rejected: invalid or expired token");
+      return res.status(401).json({ error: "Invalid or expired token" });
+    }
 
-  (req as any).mobileUser = payload;
-  next();
+    (req as any).mobileUser = payload;
+    next();
+  } catch (error: any) {
+    console.error("[mobile-auth] Authentication middleware error:", error);
+    res.status(500).json({ error: "Authentication check failed" });
+  }
 }
 
 export function registerMobileAuthRoutes(app: Express) {
   app.post("/api/mobile/auth/login", async (req: Request, res: Response) => {
     try {
-      const { email, provider, providerToken, firstName, lastName, profileImageUrl } = req.body;
+      const body = req.body ?? {};
+      const { email, firstName, lastName, profileImageUrl } = body;
 
-      if (!email) {
+      if (!email || typeof email !== "string") {
         return res.status(400).json({ error: "Email is required — email is needed for cross-platform account linking" });
       }
 
       // Normalize email to lowercase for consistent cross-platform matching.
       // This also handles legacy accounts that were stored with mixed-case emails.
       const normalizedEmail: string = email.trim().toLowerCase();
+
+      if (!normalizedEmail) {
+        return res.status(400).json({ error: "Email is required — email is needed for cross-platform account linking" });
+      }
 
       // Delegate user lookup, creation, update, and provider linking to the shared
       // authStorage.upsertUser() so all account logic lives in one place.
@@ -69,15 +81,15 @@ export function registerMobileAuthRoutes(app: Express) {
         user = await authStorage.upsertUser(
           {
             email: normalizedEmail,
-            ...(firstName ? { firstName } : {}),
-            ...(lastName ? { lastName } : {}),
-            ...(profileImageUrl ? { profileImageUrl } : {}),
+            ...(typeof firstName === "string" ? { firstName } : {}),
+            ...(typeof lastName === "string" ? { lastName } : {}),
+            ...(typeof profileImageUrl === "string" ? { profileImageUrl } : {}),
           },
           { provider: "mobile", providerSub: normalizedEmail }
         );
       } catch (upsertError) {
         if (upsertError instanceof ProviderConflictError) {
-          console.error("[mobile-auth:login] Provider link conflict:", upsertError.message);
+          console.error("[mobile-auth] Provider link conflict on login:", upsertError.message);
           return res.status(409).json({
             error: "This email is already linked to a different account. Please contact support.",
           });
@@ -101,6 +113,7 @@ export function registerMobileAuthRoutes(app: Express) {
 
       const token = generateToken({ userId: user.id, email: user.email || normalizedEmail });
       if (!token) {
+        console.error("[mobile-auth] Cannot issue login token: SESSION_SECRET not configured");
         return res.status(503).json({ error: "Mobile auth is not configured" });
       }
 
@@ -121,10 +134,16 @@ export function registerMobileAuthRoutes(app: Express) {
   });
 
   app.post("/api/mobile/auth/refresh", isMobileAuthenticated, async (req: Request, res: Response) => {
-    const mobileUser = (req as any).mobileUser as JWTPayload;
     try {
+      const mobileUser = (req as any).mobileUser as JWTPayload | undefined;
+      if (!mobileUser) {
+        console.error("[mobile-auth] Refresh called without authenticated mobile user");
+        return res.status(401).json({ error: "Invalid or expired token" });
+      }
+
       const token = generateToken({ userId: mobileUser.userId, email: mobileUser.email });
       if (!token) {
+        console.error("[mobile-auth] Cannot refresh token: SESSION_SECRET not configured");
         return res.status(503).json({ error: "Mobile auth is not configured" });
       }
       res.json({ token });
@@ -135,11 +154,16 @@ export function registerMobileAuthRoutes(app: Express) {
   });
 
   app.get("/api/mobile/auth/me", isMobileAuthenticated, async (req: Request, res: Response) => {
-    const mobileUser = (req as any).mobileUser as JWTPayload;
-
     try {
+      const mobileUser = (req as any).mobileUser as JWTPayload | undefined;
+      if (!mobileUser) {
+        console.error("[mobile-auth] Profile fetch called without authenticated mobile user");
+        return res.status(401).json({ error: "Invalid or expired token" });
+      }
+
       const user = await authStorage.getUser(mobileUser.userId);
       if (!user) {
+        console.warn("[mobile-auth] Profile fetch: user not found for id", mobileUser.userId);
         return res.status(404).json({ error: "User not found" });
       }
 
