@@ -1,6 +1,52 @@
 import type { Card, Commander, CommanderAbility, BattlefieldCard, GameState, Game, CombatLog, CardPowerBreakdown, Element } from "@shared/schema";
-import { GAME_CONSTANTS, GAME_MODE_CONFIG } from "@shared/schema";
+import { GAME_CONSTANTS, GAME_MODE_CONFIG, ALLOWED_ABILITY_EFFECTS } from "@shared/schema";
 import { storage } from "./storage";
+
+// Drift guard: the admin AI generator and commanderAbilityEffectSchema both
+// read from ALLOWED_ABILITY_EFFECTS in shared/models/cards.ts. The switch in
+// processAbility below MUST handle every entry in that list (and only those).
+// If you add a new case to the switch, add it to ALLOWED_ABILITY_EFFECTS too;
+// if you remove one, remove it from the list. The arrays are compared at
+// startup so a mismatch crashes the server immediately.
+export const IMPLEMENTED_ABILITY_TYPES = [
+  "direct_damage",
+  "element_power_damage",
+  "buff_element_unit",
+  "extra_deploy",
+  "cycle_element_cards",
+  "block_effects",
+  "negate_and_halve",
+  "healing_factor",
+  "draw_cards",
+  "protect_element",
+  "debuff_enemy",
+  "swap_units",
+  "revive_unit",
+  "growth_buff",
+  "prevent_ward",
+  "destroy_unit",
+  "add_shield",
+  "reduce_power",
+  "first_strike",
+  "add_evasion",
+  "set_power",
+  "restore_from_ward",
+  "heal_and_buff",
+] as const;
+
+(function assertEffectListsMatch() {
+  const allowed = new Set(ALLOWED_ABILITY_EFFECTS.map((e) => e.type));
+  const implemented = new Set(IMPLEMENTED_ABILITY_TYPES);
+  const missingFromEngine = [...allowed].filter((t) => !implemented.has(t as any));
+  const extraInEngine = [...implemented].filter((t) => !allowed.has(t));
+  if (missingFromEngine.length > 0 || extraInEngine.length > 0) {
+    throw new Error(
+      `[gameEngine] ALLOWED_ABILITY_EFFECTS / IMPLEMENTED_ABILITY_TYPES drift detected. ` +
+        `missingFromEngine=${JSON.stringify(missingFromEngine)} extraInEngine=${JSON.stringify(extraInEngine)}. ` +
+        `Update both shared/models/cards.ts and server/gameEngine.ts so they agree.`
+    );
+  }
+})();
 
 const colorToElement: Record<string, string> = {
   Red: "Fire",
