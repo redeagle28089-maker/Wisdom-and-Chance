@@ -9,6 +9,34 @@ if (!JWT_SECRET) {
 }
 const JWT_EXPIRY = "7d";
 
+// Emails that must NEVER be obtainable via the unverified mobile-login endpoint.
+// The mobile login flow is "claim any email and we'll mint you a JWT for it" —
+// fine for normal accounts, catastrophic for the admin account. Anyone who
+// guesses the admin email could otherwise become admin.
+//
+// The base list is the hardcoded admin email; additional emails can be added
+// at deploy time via PROTECTED_LOGIN_EMAILS (comma-separated).
+const HARDCODED_ADMIN_EMAIL = "redeagle28089@gmail.com";
+const PROTECTED_LOGIN_EMAILS: ReadonlySet<string> = new Set(
+  [
+    HARDCODED_ADMIN_EMAIL,
+    ...(process.env.PROTECTED_LOGIN_EMAILS ?? "")
+      .split(",")
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean),
+  ].map((e) => e.toLowerCase()),
+);
+
+// Enforced unconditionally in production. In development, allow protected-email
+// mobile login so the admin smoke tests (test-ai-generator.mjs,
+// test-multiplayer-hardening.mjs) keep working without a backdoor secret.
+// Set ENFORCE_PROTECTED_LOGIN=1 to enforce in dev too.
+function isProtectedEmailBlocked(normalizedEmail: string): boolean {
+  if (!PROTECTED_LOGIN_EMAILS.has(normalizedEmail)) return false;
+  if (process.env.ENFORCE_PROTECTED_LOGIN === "1") return true;
+  return process.env.NODE_ENV === "production";
+}
+
 export interface JWTPayload {
   userId: string;
   email: string;
@@ -69,6 +97,16 @@ export function registerMobileAuthRoutes(app: Express) {
 
       if (!normalizedEmail) {
         return res.status(400).json({ error: "Email is required — email is needed for cross-platform account linking" });
+      }
+
+      // Reject login attempts for protected (admin) emails. The mobile endpoint
+      // does not verify email ownership, so without this gate anyone could
+      // sign in as admin by sending the admin's email address.
+      if (isProtectedEmailBlocked(normalizedEmail)) {
+        console.warn(`[mobile-auth] Blocked protected-email login attempt for ${normalizedEmail}`);
+        return res.status(403).json({
+          error: "This account must sign in through a verified provider (Replit or Google). Mobile email login is not allowed for this account.",
+        });
       }
 
       // Delegate user lookup, creation, update, and provider linking to the shared
@@ -139,6 +177,17 @@ export function registerMobileAuthRoutes(app: Express) {
       if (!mobileUser) {
         console.error("[mobile-auth] Refresh called without authenticated mobile user");
         return res.status(401).json({ error: "Invalid or expired token" });
+      }
+
+      // Defense in depth: even if a protected-email JWT was issued before this
+      // hardening (or via a misconfigured environment), refuse to refresh it
+      // so the token cannot be kept alive indefinitely.
+      const refreshEmail = (mobileUser.email ?? "").trim().toLowerCase();
+      if (isProtectedEmailBlocked(refreshEmail)) {
+        console.warn(`[mobile-auth] Blocked refresh for protected-email token: ${refreshEmail}`);
+        return res.status(403).json({
+          error: "This account cannot use mobile token refresh. Sign in through a verified provider.",
+        });
       }
 
       const token = generateToken({ userId: mobileUser.userId, email: mobileUser.email });
