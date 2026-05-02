@@ -356,6 +356,7 @@ class GameWebSocketServer {
               });
               handleGameEndRewards(winnerId, activeGame.game.player1Id, activeGame.game.player2Id, "forfeit");
               this.sendGameStateToPlayers(gameId);
+              gameEngine.removeGame(gameId);
             });
             this.broadcastToGame(gameId, {
               type: "opponent_disconnected",
@@ -512,6 +513,20 @@ class GameWebSocketServer {
         type: "game_update",
         payload: { gameId, playerId: userId, action, data, timestamp: new Date().toISOString() },
       }, userId);
+      return;
+    }
+
+    // Reject actions from non-participants (spectators, strangers).
+    // Without this, gameEngine.isPlayer1 returns false for any non-P1, silently treating
+    // unknown senders as Player 2.
+    if (
+      currentGame.game.player1Id !== userId &&
+      currentGame.game.player2Id !== userId
+    ) {
+      this.sendToUser(userId, {
+        type: "game_error",
+        payload: { gameId, error: "Not a participant in this game" },
+      });
       return;
     }
 

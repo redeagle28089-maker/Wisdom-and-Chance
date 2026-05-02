@@ -635,6 +635,10 @@ class ServerGameEngine {
     const game = active.game;
     if (game.status !== "in_progress") return { success: false, error: "Game is not in progress" };
 
+    if (game.currentPhase !== "deployment" && game.currentPhase !== "combat") {
+      return { success: false, error: `Cannot end turn during ${game.currentPhase} phase` };
+    }
+
     const isP1 = this.isPlayer1(game, playerId);
 
     if (game.currentPhase === "deployment") {
@@ -1132,6 +1136,10 @@ class ServerGameEngine {
     if (!active) return { success: false, error: "Game not found" };
 
     const game = active.game;
+    if (game.status !== "in_progress") return { success: false, error: "Game is not in progress" };
+    if (game.player1Id !== forfeitPlayerId && game.player2Id !== forfeitPlayerId) {
+      return { success: false, error: "Not a participant in this game" };
+    }
     const isP1 = this.isPlayer1(game, forfeitPlayerId);
     const winnerId = isP1 ? game.player2Id! : game.player1Id;
 
@@ -1148,6 +1156,7 @@ class ServerGameEngine {
 
     active.disconnectedPlayers.add(playerId);
 
+    const timeoutMs = Number(process.env.MP_DISCONNECT_TIMEOUT_MS) || 60000;
     const timer = setTimeout(async () => {
       const stillActive = this.activeGames.get(gameId);
       if (!stillActive || stillActive.game.status !== "in_progress") return;
@@ -1157,7 +1166,7 @@ class ServerGameEngine {
       if (result.success && result.type === "game_over") {
         onForfeit(result.winnerId);
       }
-    }, 60000);
+    }, timeoutMs);
 
     active.disconnectTimers.set(playerId, timer);
   }

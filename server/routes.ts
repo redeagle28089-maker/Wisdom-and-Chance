@@ -1,10 +1,10 @@
 import type { Express } from "express";
 import type { Server } from "http";
 import { z } from "zod";
-import { eq, or, and, lt, lte, desc, sql } from "drizzle-orm";
+import { eq, or, and, lt, lte, desc, sql, isNull } from "drizzle-orm";
 import { storage } from "./storage";
 import { db } from "./db";
-import { insertCardSchema, insertDeckSchema, insertPlayerSchema, insertGameSchema, ELEMENTS, userDecks, insertUserDeckSchema, GAME_CONSTANTS, cardImages, insertCardImageSchema, TRAITS, BUFF_DEBUFF_COLORS, users, friendships, friendMessages, cardImageMappings, commanderImageMappings, GAME_PHASES, GAME_MODE_CONFIG, AI_DIFFICULTY, GAME_STATUS, featureFlags, serverConfig, DEFAULT_FEATURE_FLAGS, playerCurrencies, playerCollection, ECONOMY_CONSTANTS, getCardRarity, type CardRarity, playerChallenges, playerAchievements, PACK_TYPES, dailyDeals, shopCatalog, shopBundles, seasons, seasonHistory, battlePassLevels, playerBattlePass, weeklyChallenges, playerWeeklyChallenges, RANKED_TIERS, SEASON_REWARDS, BATTLE_PASS_XP, playerRatings } from "@shared/schema";
+import { insertCardSchema, insertDeckSchema, insertPlayerSchema, insertGameSchema, ELEMENTS, userDecks, insertUserDeckSchema, GAME_CONSTANTS, cardImages, insertCardImageSchema, TRAITS, BUFF_DEBUFF_COLORS, users, friendships, friendMessages, cardImageMappings, commanderImageMappings, GAME_PHASES, GAME_MODE_CONFIG, AI_DIFFICULTY, GAME_STATUS, featureFlags, serverConfig, DEFAULT_FEATURE_FLAGS, playerCurrencies, playerCollection, ECONOMY_CONSTANTS, getCardRarity, type CardRarity, playerChallenges, playerAchievements, PACK_TYPES, dailyDeals, shopCatalog, shopBundles, seasons, seasonHistory, battlePassLevels, playerBattlePass, weeklyChallenges, playerWeeklyChallenges, RANKED_TIERS, SEASON_REWARDS, BATTLE_PASS_XP, playerRatings, gameRooms } from "@shared/schema";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import { registerMultiplayerRoutes } from "./multiplayerRoutes";
 import { registerMobileAuthRoutes } from "./mobileAuth";
@@ -1427,6 +1427,59 @@ IMPORTANT:
     const userEmail = req.user?.claims?.email;
     const isAdminUser = userEmail === ADMIN_EMAIL;
     res.json({ isAdmin: isAdminUser });
+  });
+
+  // Delete waiting rooms older than `olderThanHours` (default 24h) with no guest.
+  // Helps reclaim abandoned lobbies when a host creates a room and never starts.
+  app.post("/api/admin/cleanup-stale-rooms", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const olderThanHours = Number(req.body?.olderThanHours);
+      const hours = Number.isFinite(olderThanHours) && olderThanHours > 0 ? olderThanHours : 24;
+      const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000);
+
+      const stale = await db
+        .select({ id: gameRooms.id })
+        .from(gameRooms)
+        .where(
+          and(
+            eq(gameRooms.status, "waiting"),
+            isNull(gameRooms.guestId),
+            lt(gameRooms.createdAt, cutoff),
+          )
+        );
+
+      if (stale.length === 0) {
+        return res.json({ deleted: 0, olderThanHours: hours });
+      }
+
+      await db
+        .delete(gameRooms)
+        .where(
+          and(
+            eq(gameRooms.status, "waiting"),
+            isNull(gameRooms.guestId),
+            lt(gameRooms.createdAt, cutoff),
+          )
+        );
+
+      res.json({ deleted: stale.length, olderThanHours: hours });
+    } catch (error: any) {
+      console.error("[admin] cleanup-stale-rooms error:", error);
+      res.status(500).json({ message: "Failed to clean up stale rooms" });
+    }
+  });
+
+  // Test-mode helper: admins can shorten the multiplayer disconnect-forfeit
+  // timeout at runtime so integration tests don't have to wait 60s for a
+  // disconnected player to be declared a forfeit. Future calls to
+  // gameEngine.handleDisconnect read this env var fresh.
+  app.post("/api/admin/test/disconnect-timeout", isAuthenticated, isAdmin, async (req, res) => {
+    const ms = Number(req.body?.ms);
+    if (!Number.isFinite(ms) || ms < 100 || ms > 120_000) {
+      return res.status(400).json({ message: "ms must be a number between 100 and 120000" });
+    }
+    process.env.MP_DISCONNECT_TIMEOUT_MS = String(ms);
+    res.json({ disconnectTimeoutMs: ms });
   });
 
   app.get("/api/admin/feature-flags", isAuthenticated, isAdmin, async (_req, res) => {
