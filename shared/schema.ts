@@ -5,6 +5,9 @@ export * from "./models/multiplayer";
 export * from "./models/chat";
 export * from "./models/config";
 export * from "./models/economy";
+export * from "./models/cards";
+
+import { commanderAbilityEffectSchema } from "./models/cards";
 
 export const ELEMENTS = ["Fire", "Water", "Earth", "Air", "Nature"] as const;
 export type Element = typeof ELEMENTS[number];
@@ -55,11 +58,7 @@ export const commanderAbilitySchema = z.object({
   phase: z.enum(GAME_PHASES),
   victoryCost: z.number().default(0),
   withdrawalCost: z.number().default(0),
-  effect: z.object({
-    type: z.string(),
-    value: z.number().optional(),
-    target: z.string().optional(),
-  }),
+  effect: commanderAbilityEffectSchema,
 });
 
 export type CommanderAbility = z.infer<typeof commanderAbilitySchema>;

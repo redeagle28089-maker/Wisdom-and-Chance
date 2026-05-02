@@ -16,7 +16,7 @@ import {
   Home, BookOpen, Database, Layers, Swords, Trophy, User, GraduationCap, 
   LogIn, LogOut, Users, Gamepad2, Medal, Calendar, BarChart3, Eye, 
   BookMarked, Palette, ImageIcon, ChevronDown, X, UserCircle, Package, ShoppingBag,
-  Shield, Star, Smartphone
+  Shield, Star, Smartphone, Wand2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -171,6 +171,7 @@ export function NavHeader() {
                 label="Admin" 
                 items={[
                   { title: "Card Art Generator", url: "/admin/card-art", icon: Palette },
+                  { title: "AI Generator", url: "/admin/ai-generator", icon: Wand2 },
                   { title: "Image Database", url: "/admin/image-database", icon: ImageIcon },
                   { title: "User Database", url: "/admin/user-database", icon: Users },
                 ]} 

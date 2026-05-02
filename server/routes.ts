@@ -4,7 +4,7 @@ import { z } from "zod";
 import { eq, or, and, lt, lte, desc, sql, isNull } from "drizzle-orm";
 import { storage } from "./storage";
 import { db } from "./db";
-import { insertCardSchema, insertDeckSchema, insertPlayerSchema, insertGameSchema, ELEMENTS, userDecks, insertUserDeckSchema, GAME_CONSTANTS, cardImages, insertCardImageSchema, TRAITS, BUFF_DEBUFF_COLORS, users, friendships, friendMessages, cardImageMappings, commanderImageMappings, GAME_PHASES, GAME_MODE_CONFIG, AI_DIFFICULTY, GAME_STATUS, featureFlags, serverConfig, DEFAULT_FEATURE_FLAGS, playerCurrencies, playerCollection, ECONOMY_CONSTANTS, getCardRarity, type CardRarity, playerChallenges, playerAchievements, PACK_TYPES, dailyDeals, shopCatalog, shopBundles, seasons, seasonHistory, battlePassLevels, playerBattlePass, weeklyChallenges, playerWeeklyChallenges, RANKED_TIERS, SEASON_REWARDS, BATTLE_PASS_XP, playerRatings, gameRooms } from "@shared/schema";
+import { insertCardSchema, insertDeckSchema, insertPlayerSchema, insertGameSchema, ELEMENTS, userDecks, insertUserDeckSchema, GAME_CONSTANTS, cardImages, insertCardImageSchema, TRAITS, BUFF_DEBUFF_COLORS, users, friendships, friendMessages, cardImageMappings, commanderImageMappings, GAME_PHASES, GAME_MODE_CONFIG, AI_DIFFICULTY, GAME_STATUS, featureFlags, serverConfig, DEFAULT_FEATURE_FLAGS, playerCurrencies, playerCollection, ECONOMY_CONSTANTS, getCardRarity, type CardRarity, playerChallenges, playerAchievements, PACK_TYPES, dailyDeals, shopCatalog, shopBundles, seasons, seasonHistory, battlePassLevels, playerBattlePass, weeklyChallenges, playerWeeklyChallenges, RANKED_TIERS, SEASON_REWARDS, BATTLE_PASS_XP, playerRatings, gameRooms, cardSchema, commanderSchema, insertCommanderSchema, ALLOWED_ABILITY_EFFECTS } from "@shared/schema";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import { registerMultiplayerRoutes } from "./multiplayerRoutes";
 import { registerMobileAuthRoutes } from "./mobileAuth";
@@ -1890,6 +1890,231 @@ IMPORTANT:
       console.error("Error generating card:", error);
       res.status(500).json({ error: "Failed to generate card" });
     }
+  });
+
+  // ===== Admin AI Batch Generator (units & commanders) =====
+  // Source of truth for allowed effects lives in shared/models/cards.ts so the
+  // generator and gameEngine.processAbility cannot drift apart.
+  const generateBatchSchema = z.object({
+    kind: z.enum(["unit", "commander"]),
+    count: z.number().int().min(1).max(10),
+    element: z.enum(ELEMENTS).optional(),
+    powerRange: z.tuple([z.number().int().min(1).max(10), z.number().int().min(1).max(10)]).optional(),
+    costRange: z.tuple([z.number().int().min(0).max(4), z.number().int().min(0).max(4)]).optional(),
+    stylePrompt: z.string().max(500).optional(),
+  });
+
+  const saveGeneratedSchema = z.discriminatedUnion("kind", [
+    z.object({ kind: z.literal("unit"), payload: insertCardSchema }),
+    z.object({ kind: z.literal("commander"), payload: insertCommanderSchema }),
+  ]);
+
+  function extractJsonArray(raw: string): any[] | null {
+    // Strip markdown code fences
+    const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
+    // Try a direct parse first (model may already return raw JSON array)
+    try {
+      const direct = JSON.parse(cleaned);
+      if (Array.isArray(direct)) return direct;
+      if (direct && Array.isArray(direct.cards)) return direct.cards;
+      if (direct && Array.isArray(direct.commanders)) return direct.commanders;
+    } catch {}
+    // Fallback: regex-extract first [...] block
+    const match = cleaned.match(/\[[\s\S]*\]/);
+    if (!match) return null;
+    try {
+      return JSON.parse(match[0]);
+    } catch {
+      return null;
+    }
+  }
+
+  function normalizeUnit(raw: any): any {
+    const out: any = { ...raw };
+    out.isCommander = false;
+    if (typeof out.power === "string") out.power = parseInt(out.power, 10);
+    if (typeof out.traitValue === "string") out.traitValue = parseInt(out.traitValue, 10);
+    if (typeof out.buffModifier === "string") out.buffModifier = parseInt(out.buffModifier, 10);
+    if (typeof out.debuffModifier === "string") out.debuffModifier = parseInt(out.debuffModifier, 10);
+    if (out.trait === "" || out.trait === "None" || out.trait === "none") out.trait = null;
+    if (out.trait == null) out.traitValue = null;
+    if (!out.buffColor) out.buffColor = null;
+    if (!out.debuffColor) out.debuffColor = null;
+    if (out.buffModifier == null) out.buffModifier = 0;
+    if (out.debuffModifier == null) out.debuffModifier = 0;
+    return out;
+  }
+
+  function normalizeCommander(raw: any): any {
+    const out: any = { ...raw };
+    if (Array.isArray(out.abilities)) {
+      out.abilities = out.abilities.map((a: any, i: number) => {
+        const ability: any = { ...a };
+        if (!ability.id) ability.id = `gen-ability-${Date.now()}-${i}`;
+        ability.victoryCost = Number(ability.victoryCost ?? 0);
+        ability.withdrawalCost = Number(ability.withdrawalCost ?? 0);
+        if (ability.effect) {
+          const eff: any = { ...ability.effect };
+          if (typeof eff.value === "string") eff.value = parseInt(eff.value, 10);
+          if (typeof eff.target === "string") eff.target = eff.target.toLowerCase();
+          if (eff.value == null && eff.value !== 0) delete eff.value;
+          if (!eff.target) delete eff.target;
+          ability.effect = eff;
+        }
+        return ability;
+      });
+    }
+    return out;
+  }
+
+  app.post("/api/admin/generate-cards", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const parseResult = generateBatchSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ error: parseResult.error.flatten().fieldErrors });
+      }
+      const opts = parseResult.data;
+
+      // Sample up to 8 inspiration items from the existing DB so the model matches house style
+      let inspiration: string;
+      if (opts.kind === "unit") {
+        const allCards = await storage.getCards();
+        const pool = opts.element ? allCards.filter(c => c.element === opts.element) : allCards;
+        const sampled = pool.sort(() => Math.random() - 0.5).slice(0, 8);
+        inspiration = sampled.map(c => `- ${c.name} | ${c.element} | power ${c.power} | trait: ${c.trait || "none"} (${c.traitValue ?? 0}) | buff +${c.buffModifier} ${c.buffColor || ""} | debuff -${c.debuffModifier} ${c.debuffColor || ""} | ${c.description || ""}`).join("\n");
+      } else {
+        const allCommanders = await storage.getCommanders();
+        const pool = opts.element ? allCommanders.filter(c => c.element === opts.element) : allCommanders;
+        const sampled = pool.sort(() => Math.random() - 0.5).slice(0, 4);
+        inspiration = sampled.map(c => {
+          const abs = c.abilities.map(a => `    * ${a.name} [${a.phase}] cost(adv:${a.victoryCost}/wd:${a.withdrawalCost}) effect=${JSON.stringify(a.effect)}`).join("\n");
+          return `- ${c.name} (${c.title}) | ${c.element}\n${abs}`;
+        }).join("\n");
+      }
+
+      const allowedEffectsBlock = ALLOWED_ABILITY_EFFECTS.map(e => {
+        const params: string[] = [];
+        if (e.acceptsValue) params.push(`value (1-20)`);
+        if (e.targetMode === "element") params.push(`target ∈ {fire,water,earth,air,nature}`);
+        return `- ${e.type}: ${e.description}${params.length ? "  [params: " + params.join(", ") + "]" : "  [no params]"}`;
+      }).join("\n");
+
+      const elementHint = opts.element ? `Every result MUST use element "${opts.element}".` : `Mix elements (Fire/Water/Earth/Air/Nature) freely.`;
+      const powerHint = opts.powerRange ? `Power must fall in [${opts.powerRange[0]}, ${opts.powerRange[1]}].` : `Power should be 1-10.`;
+      const costHint = opts.costRange ? `Each ability's victoryCost+withdrawalCost should fall in [${opts.costRange[0]}, ${opts.costRange[1]}].` : `Ability costs are usually 0 or 2.`;
+      const styleHint = opts.stylePrompt ? `Stylistic guidance: ${opts.stylePrompt}` : "";
+
+      let prompt: string;
+      if (opts.kind === "unit") {
+        prompt = `You are designing playable units for the Wisdom & Chance TCG. Generate exactly ${opts.count} unique, balanced unit cards.
+
+Hard rules:
+- ${elementHint}
+- ${powerHint}
+- trait MUST be exactly one of: "Quick Strike", "Care Package", "Restoration", "Guardian", or null. NEVER invent a trait. If trait is null, traitValue MUST be null.
+- traitValue (when trait is set) is an integer 1-3.
+- buffColor / debuffColor MUST be exactly one of: "Red", "Blue", "Amber", "Green", "Black", or null. If color is null, the matching modifier MUST be 0.
+- buffModifier / debuffModifier are integers 0-5.
+- description is a single short sentence (under 120 chars).
+- DO NOT include id, imageUrl, isCommander, or rarity fields — they are added by the server.
+
+${styleHint}
+
+Existing cards for inspiration (do NOT copy names):
+${inspiration}
+
+Return ONLY a raw JSON array, no prose, no markdown fences. Each element shape:
+{ "name": string, "element": "Fire"|"Water"|"Earth"|"Air"|"Nature", "power": int, "trait": null|"Quick Strike"|"Care Package"|"Restoration"|"Guardian", "traitValue": null|int, "buffModifier": int, "buffColor": null|"Red"|"Blue"|"Amber"|"Green"|"Black", "debuffModifier": int, "debuffColor": null|"Red"|"Blue"|"Amber"|"Green"|"Black", "description": string }`;
+      } else {
+        prompt = `You are designing playable commanders for the Wisdom & Chance TCG. Generate exactly ${opts.count} unique commanders.
+
+Hard rules:
+- ${elementHint}
+- Each commander has 2-3 abilities.
+- Each ability has: name, description (one short sentence), phase ∈ {"draw","deployment","combat"}, victoryCost (int 0-4), withdrawalCost (int 0-4), and effect.
+- ${costHint}
+- effect.type MUST be exactly one of these implemented effects (NEVER invent new ones):
+${allowedEffectsBlock}
+- effect.value is required when the effect accepts a value, must be a positive integer (1-20).
+- effect.target, when the effect accepts an element target, MUST be one of: "fire","water","earth","air","nature" (lowercase). For non-targeting effects, omit it.
+- DO NOT include id or imageUrl fields — the server fills those in.
+
+${styleHint}
+
+Existing commanders for inspiration (do NOT copy names):
+${inspiration}
+
+Return ONLY a raw JSON array, no prose, no markdown fences. Each element shape:
+{ "name": string, "title": string, "element": "Fire"|"Water"|"Earth"|"Air"|"Nature", "description": string, "abilities": [ { "name": string, "description": string, "phase": "draw"|"deployment"|"combat", "victoryCost": int, "withdrawalCost": int, "effect": { "type": <one of the allowed types>, "value"?: int, "target"?: string } } ] }`;
+      }
+
+      const aiResponse = await generateText(prompt);
+      const rawCandidates = extractJsonArray(aiResponse);
+
+      if (!rawCandidates || !Array.isArray(rawCandidates)) {
+        console.error("[ai-generator] Failed to parse AI response:", aiResponse.slice(0, 500));
+        return res.status(502).json({ error: "AI response was not valid JSON", raw: aiResponse.slice(0, 500) });
+      }
+
+      const valid: any[] = [];
+      const rejected: { index: number; errors: any }[] = [];
+
+      for (let i = 0; i < rawCandidates.length; i++) {
+        const candidate = rawCandidates[i];
+        if (opts.kind === "unit") {
+          const normalized = normalizeUnit(candidate);
+          const result = insertCardSchema.safeParse(normalized);
+          if (result.success) {
+            valid.push(result.data);
+          } else {
+            rejected.push({ index: i, errors: result.error.flatten() });
+          }
+        } else {
+          const normalized = normalizeCommander(candidate);
+          const result = insertCommanderSchema.safeParse(normalized);
+          if (result.success) {
+            valid.push(result.data);
+          } else {
+            rejected.push({ index: i, errors: result.error.flatten() });
+          }
+        }
+      }
+
+      res.json({
+        kind: opts.kind,
+        candidates: valid,
+        rejectedCount: rejected.length,
+        rejectedDetails: rejected,
+        totalReturnedByAi: rawCandidates.length,
+      });
+    } catch (error) {
+      console.error("[ai-generator] Error:", error);
+      res.status(500).json({ error: "Failed to generate cards" });
+    }
+  });
+
+  app.post("/api/admin/generated-cards/save", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const parseResult = saveGeneratedSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ error: parseResult.error.flatten() });
+      }
+      const data = parseResult.data;
+      if (data.kind === "unit") {
+        const created = await storage.createCard(data.payload);
+        return res.status(201).json({ kind: "unit", record: created });
+      } else {
+        const created = await storage.createCommander(data.payload);
+        return res.status(201).json({ kind: "commander", record: created });
+      }
+    } catch (error) {
+      console.error("[ai-generator] Save error:", error);
+      res.status(500).json({ error: "Failed to save generated card" });
+    }
+  });
+
+  app.get("/api/admin/allowed-effects", isAuthenticated, isAdmin, async (_req, res) => {
+    res.json({ effects: ALLOWED_ABILITY_EFFECTS });
   });
 
   // Swap image from image database to a card
