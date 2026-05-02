@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { boolean, integer, jsonb, pgTable, text, timestamp, varchar } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 export const ALLOWED_ABILITY_EFFECTS = [
   {
@@ -221,3 +223,40 @@ export const commanderAbilityEffectSchema = z
   });
 
 export type CommanderAbilityEffect = z.infer<typeof commanderAbilityEffectSchema>;
+
+// Persisted card and commander tables. These hold AI-generated entries created
+// via the admin generator so they survive server restarts. The seeded built-in
+// cards/commanders continue to live in `MemStorage` only; on startup we hydrate
+// the in-memory maps with the rows below so existing read paths keep working.
+export const cards = pgTable("cards", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  element: varchar("element").notNull(),
+  power: integer("power").notNull(),
+  rarity: varchar("rarity"),
+  trait: varchar("trait"),
+  traitValue: integer("trait_value"),
+  buffModifier: integer("buff_modifier").notNull().default(0),
+  buffColor: varchar("buff_color"),
+  debuffModifier: integer("debuff_modifier").notNull().default(0),
+  debuffColor: varchar("debuff_color"),
+  description: text("description"),
+  imageUrl: text("image_url"),
+  isCommander: boolean("is_commander").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type CardRow = typeof cards.$inferSelect;
+
+export const commanders = pgTable("commanders", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  element: varchar("element").notNull(),
+  title: varchar("title").notNull(),
+  description: text("description").notNull(),
+  imageUrl: text("image_url"),
+  abilities: jsonb("abilities").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type CommanderRow = typeof commanders.$inferSelect;

@@ -3,20 +3,28 @@ import {
   type InsertCard,
   type Commander,
   type InsertCommander,
+  type CommanderAbility,
   type Deck,
   type InsertDeck,
   type Player,
   type InsertPlayer,
   type Game,
   type InsertGame,
+  type Element,
+  type Trait,
+  type BuffDebuffColor,
+  type CardRarity,
   ELEMENTS,
   TRAITS,
   BUFF_DEBUFF_COLORS,
   getCardRarity,
   cardImageMappings,
   commanderImageMappings,
+  cards as cardsTable,
+  commanders as commandersTable,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
+import { eq } from "drizzle-orm";
 import { db } from "./db";
 
 export interface IStorage {
@@ -71,6 +79,21 @@ export class MemStorage implements IStorage {
 
   async initialize(): Promise<void> {
     try {
+      // Hydrate persisted cards (e.g. AI-generated) from Postgres so they
+      // survive server restarts. These live alongside the seeded in-memory
+      // cards in the same map.
+      const dbCards = await db.select().from(cardsTable);
+      for (const row of dbCards) {
+        this.cards.set(row.id, this.rowToCard(row));
+      }
+      console.log(`[storage] Loaded ${dbCards.length} persisted cards from database`);
+
+      const dbCommanders = await db.select().from(commandersTable);
+      for (const row of dbCommanders) {
+        this.commanders.set(row.id, this.rowToCommander(row));
+      }
+      console.log(`[storage] Loaded ${dbCommanders.length} persisted commanders from database`);
+
       const cardMappings = await db.select().from(cardImageMappings);
       for (const mapping of cardMappings) {
         const card = this.cards.get(mapping.cardId);
@@ -89,8 +112,39 @@ export class MemStorage implements IStorage {
       }
       console.log(`[storage] Loaded ${commanderMappings.length} commander image mappings from database`);
     } catch (error) {
-      console.error("[storage] Failed to load image mappings:", error);
+      console.error("[storage] Failed to load persisted cards/commanders:", error);
     }
+  }
+
+  private rowToCard(row: typeof cardsTable.$inferSelect): Card {
+    return {
+      id: row.id,
+      name: row.name,
+      element: row.element as Element,
+      power: row.power,
+      rarity: (row.rarity as CardRarity) ?? getCardRarity(row.power),
+      trait: (row.trait as Trait | null) ?? null,
+      traitValue: row.traitValue,
+      buffModifier: row.buffModifier,
+      buffColor: (row.buffColor as BuffDebuffColor | null) ?? null,
+      debuffModifier: row.debuffModifier,
+      debuffColor: (row.debuffColor as BuffDebuffColor | null) ?? null,
+      description: row.description ?? undefined,
+      imageUrl: row.imageUrl ?? undefined,
+      isCommander: row.isCommander,
+    };
+  }
+
+  private rowToCommander(row: typeof commandersTable.$inferSelect): Commander {
+    return {
+      id: row.id,
+      name: row.name,
+      element: row.element as Element,
+      title: row.title,
+      description: row.description,
+      imageUrl: row.imageUrl ?? undefined,
+      abilities: (row.abilities as CommanderAbility[]) ?? [],
+    };
   }
 
   private seedData() {
@@ -713,7 +767,24 @@ export class MemStorage implements IStorage {
 
   async createCard(insertCard: InsertCard): Promise<Card> {
     const id = randomUUID();
-    const card: Card = { ...insertCard, id, rarity: getCardRarity(insertCard.power) };
+    const rarity = getCardRarity(insertCard.power);
+    const card: Card = { ...insertCard, id, rarity };
+    await db.insert(cardsTable).values({
+      id,
+      name: insertCard.name,
+      element: insertCard.element,
+      power: insertCard.power,
+      rarity,
+      trait: insertCard.trait ?? null,
+      traitValue: insertCard.traitValue ?? null,
+      buffModifier: insertCard.buffModifier ?? 0,
+      buffColor: insertCard.buffColor ?? null,
+      debuffModifier: insertCard.debuffModifier ?? 0,
+      debuffColor: insertCard.debuffColor ?? null,
+      description: insertCard.description ?? null,
+      imageUrl: insertCard.imageUrl ?? null,
+      isCommander: insertCard.isCommander ?? false,
+    });
     this.cards.set(id, card);
     return card;
   }
@@ -723,11 +794,33 @@ export class MemStorage implements IStorage {
     if (!existing) return undefined;
     const updated: Card = { ...existing, ...updates };
     this.cards.set(id, updated);
+    // Persist field changes for any DB-backed card. For seeded in-memory
+    // cards this is a no-op (0 rows updated) since they don't exist in
+    // the cards table.
+    const dbUpdates: Partial<typeof cardsTable.$inferInsert> = {};
+    if (updates.name !== undefined) dbUpdates.name = updates.name;
+    if (updates.element !== undefined) dbUpdates.element = updates.element;
+    if (updates.power !== undefined) dbUpdates.power = updates.power;
+    if (updates.rarity !== undefined) dbUpdates.rarity = updates.rarity;
+    if (updates.trait !== undefined) dbUpdates.trait = updates.trait;
+    if (updates.traitValue !== undefined) dbUpdates.traitValue = updates.traitValue;
+    if (updates.buffModifier !== undefined) dbUpdates.buffModifier = updates.buffModifier;
+    if (updates.buffColor !== undefined) dbUpdates.buffColor = updates.buffColor;
+    if (updates.debuffModifier !== undefined) dbUpdates.debuffModifier = updates.debuffModifier;
+    if (updates.debuffColor !== undefined) dbUpdates.debuffColor = updates.debuffColor;
+    if (updates.description !== undefined) dbUpdates.description = updates.description ?? null;
+    if (updates.imageUrl !== undefined) dbUpdates.imageUrl = updates.imageUrl ?? null;
+    if (updates.isCommander !== undefined) dbUpdates.isCommander = updates.isCommander;
+    if (Object.keys(dbUpdates).length > 0) {
+      await db.update(cardsTable).set(dbUpdates).where(eq(cardsTable.id, id));
+    }
     return updated;
   }
 
   async deleteCard(id: string): Promise<boolean> {
-    return this.cards.delete(id);
+    const existed = this.cards.delete(id);
+    await db.delete(cardsTable).where(eq(cardsTable.id, id));
+    return existed;
   }
 
   async getCommanders(): Promise<Commander[]> {
@@ -741,6 +834,15 @@ export class MemStorage implements IStorage {
   async createCommander(insertCommander: InsertCommander): Promise<Commander> {
     const id = randomUUID();
     const commander: Commander = { ...insertCommander, id };
+    await db.insert(commandersTable).values({
+      id,
+      name: insertCommander.name,
+      element: insertCommander.element,
+      title: insertCommander.title,
+      description: insertCommander.description,
+      imageUrl: insertCommander.imageUrl ?? null,
+      abilities: insertCommander.abilities as unknown as CommanderAbility[],
+    });
     this.commanders.set(id, commander);
     return commander;
   }
@@ -750,6 +852,19 @@ export class MemStorage implements IStorage {
     if (!existing) return undefined;
     const updated: Commander = { ...existing, ...updates };
     this.commanders.set(id, updated);
+    // Persist field changes for any DB-backed commander. For seeded in-memory
+    // commanders this is a no-op (0 rows updated) since they don't exist in
+    // the commanders table.
+    const dbUpdates: Partial<typeof commandersTable.$inferInsert> = {};
+    if (updates.name !== undefined) dbUpdates.name = updates.name;
+    if (updates.element !== undefined) dbUpdates.element = updates.element;
+    if (updates.title !== undefined) dbUpdates.title = updates.title;
+    if (updates.description !== undefined) dbUpdates.description = updates.description;
+    if (updates.imageUrl !== undefined) dbUpdates.imageUrl = updates.imageUrl ?? null;
+    if (updates.abilities !== undefined) dbUpdates.abilities = updates.abilities as unknown as CommanderAbility[];
+    if (Object.keys(dbUpdates).length > 0) {
+      await db.update(commandersTable).set(dbUpdates).where(eq(commandersTable.id, id));
+    }
     return updated;
   }
 
