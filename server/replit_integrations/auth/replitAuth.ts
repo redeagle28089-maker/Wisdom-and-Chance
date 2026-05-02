@@ -421,6 +421,25 @@ async function upsertUser(claims: JWTClaims, provider: "replit" | "google") {
     { provider, providerSub: claims.sub }
   );
 
+  // Auto-promote the configured admin email to users.isAdmin=true when the
+  // holder signs in via verified web SSO (Replit OIDC or Google). Mobile
+  // email login refuses the admin email outright (mobileAuth), so only a
+  // cryptographically verified SSO callback can land here for the admin —
+  // that's what makes it safe to flip the flag automatically. See task #61.
+  try {
+    const { isAdminEmail } = await import("../../adminConfig");
+    const { db } = await import("../../db");
+    const { users } = await import("@shared/models/auth");
+    const { eq } = await import("drizzle-orm");
+    if (isAdminEmail(dbUser.email) && !dbUser.isAdmin) {
+      await db.update(users).set({ isAdmin: true, updatedAt: new Date() }).where(eq(users.id, dbUser.id));
+      dbUser.isAdmin = true;
+      console.log(`[auth] Auto-promoted admin account to isAdmin=true via ${provider} SSO — userId=${dbUser.id}`);
+    }
+  } catch (e) {
+    console.error("[auth] Error auto-promoting admin account:", e);
+  }
+
   try {
     const { ensureCurrencies, grantStarterCollection } = await import("../../economyService");
     await ensureCurrencies(dbUser.id);

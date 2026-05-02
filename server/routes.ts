@@ -18,7 +18,7 @@ import { filterObscenity } from "./obscenity-filter";
 import { gameEngine } from "./gameEngine";
 import { ensureCurrencies, grantGold, grantStarterCollection, grantBattlePassXP } from "./economyService";
 
-const ADMIN_EMAIL = "redeagle28089@gmail.com";
+import { ADMIN_EMAIL } from "./adminConfig";
 
 const deckSuggestionSchema = z.object({
   commanderId: z.string().min(1, "Commander is required"),
@@ -1413,20 +1413,40 @@ IMPORTANT:
     }
   });
 
-  // Admin middleware
-  const isAdmin = (req: any, res: any, next: any) => {
-    const userEmail = req.user?.claims?.email;
-    if (!req.user || userEmail !== ADMIN_EMAIL) {
+  // Admin middleware (task #61): admin permissions are tied to the registered
+  // admin account via users.isAdmin in the DB, NOT just an email match. The
+  // admin email is auto-promoted on web SSO sign-in (replitAuth.upsertUser).
+  // This middleware looks up the user fresh per request so demotions take
+  // effect immediately and so a stranger holding a JWT for an account that
+  // happens to share the admin email cannot escalate.
+  const isAdmin = async (req: any, res: any, next: any) => {
+    const userId = req.user?.claims?.sub;
+    if (!req.user || !userId) {
       return res.status(403).json({ message: "Admin access required" });
     }
-    next();
+    try {
+      const [u] = await db.select({ isAdmin: users.isAdmin }).from(users).where(eq(users.id, userId)).limit(1);
+      if (!u?.isAdmin) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      next();
+    } catch (error) {
+      console.error("[isAdmin] DB lookup failed:", error);
+      return res.status(500).json({ message: "Admin check failed" });
+    }
   };
 
   // Admin routes for card art generation
-  app.get("/api/admin/check", isAuthenticated, (req: any, res) => {
-    const userEmail = req.user?.claims?.email;
-    const isAdminUser = userEmail === ADMIN_EMAIL;
-    res.json({ isAdmin: isAdminUser });
+  app.get("/api/admin/check", isAuthenticated, async (req: any, res) => {
+    const userId = req.user?.claims?.sub;
+    if (!userId) return res.json({ isAdmin: false });
+    try {
+      const [u] = await db.select({ isAdmin: users.isAdmin }).from(users).where(eq(users.id, userId)).limit(1);
+      res.json({ isAdmin: !!u?.isAdmin });
+    } catch (error) {
+      console.error("[admin/check] DB lookup failed:", error);
+      res.json({ isAdmin: false });
+    }
   });
 
   // Delete waiting rooms older than `olderThanHours` (default 24h) with no guest.

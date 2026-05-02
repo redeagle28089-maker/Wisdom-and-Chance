@@ -3,7 +3,6 @@ import { eq, and, sql, lte, gte } from "drizzle-orm";
 import { playerCurrencies, playerCollection, ECONOMY_CONSTANTS, featureFlags, seasons, playerBattlePass, battlePassLevels, BATTLE_PASS_XP, weeklyChallenges, playerWeeklyChallenges, users } from "@shared/schema";
 import { storage } from "./storage";
 
-const ADMIN_EMAIL = "redeagle28089@gmail.com";
 const MAX = ECONOMY_CONSTANTS.MAX_CURRENCY;
 
 async function isEconomyEnabled(): Promise<boolean> {
@@ -11,9 +10,11 @@ async function isEconomyEnabled(): Promise<boolean> {
   return flag.length > 0 ? flag[0].enabled : false;
 }
 
+// Admin status comes from the users.isAdmin flag — the registered admin
+// account, not just an email string. See server/adminConfig.ts (task #61).
 async function isAdminUser(userId: string): Promise<boolean> {
-  const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-  return user?.email === ADMIN_EMAIL;
+  const [user] = await db.select({ isAdmin: users.isAdmin }).from(users).where(eq(users.id, userId)).limit(1);
+  return !!user?.isAdmin;
 }
 
 export async function ensureCurrencies(userId: string) {

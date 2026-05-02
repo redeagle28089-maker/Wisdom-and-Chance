@@ -2,6 +2,7 @@ import type { Express, Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { seedStarterDecks } from "./starter-decks";
 import { authStorage, ProviderConflictError, getLinkedProviders } from "./replit_integrations/auth";
+import { ADMIN_EMAIL } from "./adminConfig";
 
 const JWT_SECRET = process.env.SESSION_SECRET;
 if (!JWT_SECRET) {
@@ -14,12 +15,14 @@ const JWT_EXPIRY = "7d";
 // fine for normal accounts, catastrophic for the admin account. Anyone who
 // guesses the admin email could otherwise become admin.
 //
-// The base list is the hardcoded admin email; additional emails can be added
-// at deploy time via PROTECTED_LOGIN_EMAILS (comma-separated).
-const HARDCODED_ADMIN_EMAIL = "redeagle28089@gmail.com";
+// The base list is the canonical admin email (server/adminConfig.ts); additional
+// emails can be added at deploy time via PROTECTED_LOGIN_EMAILS (comma-separated).
+// Admin authorization itself is keyed off users.isAdmin in the DB (see task #61);
+// this list exists only to prevent stranger-as-admin JWT issuance via the mobile
+// password-less endpoint.
 const PROTECTED_LOGIN_EMAILS: ReadonlySet<string> = new Set(
   [
-    HARDCODED_ADMIN_EMAIL,
+    ADMIN_EMAIL,
     ...(process.env.PROTECTED_LOGIN_EMAILS ?? "")
       .split(",")
       .map((e) => e.trim().toLowerCase())
@@ -99,9 +102,14 @@ export function registerMobileAuthRoutes(app: Express) {
         return res.status(400).json({ error: "Email is required — email is needed for cross-platform account linking" });
       }
 
-      // Reject login attempts for protected (admin) emails. The mobile endpoint
-      // does not verify email ownership, so without this gate anyone could
-      // sign in as admin by sending the admin's email address.
+      // Admin spoofing guard (task #61): the mobile endpoint issues a JWT for
+      // any email submitted, with no credential beyond the email itself. To
+      // prevent stranger-as-admin escalation, refuse the admin email (and any
+      // other emails listed in PROTECTED_LOGIN_EMAILS) on this path. The
+      // admin must sign in via web SSO (Replit OIDC or Google OAuth) — those
+      // flows verify identity cryptographically before reaching upsertUser().
+      // Admin authorization elsewhere is keyed off users.isAdmin in the DB,
+      // which is auto-set on verified SSO sign-in (replitAuth.upsertUser).
       if (isProtectedEmailBlocked(normalizedEmail)) {
         console.warn(`[mobile-auth] Blocked protected-email login attempt for ${normalizedEmail}`);
         return res.status(403).json({

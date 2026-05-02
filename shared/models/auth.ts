@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { check, index, jsonb, pgTable, timestamp, varchar, text, unique } from "drizzle-orm/pg-core";
+import { boolean, check, index, jsonb, pgTable, timestamp, varchar, text, unique } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -23,6 +23,12 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
+  // Admin flag — only accounts with this set true can reach isAdmin-gated endpoints.
+  // Auto-set on web OIDC login when the email matches the configured admin email
+  // (replitAuth.upsertUser). Stored on the user row so admin status follows the
+  // registered account, not just an email string. Manual promotion via SQL is also
+  // supported. See task #61.
+  isAdmin: boolean("is_admin").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
