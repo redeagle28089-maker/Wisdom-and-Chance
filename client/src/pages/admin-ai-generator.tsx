@@ -160,6 +160,8 @@ export default function AdminAiGeneratorPage() {
     onSuccess: (data) => {
       setResults(data);
       setCandidateStates({});
+      setArtStates({});
+      setGeneratedArt({});
       toast({
         title: "Generation complete",
         description: `${data.candidates.length} valid candidate(s) of ${data.totalReturnedByAi} returned (${data.rejectedCount} rejected by schema)`,
@@ -177,9 +179,11 @@ export default function AdminAiGeneratorPage() {
   const saveMutation = useMutation({
     mutationFn: async (args: { index: number; payload: InsertCard | InsertCommander }) => {
       setCandidateStates((s) => ({ ...s, [args.index]: "saving" }));
+      const art = generatedArt[args.index];
+      const payloadWithArt = art ? { ...args.payload, imageUrl: art } : args.payload;
       const res = await apiRequest("POST", "/api/admin/generated-cards/save", {
         kind,
-        payload: args.payload,
+        payload: payloadWithArt,
       });
       return { index: args.index, body: await res.json() };
     },
@@ -203,14 +207,47 @@ export default function AdminAiGeneratorPage() {
     setCandidateStates((s) => ({ ...s, [index]: "discarded" }));
   };
 
+  const artMutation = useMutation({
+    mutationFn: async (args: { index: number; payload: InsertCard | InsertCommander }) => {
+      setArtStates((s) => ({ ...s, [args.index]: "generating" }));
+      const body: any = {
+        kind,
+        name: (args.payload as any).name,
+        element: (args.payload as any).element,
+        description: (args.payload as any).description,
+      };
+      if (kind === "commander") body.title = (args.payload as InsertCommander).title;
+      if (artReferenceText.trim()) body.artReferenceText = artReferenceText.trim();
+      if (artReferenceImage) body.artReferenceImageBase64 = artReferenceImage;
+      const res = await apiRequest("POST", "/api/admin/generated-cards/generate-art", body);
+      const data = (await res.json()) as { imageUrl: string };
+      return { index: args.index, imageUrl: data.imageUrl };
+    },
+    onSuccess: ({ index, imageUrl }) => {
+      setArtStates((s) => ({ ...s, [index]: "done" }));
+      setGeneratedArt((g) => ({ ...g, [index]: imageUrl }));
+      toast({ title: "Art generated", description: "Click Save to attach it to this candidate." });
+    },
+    onError: (error: any, vars) => {
+      setArtStates((s) => ({ ...s, [vars.index]: "error" }));
+      toast({
+        title: "Art generation failed",
+        description: error?.message || "Could not generate art",
+        variant: "destructive",
+      });
+    },
+  });
+
   const previewCard = (payload: InsertCard, index: number): CardType => ({
     ...payload,
     id: `gen-card-${index}`,
+    imageUrl: generatedArt[index] || payload.imageUrl,
   } as CardType);
 
   const previewCommander = (payload: InsertCommander, index: number): Commander => ({
     ...payload,
     id: `gen-commander-${index}`,
+    imageUrl: generatedArt[index] || payload.imageUrl,
   } as Commander);
 
   const sortedEffects = useMemo(() => [...ALLOWED_ABILITY_EFFECTS].sort((a, b) => a.type.localeCompare(b.type)), []);
@@ -362,6 +399,62 @@ export default function AdminAiGeneratorPage() {
             />
           </div>
 
+          <div className="rounded-lg border border-purple-500/30 bg-slate-950/40 p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <Palette className="w-4 h-4 text-purple-400" />
+              <h3 className="text-white font-semibold text-sm">Art reference (optional)</h3>
+            </div>
+            <p className="text-slate-400 text-xs">
+              Used by the per-candidate <span className="font-semibold text-slate-300">Generate art</span> button below.
+              Combine a written description and/or a reference image — both are sent to the image model.
+            </p>
+            <div>
+              <Label htmlFor="art-ref-text" className="text-xs">Written art reference</Label>
+              <Textarea
+                id="art-ref-text"
+                placeholder='e.g. "moody chiaroscuro, oil-paint texture, low-angle hero shot"'
+                value={artReferenceText}
+                onChange={(e) => setArtReferenceText(e.target.value)}
+                maxLength={800}
+                data-testid="input-art-reference-text"
+              />
+            </div>
+            <div>
+              <Label htmlFor="art-ref-image" className="text-xs">Reference image upload</Label>
+              <div className="flex items-center gap-2 mt-1">
+                <Input
+                  id="art-ref-image"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleReferenceImageChange(e.target.files?.[0] ?? null)}
+                  className="flex-1"
+                  data-testid="input-art-reference-image"
+                />
+                {artReferenceImage && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleReferenceImageChange(null)}
+                    data-testid="button-clear-art-reference-image"
+                  >
+                    <X className="w-3 h-3" />
+                  </Button>
+                )}
+              </div>
+              {artReferenceImage && (
+                <div className="mt-2 flex items-center gap-3">
+                  <img
+                    src={artReferenceImage}
+                    alt="reference"
+                    className="w-16 h-16 object-cover rounded border border-slate-700"
+                    data-testid="img-art-reference-preview"
+                  />
+                  <span className="text-slate-400 text-xs truncate">{artReferenceImageName}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
           <Button
             onClick={() => generateMutation.mutate()}
             disabled={generateMutation.isPending}
@@ -426,6 +519,8 @@ export default function AdminAiGeneratorPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {(results.candidates as InsertCard[]).map((payload, i) => {
                   const state = candidateStates[i] || "idle";
+                  const artState = artStates[i] || "idle";
+                  const hasArt = !!generatedArt[i];
                   return (
                     <div
                       key={i}
@@ -446,8 +541,11 @@ export default function AdminAiGeneratorPage() {
                       <CandidateActions
                         index={i}
                         state={state}
+                        artState={artState}
+                        hasArt={hasArt}
                         onSave={() => saveMutation.mutate({ index: i, payload })}
                         onDiscard={() => handleDiscard(i)}
+                        onGenerateArt={() => artMutation.mutate({ index: i, payload })}
                       />
                     </div>
                   );
@@ -457,6 +555,8 @@ export default function AdminAiGeneratorPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {(results.candidates as InsertCommander[]).map((payload, i) => {
                   const state = candidateStates[i] || "idle";
+                  const artState = artStates[i] || "idle";
+                  const hasArt = !!generatedArt[i];
                   return (
                     <div
                       key={i}
@@ -477,8 +577,11 @@ export default function AdminAiGeneratorPage() {
                       <CandidateActions
                         index={i}
                         state={state}
+                        artState={artState}
+                        hasArt={hasArt}
                         onSave={() => saveMutation.mutate({ index: i, payload })}
                         onDiscard={() => handleDiscard(i)}
+                        onGenerateArt={() => artMutation.mutate({ index: i, payload })}
                       />
                     </div>
                   );
