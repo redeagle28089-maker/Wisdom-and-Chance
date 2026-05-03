@@ -384,7 +384,7 @@ export default function AdminImageDatabasePage() {
               ) : (
                 <>
                   <Archive className="w-4 h-4" />
-                  Download ZIP ({cardImages.length})
+                  Download All as ZIP
                 </>
               )}
             </Button>
