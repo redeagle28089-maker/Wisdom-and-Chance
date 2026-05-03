@@ -64,6 +64,8 @@ export default function AdminPresentationPage() {
     },
     onSuccess: (data) => {
       setLastResult(data);
+      queryClient.invalidateQueries({ queryKey: ["/api/collection"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/decks"] });
       toast({
         title: "Cards Granted!",
         description: `Gave ${data.copiesPerCard}× all ${data.cardsGranted} cards to ${data.usersUpdated} accounts.`,
