@@ -4,7 +4,7 @@ import { z } from "zod";
 import { eq, or, and, lt, lte, desc, sql, isNull } from "drizzle-orm";
 import { storage } from "./storage";
 import { db } from "./db";
-import { insertCardSchema, insertDeckSchema, insertPlayerSchema, insertGameSchema, ELEMENTS, userDecks, insertUserDeckSchema, GAME_CONSTANTS, cardImages, insertCardImageSchema, TRAITS, BUFF_DEBUFF_COLORS, users, friendships, friendMessages, cardImageMappings, commanderImageMappings, GAME_PHASES, GAME_MODE_CONFIG, AI_DIFFICULTY, GAME_STATUS, featureFlags, serverConfig, DEFAULT_FEATURE_FLAGS, playerCurrencies, playerCollection, ECONOMY_CONSTANTS, getCardRarity, type CardRarity, playerChallenges, playerAchievements, PACK_TYPES, dailyDeals, shopCatalog, shopBundles, seasons, seasonHistory, battlePassLevels, playerBattlePass, weeklyChallenges, playerWeeklyChallenges, RANKED_TIERS, SEASON_REWARDS, BATTLE_PASS_XP, playerRatings, gameRooms, cardSchema, commanderSchema, insertCommanderSchema, ALLOWED_ABILITY_EFFECTS, cards as cardsTable, commanders as commandersTable } from "@shared/schema";
+import { insertCardSchema, insertDeckSchema, insertPlayerSchema, insertGameSchema, ELEMENTS, userDecks, insertUserDeckSchema, GAME_CONSTANTS, cardImages, insertCardImageSchema, TRAITS, BUFF_DEBUFF_COLORS, users, friendships, friendMessages, cardImageMappings, commanderImageMappings, GAME_PHASES, GAME_MODE_CONFIG, AI_DIFFICULTY, GAME_STATUS, featureFlags, serverConfig, DEFAULT_FEATURE_FLAGS, playerCurrencies, playerCollection, ECONOMY_CONSTANTS, getCardRarity, type CardRarity, playerChallenges, playerAchievements, PACK_TYPES, dailyDeals, shopCatalog, shopBundles, seasons, seasonHistory, battlePassLevels, playerBattlePass, weeklyChallenges, playerWeeklyChallenges, RANKED_TIERS, SEASON_REWARDS, BATTLE_PASS_XP, playerRatings, gameRooms, cardSchema, commanderSchema, insertCommanderSchema, ALLOWED_ABILITY_EFFECTS } from "@shared/schema";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import { registerMultiplayerRoutes } from "./multiplayerRoutes";
 import { registerMobileAuthRoutes } from "./mobileAuth";
@@ -1841,25 +1841,24 @@ IMPORTANT:
   // Download all images as a single ZIP file
   app.get("/api/admin/images/download-zip", isAuthenticated, isAdmin, async (req, res) => {
     try {
-      // Fetch all three sources in parallel, joining mappings to get display names
-      const [libraryImages, cardMappings, commanderMappings] = await Promise.all([
+      // Fetch all sources in parallel; use storage layer for cards/commanders so
+      // seeded (in-memory) records are included alongside any DB-persisted ones
+      const [libraryImages, cardMappings, commanderMappings, allCards, allCommanders] = await Promise.all([
         db.select().from(cardImages).orderBy(cardImages.name),
-        db.select({
-          cardId: cardImageMappings.cardId,
-          imageUrl: cardImageMappings.imageUrl,
-          cardName: cardsTable.name,
-        }).from(cardImageMappings).leftJoin(cardsTable, eq(cardImageMappings.cardId, cardsTable.id)),
-        db.select({
-          commanderId: commanderImageMappings.commanderId,
-          imageUrl: commanderImageMappings.imageUrl,
-          commanderName: commandersTable.name,
-        }).from(commanderImageMappings).leftJoin(commandersTable, eq(commanderImageMappings.commanderId, commandersTable.id)),
+        db.select().from(cardImageMappings),
+        db.select().from(commanderImageMappings),
+        storage.getCards(),
+        storage.getCommanders(),
       ]);
 
       const totalCount = libraryImages.length + cardMappings.length + commanderMappings.length;
       if (totalCount === 0) {
         return res.status(404).json({ error: "No images found to export" });
       }
+
+      // Build name lookup maps from the canonical storage layer
+      const cardNameById = new Map(allCards.map(c => [c.id, c.name]));
+      const commanderNameById = new Map(allCommanders.map(c => [c.id, c.name]));
 
       res.setHeader("Content-Type", "application/zip");
       res.setHeader("Content-Disposition", 'attachment; filename="wisdom-chance-card-art.zip"');
@@ -1877,7 +1876,7 @@ IMPORTANT:
         return { buffer: Buffer.from(match[2], "base64"), ext: match[1] === "jpeg" ? "jpg" : match[1] };
       };
 
-      const sanitize = (s: string) => s.replace(/[^a-zA-Z0-9_-]/g, "_");
+      const sanitize = (s: string) => s.replace(/[^a-zA-Z0-9_\- ]/g, "_").trim();
 
       // Library images → card-art/{name}_{fullId}.{ext}
       for (const img of libraryImages) {
@@ -1890,16 +1889,16 @@ IMPORTANT:
       for (const mapping of cardMappings) {
         const result = toBuffer(mapping.imageUrl);
         if (!result) continue;
-        const label = mapping.cardName ? sanitize(mapping.cardName) : sanitize(mapping.cardId);
-        archive.append(result.buffer, { name: `card-mappings/${label}.${result.ext}` });
+        const displayName = cardNameById.get(mapping.cardId) ?? mapping.cardId;
+        archive.append(result.buffer, { name: `card-mappings/${sanitize(displayName)}.${result.ext}` });
       }
 
       // Commander image mappings → commander-mappings/{commanderName}.{ext} (fallback to commanderId)
       for (const mapping of commanderMappings) {
         const result = toBuffer(mapping.imageUrl);
         if (!result) continue;
-        const label = mapping.commanderName ? sanitize(mapping.commanderName) : sanitize(mapping.commanderId);
-        archive.append(result.buffer, { name: `commander-mappings/${label}.${result.ext}` });
+        const displayName = commanderNameById.get(mapping.commanderId) ?? mapping.commanderId;
+        archive.append(result.buffer, { name: `commander-mappings/${sanitize(displayName)}.${result.ext}` });
       }
 
       await archive.finalize();
