@@ -17,6 +17,7 @@ import { getWebSocketServer } from "./websocket";
 import { filterObscenity } from "./obscenity-filter";
 import { gameEngine } from "./gameEngine";
 import { ensureCurrencies, grantGold, grantStarterCollection, grantBattlePassXP } from "./economyService";
+import archiver from "archiver";
 
 import { ADMIN_EMAIL } from "./adminConfig";
 
@@ -1834,6 +1835,70 @@ IMPORTANT:
     } catch (error) {
       console.error("Error downloading card image:", error);
       res.status(500).json({ error: "Failed to download image" });
+    }
+  });
+
+  // Download all images as a single ZIP file
+  app.get("/api/admin/images/download-zip", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      // Fetch all three sources in parallel
+      const [libraryImages, cardMappings, commanderMappings] = await Promise.all([
+        db.select().from(cardImages).orderBy(cardImages.name),
+        db.select().from(cardImageMappings),
+        db.select().from(commanderImageMappings),
+      ]);
+
+      const totalCount = libraryImages.length + cardMappings.length + commanderMappings.length;
+      if (totalCount === 0) {
+        return res.status(404).json({ error: "No images found to export" });
+      }
+
+      res.setHeader("Content-Type", "application/zip");
+      res.setHeader("Content-Disposition", 'attachment; filename="wisdom-chance-card-art.zip"');
+
+      const archive = archiver("zip", { zlib: { level: 6 } });
+      archive.on("error", (err) => {
+        console.error("Archiver error:", err);
+        res.end();
+      });
+      archive.pipe(res);
+
+      const toBuffer = (imageUrl: string) => {
+        const match = imageUrl.match(/^data:image\/(png|jpeg|jpg|webp|gif);base64,(.+)$/);
+        if (!match) return null;
+        return { buffer: Buffer.from(match[2], "base64"), ext: match[1] === "jpeg" ? "jpg" : match[1] };
+      };
+
+      // Library images → card-art/
+      for (const img of libraryImages) {
+        const result = toBuffer(img.imageUrl);
+        if (!result) continue;
+        const safeName = img.name.replace(/[^a-zA-Z0-9_-]/g, "_");
+        archive.append(result.buffer, { name: `card-art/${safeName}_${img.id.slice(0, 8)}.${result.ext}` });
+      }
+
+      // Card image mappings → card-mappings/
+      for (const mapping of cardMappings) {
+        const result = toBuffer(mapping.imageUrl);
+        if (!result) continue;
+        const safeName = mapping.cardId.replace(/[^a-zA-Z0-9_-]/g, "_");
+        archive.append(result.buffer, { name: `card-mappings/${safeName}.${result.ext}` });
+      }
+
+      // Commander image mappings → commander-mappings/
+      for (const mapping of commanderMappings) {
+        const result = toBuffer(mapping.imageUrl);
+        if (!result) continue;
+        const safeName = mapping.commanderId.replace(/[^a-zA-Z0-9_-]/g, "_");
+        archive.append(result.buffer, { name: `commander-mappings/${safeName}.${result.ext}` });
+      }
+
+      await archive.finalize();
+    } catch (error) {
+      console.error("Error creating image ZIP:", error);
+      if (!res.headersSent) {
+        res.status(500).json({ error: "Failed to create image ZIP" });
+      }
     }
   });
 

@@ -30,7 +30,8 @@ import {
   Filter,
   Edit2,
   Check,
-  X
+  X,
+  Archive
 } from "lucide-react";
 import {
   AlertDialog,
@@ -81,6 +82,7 @@ export default function AdminImageDatabasePage() {
   const [isUploading, setIsUploading] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
+  const [isZipping, setIsZipping] = useState(false);
 
   const { data: adminCheck, isLoading: adminLoading } = useQuery<{ isAdmin: boolean }>({
     queryKey: ["/api/admin/check"],
@@ -343,6 +345,49 @@ export default function AdminImageDatabasePage() {
           </div>
           
           <div className="flex gap-2">
+            <Button
+              variant="outline"
+              className="gap-2 border-amber-500/50 text-amber-300 hover:bg-amber-500/10"
+              onClick={async () => {
+                setIsZipping(true);
+                try {
+                  const resp = await fetch("/api/admin/images/download-zip");
+                  if (!resp.ok) {
+                    const err = await resp.json().catch(() => ({ error: "Unknown error" }));
+                    toast({ title: "ZIP Failed", description: err.error, variant: "destructive" });
+                    return;
+                  }
+                  const blob = await resp.blob();
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = "wisdom-chance-card-art.zip";
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  URL.revokeObjectURL(url);
+                  toast({ title: "ZIP Downloaded", description: "All card art packaged successfully." });
+                } catch {
+                  toast({ title: "ZIP Failed", description: "Could not download ZIP.", variant: "destructive" });
+                } finally {
+                  setIsZipping(false);
+                }
+              }}
+              disabled={isZipping || cardImages.length === 0}
+              data-testid="button-download-zip"
+            >
+              {isZipping ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Zipping…
+                </>
+              ) : (
+                <>
+                  <Archive className="w-4 h-4" />
+                  Download ZIP ({cardImages.length})
+                </>
+              )}
+            </Button>
             <Button 
               variant="outline"
               className="gap-2"
@@ -358,7 +403,7 @@ export default function AdminImageDatabasePage() {
               ) : (
                 <>
                   <Download className="w-4 h-4" />
-                  Download All ({filteredImages.length})
+                  Download ({filteredImages.length})
                 </>
               )}
             </Button>
