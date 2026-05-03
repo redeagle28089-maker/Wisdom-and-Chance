@@ -107,7 +107,7 @@ title = "Wisdom & Chance TCG — Business Plan v6.3 (Final)"
 id = "68YGWKkQR3j0j53qZRdfe"
 uri = "file://Wisdom_Chance_TCG_Business_Plan_v7.0.pdf"
 type = "pdf"
-title = "Wisdom & Chance TCG Business Plan v7.0 (with Campaign Summary)"
+title = "Wisdom & Chance — Business Plan v7.0 (Root Copy)"
 
 [[outputs]]
 id = "eKsYe9GFq763SMQaCnepJ"
@@ -138,3 +138,9 @@ id = "633CS65HxekLl5rCs1f51"
 uri = "file://.local/backups/wisdom-chance-tcg-20260503-004840.tar.gz"
 type = "unspecified"
 title = "Project backup — wisdom-chance-tcg-20260503-004840.tar.gz"
+
+[[outputs]]
+id = "0f-JG984AKJINFLAfeyjs"
+uri = "file://docs/reference/business-plan-v7.pdf"
+type = "pdf"
+title = "Wisdom & Chance — Business Plan v7.0 (Canonical Reference)"
