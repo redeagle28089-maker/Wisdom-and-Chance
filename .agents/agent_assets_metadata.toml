@@ -132,3 +132,9 @@ id = "HEFkw47Iy8J5uQWa44wjQ"
 uri = "file://.local/backups/wisdom-chance-tcg-20260503-001346.tar.gz"
 type = "unspecified"
 title = "Project backup — wisdom-chance-tcg-20260503-001346.tar.gz"
+
+[[outputs]]
+id = "633CS65HxekLl5rCs1f51"
+uri = "file://.local/backups/wisdom-chance-tcg-20260503-004840.tar.gz"
+type = "unspecified"
+title = "Project backup — wisdom-chance-tcg-20260503-004840.tar.gz"
