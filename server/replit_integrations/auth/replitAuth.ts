@@ -5,7 +5,7 @@ import session from "express-session";
 import type { Express, RequestHandler } from "express";
 import connectPg from "connect-pg-simple";
 import { authStorage, ensureUserProvidersTable, backfillProviderLinks, migrateEmailsToLowercase, ProviderConflictError } from "./storage";
-import { seedStarterDecks } from "../starter-decks";
+import { seedStarterDecks } from "../../starter-decks";
 
 // Simple retry utility (replaces p-retry to avoid ESM bundling issues)
 async function retry<T>(
