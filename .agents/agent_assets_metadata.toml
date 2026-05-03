@@ -126,3 +126,9 @@ id = "--q6yxm4RLRr4VCJofziF"
 uri = "file://wisdom-chance-business-plan.pdf"
 type = "pdf"
 title = "Wisdom & Chance — Full Business Plan (fixed)"
+
+[[outputs]]
+id = "HEFkw47Iy8J5uQWa44wjQ"
+uri = "file://.local/backups/wisdom-chance-tcg-20260503-001346.tar.gz"
+type = "unspecified"
+title = "Project backup — wisdom-chance-tcg-20260503-001346.tar.gz"
