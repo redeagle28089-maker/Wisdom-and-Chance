@@ -157,6 +157,16 @@ export function registerMobileAuthRoutes(app: Express) {
         console.warn("[mobile-auth] Failed to grant starter economy:", error);
       }
 
+      try {
+        const { isPresentationMode, grantPresentationCards } = await import("./economyService");
+        if (await isPresentationMode()) {
+          const count = await grantPresentationCards(user.id);
+          console.log(`[mobile-auth] Presentation mode active — granted ${count} max-copy cards to userId=${user.id}`);
+        }
+      } catch (error) {
+        console.warn("[mobile-auth] Failed to grant presentation cards:", error);
+      }
+
       const token = generateToken({ userId: user.id, email: user.email || normalizedEmail });
       if (!token) {
         console.error("[mobile-auth] Cannot issue login token: SESSION_SECRET not configured");

@@ -16,7 +16,7 @@ import {
   Home, BookOpen, Database, Layers, Swords, Trophy, User, GraduationCap, 
   LogIn, LogOut, Users, Gamepad2, Medal, Calendar, BarChart3, Eye, 
   BookMarked, Palette, ImageIcon, ChevronDown, X, UserCircle, Package, ShoppingBag,
-  Shield, Star, Smartphone, Wand2
+  Shield, Star, Smartphone, Wand2, Presentation
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -174,6 +174,7 @@ export function NavHeader() {
                   { title: "AI Generator", url: "/admin/ai-generator", icon: Wand2 },
                   { title: "Image Database", url: "/admin/image-database", icon: ImageIcon },
                   { title: "User Database", url: "/admin/user-database", icon: Users },
+                  { title: "Presentation Mode", url: "/admin/presentation", icon: Presentation },
                 ]} 
                 labelColor="text-amber-400"
               />

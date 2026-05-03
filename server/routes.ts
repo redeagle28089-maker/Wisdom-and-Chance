@@ -1620,23 +1620,17 @@ IMPORTANT:
 
   app.post("/api/admin/grant-all-cards", isAuthenticated, isAdmin, async (req, res) => {
     try {
-      const allCards = await storage.getCards();
+      const { grantPresentationCards } = await import("./economyService");
       const allUsers = await db.select({ id: users.id }).from(users);
+      let cardsGranted = 0;
       for (const user of allUsers) {
-        for (const card of allCards) {
-          await db.insert(playerCollection)
-            .values({ userId: user.id, cardId: card.id, quantity: GAME_CONSTANTS.MAX_COPIES_PER_CARD })
-            .onConflictDoUpdate({
-              target: [playerCollection.userId, playerCollection.cardId],
-              set: { quantity: GAME_CONSTANTS.MAX_COPIES_PER_CARD },
-            });
-        }
+        cardsGranted = await grantPresentationCards(user.id);
       }
-      console.log(`[admin] Granted ${GAME_CONSTANTS.MAX_COPIES_PER_CARD}x all ${allCards.length} cards to ${allUsers.length} users`);
+      console.log(`[admin] Granted ${GAME_CONSTANTS.MAX_COPIES_PER_CARD}x all ${cardsGranted} cards to ${allUsers.length} users`);
       res.json({
         success: true,
         usersUpdated: allUsers.length,
-        cardsGranted: allCards.length,
+        cardsGranted,
         copiesPerCard: GAME_CONSTANTS.MAX_COPIES_PER_CARD,
       });
     } catch (error) {
