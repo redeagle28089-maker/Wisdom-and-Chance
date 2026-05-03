@@ -4,7 +4,7 @@ import { z } from "zod";
 import { eq, or, and, lt, lte, desc, sql, isNull } from "drizzle-orm";
 import { storage } from "./storage";
 import { db } from "./db";
-import { insertCardSchema, insertDeckSchema, insertPlayerSchema, insertGameSchema, ELEMENTS, userDecks, insertUserDeckSchema, GAME_CONSTANTS, cardImages, insertCardImageSchema, TRAITS, BUFF_DEBUFF_COLORS, users, friendships, friendMessages, cardImageMappings, commanderImageMappings, GAME_PHASES, GAME_MODE_CONFIG, AI_DIFFICULTY, GAME_STATUS, featureFlags, serverConfig, DEFAULT_FEATURE_FLAGS, playerCurrencies, playerCollection, ECONOMY_CONSTANTS, getCardRarity, type CardRarity, playerChallenges, playerAchievements, PACK_TYPES, dailyDeals, shopCatalog, shopBundles, seasons, seasonHistory, battlePassLevels, playerBattlePass, weeklyChallenges, playerWeeklyChallenges, RANKED_TIERS, SEASON_REWARDS, BATTLE_PASS_XP, playerRatings, gameRooms, cardSchema, commanderSchema, insertCommanderSchema, ALLOWED_ABILITY_EFFECTS } from "@shared/schema";
+import { insertCardSchema, insertDeckSchema, insertPlayerSchema, insertGameSchema, ELEMENTS, userDecks, insertUserDeckSchema, GAME_CONSTANTS, cardImages, insertCardImageSchema, TRAITS, BUFF_DEBUFF_COLORS, users, friendships, friendMessages, cardImageMappings, commanderImageMappings, GAME_PHASES, GAME_MODE_CONFIG, AI_DIFFICULTY, GAME_STATUS, featureFlags, serverConfig, DEFAULT_FEATURE_FLAGS, playerCurrencies, playerCollection, ECONOMY_CONSTANTS, getCardRarity, type CardRarity, playerChallenges, playerAchievements, PACK_TYPES, dailyDeals, shopCatalog, shopBundles, seasons, seasonHistory, battlePassLevels, playerBattlePass, weeklyChallenges, playerWeeklyChallenges, RANKED_TIERS, SEASON_REWARDS, BATTLE_PASS_XP, playerRatings, gameRooms, cardSchema, commanderSchema, insertCommanderSchema, ALLOWED_ABILITY_EFFECTS, cards as cardsTable, commanders as commandersTable } from "@shared/schema";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import { registerMultiplayerRoutes } from "./multiplayerRoutes";
 import { registerMobileAuthRoutes } from "./mobileAuth";
@@ -1841,11 +1841,19 @@ IMPORTANT:
   // Download all images as a single ZIP file
   app.get("/api/admin/images/download-zip", isAuthenticated, isAdmin, async (req, res) => {
     try {
-      // Fetch all three sources in parallel
+      // Fetch all three sources in parallel, joining mappings to get display names
       const [libraryImages, cardMappings, commanderMappings] = await Promise.all([
         db.select().from(cardImages).orderBy(cardImages.name),
-        db.select().from(cardImageMappings),
-        db.select().from(commanderImageMappings),
+        db.select({
+          cardId: cardImageMappings.cardId,
+          imageUrl: cardImageMappings.imageUrl,
+          cardName: cardsTable.name,
+        }).from(cardImageMappings).leftJoin(cardsTable, eq(cardImageMappings.cardId, cardsTable.id)),
+        db.select({
+          commanderId: commanderImageMappings.commanderId,
+          imageUrl: commanderImageMappings.imageUrl,
+          commanderName: commandersTable.name,
+        }).from(commanderImageMappings).leftJoin(commandersTable, eq(commanderImageMappings.commanderId, commandersTable.id)),
       ]);
 
       const totalCount = libraryImages.length + cardMappings.length + commanderMappings.length;
@@ -1869,28 +1877,29 @@ IMPORTANT:
         return { buffer: Buffer.from(match[2], "base64"), ext: match[1] === "jpeg" ? "jpg" : match[1] };
       };
 
-      // Library images → card-art/
+      const sanitize = (s: string) => s.replace(/[^a-zA-Z0-9_-]/g, "_");
+
+      // Library images → card-art/{name}_{fullId}.{ext}
       for (const img of libraryImages) {
         const result = toBuffer(img.imageUrl);
         if (!result) continue;
-        const safeName = img.name.replace(/[^a-zA-Z0-9_-]/g, "_");
-        archive.append(result.buffer, { name: `card-art/${safeName}_${img.id.slice(0, 8)}.${result.ext}` });
+        archive.append(result.buffer, { name: `card-art/${sanitize(img.name)}_${sanitize(img.id)}.${result.ext}` });
       }
 
-      // Card image mappings → card-mappings/
+      // Card image mappings → card-mappings/{cardName}.{ext} (fallback to cardId)
       for (const mapping of cardMappings) {
         const result = toBuffer(mapping.imageUrl);
         if (!result) continue;
-        const safeName = mapping.cardId.replace(/[^a-zA-Z0-9_-]/g, "_");
-        archive.append(result.buffer, { name: `card-mappings/${safeName}.${result.ext}` });
+        const label = mapping.cardName ? sanitize(mapping.cardName) : sanitize(mapping.cardId);
+        archive.append(result.buffer, { name: `card-mappings/${label}.${result.ext}` });
       }
 
-      // Commander image mappings → commander-mappings/
+      // Commander image mappings → commander-mappings/{commanderName}.{ext} (fallback to commanderId)
       for (const mapping of commanderMappings) {
         const result = toBuffer(mapping.imageUrl);
         if (!result) continue;
-        const safeName = mapping.commanderId.replace(/[^a-zA-Z0-9_-]/g, "_");
-        archive.append(result.buffer, { name: `commander-mappings/${safeName}.${result.ext}` });
+        const label = mapping.commanderName ? sanitize(mapping.commanderName) : sanitize(mapping.commanderId);
+        archive.append(result.buffer, { name: `commander-mappings/${label}.${result.ext}` });
       }
 
       await archive.finalize();

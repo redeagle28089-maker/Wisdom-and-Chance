@@ -373,7 +373,7 @@ export default function AdminImageDatabasePage() {
                   setIsZipping(false);
                 }
               }}
-              disabled={isZipping || cardImages.length === 0}
+              disabled={isZipping}
               data-testid="button-download-zip"
             >
               {isZipping ? (
