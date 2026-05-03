@@ -5,6 +5,7 @@ import session from "express-session";
 import type { Express, RequestHandler } from "express";
 import connectPg from "connect-pg-simple";
 import { authStorage, ensureUserProvidersTable, backfillProviderLinks, migrateEmailsToLowercase, ProviderConflictError } from "./storage";
+import { seedStarterDecks } from "../starter-decks";
 
 // Simple retry utility (replaces p-retry to avoid ESM bundling issues)
 async function retry<T>(
@@ -699,7 +700,6 @@ export async function setupAuth(app: Express) {
       const effectiveUserId = dbUser.id;
 
       try {
-        const { seedStarterDecks } = await import("../starter-decks");
         await seedStarterDecks(effectiveUserId);
       } catch (error) {
         console.warn("[auth] Failed to seed starter decks:", error);
@@ -815,7 +815,6 @@ export async function setupAuth(app: Express) {
           const dbUser = await upsertUser(googleClaims, "google");
 
           try {
-            const { seedStarterDecks } = await import("../starter-decks");
             await seedStarterDecks(dbUser.id);
           } catch (e) {
             console.warn("[google] Failed to seed starter decks:", e);
