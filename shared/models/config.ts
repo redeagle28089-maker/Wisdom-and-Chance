@@ -40,6 +40,7 @@ export const DEFAULT_FEATURE_FLAGS: Record<string, { enabled: boolean; descripti
   daily_challenges: { enabled: true, description: "Daily challenge quests" },
   achievements: { enabled: true, description: "Achievement system with XP rewards" },
   leaderboard: { enabled: true, description: "Global leaderboard and rankings" },
+  presentation_mode: { enabled: false, description: "Grant all users max card copies for demos and presentations" },
 };
 
 export const appConfigSchema = z.object({

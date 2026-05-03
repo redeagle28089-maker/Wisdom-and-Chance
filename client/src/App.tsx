@@ -35,6 +35,7 @@ import AdminCardArtPage from "@/pages/admin-card-art";
 import AdminImageDatabasePage from "@/pages/admin-image-database";
 import AdminUserDatabasePage from "@/pages/admin-user-database";
 import AdminAiGeneratorPage from "@/pages/admin-ai-generator";
+import AdminPresentationPage from "@/pages/admin-presentation";
 import AboutCreatorPage from "@/pages/about-creator";
 import CollectionPage from "@/pages/collection";
 import ShopPage from "@/pages/shop";
@@ -135,6 +136,7 @@ function AppContent() {
           <Route path="/admin/image-database" component={AdminImageDatabasePage} />
           <Route path="/admin/user-database" component={AdminUserDatabasePage} />
           <Route path="/admin/ai-generator" component={AdminAiGeneratorPage} />
+          <Route path="/admin/presentation" component={AdminPresentationPage} />
           <Route path="/admin-card-art" component={AdminCardArtPage} />
           <Route component={NotFound} />
         </Switch>

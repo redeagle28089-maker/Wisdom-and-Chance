@@ -448,6 +448,16 @@ async function upsertUser(claims: JWTClaims, provider: "replit" | "google") {
     console.error("[auth] Error granting starter economy:", e);
   }
 
+  try {
+    const { isPresentationMode, grantPresentationCards } = await import("../../economyService");
+    if (await isPresentationMode()) {
+      const count = await grantPresentationCards(dbUser.id);
+      console.log(`[auth] Presentation mode active — granted ${count} max-copy cards to userId=${dbUser.id}`);
+    }
+  } catch (e) {
+    console.error("[auth] Error granting presentation cards:", e);
+  }
+
   return dbUser;
 }
 

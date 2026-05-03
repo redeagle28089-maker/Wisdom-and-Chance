@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { eq, and, sql, lte, gte } from "drizzle-orm";
-import { playerCurrencies, playerCollection, ECONOMY_CONSTANTS, featureFlags, seasons, playerBattlePass, battlePassLevels, BATTLE_PASS_XP, weeklyChallenges, playerWeeklyChallenges, users } from "@shared/schema";
+import { playerCurrencies, playerCollection, ECONOMY_CONSTANTS, GAME_CONSTANTS, featureFlags, seasons, playerBattlePass, battlePassLevels, BATTLE_PASS_XP, weeklyChallenges, playerWeeklyChallenges, users } from "@shared/schema";
 import { storage } from "./storage";
 
 const MAX = ECONOMY_CONSTANTS.MAX_CURRENCY;
@@ -76,6 +76,24 @@ export async function grantStarterCollection(userId: string) {
     .where(eq(playerCurrencies.userId, userId));
 
   console.log(`[economy] Granted starter collection (${starterCards.length} cards x2) to ${userId}`);
+}
+
+export async function isPresentationMode(): Promise<boolean> {
+  const flag = await db.select().from(featureFlags).where(eq(featureFlags.key, "presentation_mode")).limit(1);
+  return flag.length > 0 ? flag[0].enabled : false;
+}
+
+export async function grantPresentationCards(userId: string): Promise<number> {
+  const allCards = await storage.getCards();
+  for (const card of allCards) {
+    await db.insert(playerCollection)
+      .values({ userId, cardId: card.id, quantity: GAME_CONSTANTS.MAX_COPIES_PER_CARD })
+      .onConflictDoUpdate({
+        target: [playerCollection.userId, playerCollection.cardId],
+        set: { quantity: GAME_CONSTANTS.MAX_COPIES_PER_CARD },
+      });
+  }
+  return allCards.length;
 }
 
 export async function grantBattlePassXP(userId: string, xpAmount: number, reason: string) {

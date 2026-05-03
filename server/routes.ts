@@ -1618,6 +1618,33 @@ IMPORTANT:
     }
   });
 
+  app.post("/api/admin/grant-all-cards", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const allCards = await storage.getCards();
+      const allUsers = await db.select({ id: users.id }).from(users);
+      for (const user of allUsers) {
+        for (const card of allCards) {
+          await db.insert(playerCollection)
+            .values({ userId: user.id, cardId: card.id, quantity: GAME_CONSTANTS.MAX_COPIES_PER_CARD })
+            .onConflictDoUpdate({
+              target: [playerCollection.userId, playerCollection.cardId],
+              set: { quantity: GAME_CONSTANTS.MAX_COPIES_PER_CARD },
+            });
+        }
+      }
+      console.log(`[admin] Granted ${GAME_CONSTANTS.MAX_COPIES_PER_CARD}x all ${allCards.length} cards to ${allUsers.length} users`);
+      res.json({
+        success: true,
+        usersUpdated: allUsers.length,
+        cardsGranted: allCards.length,
+        copiesPerCard: GAME_CONSTANTS.MAX_COPIES_PER_CARD,
+      });
+    } catch (error) {
+      console.error("[admin] Error granting all cards:", error);
+      res.status(500).json({ message: "Failed to grant all cards" });
+    }
+  });
+
   app.post("/api/admin/generate-card-art", isAuthenticated, isAdmin, async (req, res) => {
     try {
       const parseResult = generateArtSchema.safeParse(req.body);
