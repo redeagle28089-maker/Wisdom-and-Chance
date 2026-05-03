@@ -144,3 +144,9 @@ id = "0f-JG984AKJINFLAfeyjs"
 uri = "file://docs/reference/business-plan-v7.pdf"
 type = "pdf"
 title = "Wisdom & Chance — Business Plan v7.0 (Canonical Reference)"
+
+[[outputs]]
+id = "q7fmIZsyKOeKYUDJru4qK"
+uri = "file://exports/wisdom-chance-card-art.zip"
+type = "unspecified"
+title = "Wisdom & Chance Card Art (68 images)"
