@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import { seedStarterDecks } from "./starter-decks";
 import { authStorage, ProviderConflictError, getLinkedProviders } from "./replit_integrations/auth";
 import { ADMIN_EMAIL } from "./adminConfig";
+import { ensureCurrencies, grantStarterCollection, isPresentationMode, grantPresentationCards } from "./economyService";
 
 const JWT_SECRET = process.env.SESSION_SECRET;
 if (!JWT_SECRET) {
@@ -150,7 +151,6 @@ export function registerMobileAuthRoutes(app: Express) {
       }
 
       try {
-        const { ensureCurrencies, grantStarterCollection } = await import("./economyService");
         await ensureCurrencies(user.id);
         await grantStarterCollection(user.id);
       } catch (error) {
@@ -158,7 +158,6 @@ export function registerMobileAuthRoutes(app: Express) {
       }
 
       try {
-        const { isPresentationMode, grantPresentationCards } = await import("./economyService");
         if (await isPresentationMode()) {
           const count = await grantPresentationCards(user.id);
           console.log(`[mobile-auth] Presentation mode active — granted ${count} max-copy cards to userId=${user.id}`);

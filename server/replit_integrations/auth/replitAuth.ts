@@ -6,6 +6,11 @@ import type { Express, RequestHandler } from "express";
 import connectPg from "connect-pg-simple";
 import { authStorage, ensureUserProvidersTable, backfillProviderLinks, migrateEmailsToLowercase, ProviderConflictError } from "./storage";
 import { seedStarterDecks } from "../../starter-decks";
+import { isAdminEmail } from "../../adminConfig";
+import { db } from "../../db";
+import { users } from "@shared/models/auth";
+import { eq } from "drizzle-orm";
+import { ensureCurrencies, grantStarterCollection, isPresentationMode, grantPresentationCards } from "../../economyService";
 
 // Simple retry utility (replaces p-retry to avoid ESM bundling issues)
 async function retry<T>(
@@ -428,10 +433,6 @@ async function upsertUser(claims: JWTClaims, provider: "replit" | "google") {
   // cryptographically verified SSO callback can land here for the admin —
   // that's what makes it safe to flip the flag automatically. See task #61.
   try {
-    const { isAdminEmail } = await import("../../adminConfig");
-    const { db } = await import("../../db");
-    const { users } = await import("@shared/models/auth");
-    const { eq } = await import("drizzle-orm");
     if (isAdminEmail(dbUser.email) && !dbUser.isAdmin) {
       await db.update(users).set({ isAdmin: true, updatedAt: new Date() }).where(eq(users.id, dbUser.id));
       dbUser.isAdmin = true;
@@ -442,7 +443,6 @@ async function upsertUser(claims: JWTClaims, provider: "replit" | "google") {
   }
 
   try {
-    const { ensureCurrencies, grantStarterCollection } = await import("../../economyService");
     await ensureCurrencies(dbUser.id);
     await grantStarterCollection(dbUser.id);
   } catch (e) {
@@ -450,7 +450,6 @@ async function upsertUser(claims: JWTClaims, provider: "replit" | "google") {
   }
 
   try {
-    const { isPresentationMode, grantPresentationCards } = await import("../../economyService");
     if (await isPresentationMode()) {
       const count = await grantPresentationCards(dbUser.id);
       console.log(`[auth] Presentation mode active — granted ${count} max-copy cards to userId=${dbUser.id}`);
