@@ -150,3 +150,9 @@ id = "q7fmIZsyKOeKYUDJru4qK"
 uri = "file://exports/wisdom-chance-card-art.zip"
 type = "unspecified"
 title = "Wisdom & Chance Card Art — 68 unit art + 5 commander portraits"
+
+[[outputs]]
+id = "rcXEwzuQYmRdsYnmBfWun"
+uri = "file://exports/wisdom-chance-kickstarter.pdf"
+type = "pdf"
+title = "Wisdom & Chance — Kickstarter Campaign Guide"
