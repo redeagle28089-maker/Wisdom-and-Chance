@@ -156,3 +156,9 @@ id = "rcXEwzuQYmRdsYnmBfWun"
 uri = "file://exports/wisdom-chance-kickstarter.pdf"
 type = "pdf"
 title = "Wisdom & Chance — Kickstarter Campaign Guide"
+
+[[outputs]]
+id = "KAm6T_m4r736HoqNeuSmK"
+uri = "file://exports/steam-electron-implementation-plan.pdf"
+type = "pdf"
+title = "Steam / Desktop Electron Client — Implementation Plan"
