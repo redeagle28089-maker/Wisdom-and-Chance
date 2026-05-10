@@ -6,7 +6,7 @@ Steam, Windows, Mac, and Linux. This is the fourth client in the monorepo alongs
 
 ## How It Works
 
-The desktop app loads `https://wisdom-and-chance.replit.app` inside an Electron
+The desktop app loads `https://wisdom-and-chance-2.replit.app` inside an Electron
 `BrowserWindow`. All game logic, multiplayer, deck building, and authentication
 are handled by the same server that powers the web and mobile clients — no
 duplicate code. The only Electron-specific code is:
@@ -57,7 +57,7 @@ See `STEAM.md` for the four-step manual process to publish on Steam after buildi
 
 ## Architecture Notes
 
-- The desktop app connects to the **production server** at `wisdom-and-chance.replit.app`
+- The desktop app connects to the **production server** at `wisdom-and-chance-2.replit.app`
 - WebSocket multiplayer works identically to the web client (same server endpoint)
 - Authentication uses Replit OIDC — the OAuth flow is handled inside the Electron window
   via navigation event interception in `main.js`

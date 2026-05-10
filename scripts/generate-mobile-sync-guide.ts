@@ -147,8 +147,8 @@ doc.fontSize(12).fillColor(COLORS.muted).text("API Version 2.3.0  |  March 2026"
 doc.moveDown(0.5);
 doc.fontSize(10).fillColor(COLORS.muted).text("For the Mobile Development Team", { align: "center" });
 doc.moveDown(3);
-doc.fontSize(9).fillColor(COLORS.muted).text("Base URL: https://wisdom-and-chance.replit.app", { align: "center" });
-doc.text("WebSocket: wss://wisdom-and-chance.replit.app/ws", { align: "center" });
+doc.fontSize(9).fillColor(COLORS.muted).text("Base URL: https://wisdom-and-chance-2.replit.app", { align: "center" });
+doc.text("WebSocket: wss://wisdom-and-chance-2.replit.app/ws", { align: "center" });
 
 // ===================== TABLE OF CONTENTS =====================
 doc.addPage();
@@ -364,7 +364,7 @@ title("4. API Contracts & Versioning");
 
 h2("4.1 Base Configuration");
 code(
-`Base URL: https://wisdom-and-chance.replit.app
+`Base URL: https://wisdom-and-chance-2.replit.app
 API Prefix: /api
 Auth Header: Authorization: Bearer <jwt_token>
 Content-Type: application/json
@@ -575,7 +575,7 @@ h2("7.1 Connection");
 code(
 `// Mobile WebSocket connection
 const ws = new WebSocket(
-  "wss://wisdom-and-chance.replit.app/ws?token=<jwt_token>"
+  "wss://wisdom-and-chance-2.replit.app/ws?token=<jwt_token>"
 );
 
 // Web uses session cookies automatically

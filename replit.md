@@ -48,7 +48,7 @@ Key features include:
 - **API Docs:** Available at GET /api/docs - comprehensive JSON documentation of all endpoints, WebSocket events, and game rules.
 - **Admin Sync Endpoint:** GET /api/admin/sync?code=4838 — Returns complete app data dump (all cards, commanders, game constants, database schemas, API endpoints, WebSocket events, game mechanics) for mobile app development. Protected by access code, no auth required.
 - **Mobile Auth Flow:** POST /api/mobile/auth/login with email to get JWT token (7-day expiry). Token refresh via POST /api/mobile/auth/refresh.
-- **WebSocket Mobile:** Connect with `wss://wisdom-and-chance.replit.app/ws?token=<jwt>` for real-time multiplayer.
+- **WebSocket Mobile:** Connect with `wss://wisdom-and-chance-2.replit.app/ws?token=<jwt>` for real-time multiplayer.
 - **Image Download Endpoints:** GET /api/cards/:id/image and GET /api/commanders/:id/image return binary image files for any authenticated user. GET /api/admin/card-images/:id/download returns a downloadable image file (admin only). GET /api/admin/card-images/bulk/download-manifest returns a JSON manifest of all images with download URLs (admin only).
 - **Key Files:** server/unifiedAuth.ts (JWT middleware), server/mobileAuth.ts (mobile auth endpoints), server/apiDocs.ts (API documentation).
 
@@ -104,13 +104,13 @@ Key features include:
 
 ### Monorepo Structure (v2.7.1)
 This project is a monorepo containing the web app, mobile app, and desktop app:
-- **`/client`** — React web frontend (live at wisdom-and-chance.replit.app)
+- **`/client`** — React web frontend (live at wisdom-and-chance-2.replit.app)
 - **`/server`** — Shared Express.js backend serving all clients
 - **`/shared`** — Shared TypeScript types and schemas (used by all clients)
 - **`/mobile`** — Expo/React Native mobile app (deploys to Google Play and Apple App Store via EAS Build)
 - **`/electron`** — Electron desktop app for Steam, Windows, Mac, and Linux distribution
 
-All clients connect to the same server and database. The web app connects directly (same origin), the mobile app connects remotely using JWT auth, and the desktop app loads the production URL (`https://wisdom-and-chance.replit.app`) inside an Electron BrowserWindow.
+All clients connect to the same server and database. The web app connects directly (same origin), the mobile app connects remotely using JWT auth, and the desktop app loads the production URL (`https://wisdom-and-chance-2.replit.app`) inside an Electron BrowserWindow.
 
 - **Mobile Framework:** Expo SDK 54 with React Native 0.81, TypeScript, expo-router for navigation
 - **Mobile Auth:** JWT Bearer tokens via `/api/mobile/auth/login` and `/api/mobile/auth/refresh`

@@ -1,8 +1,8 @@
 const { app, BrowserWindow, shell, session } = require('electron');
 const path = require('path');
 
-const GAME_URL = 'https://wisdom-and-chance.replit.app';
-const APP_DOMAIN = 'wisdom-and-chance.replit.app';
+const GAME_URL = 'https://wisdom-and-chance-2.replit.app';
+const APP_DOMAIN = 'wisdom-and-chance-2.replit.app';
 
 // Domains involved in the Replit OIDC login flow — all must stay inside the window
 const ALLOWED_INTERNAL_DOMAINS = [

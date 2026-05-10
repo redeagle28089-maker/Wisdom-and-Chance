@@ -3,7 +3,7 @@ import type { Express } from "express";
 const API_DOCS = {
   title: "Wisdom & Chance TCG - Mobile API Reference",
   version: "2.3.0",
-  baseUrl: "https://wisdom-and-chance.replit.app",
+  baseUrl: "https://wisdom-and-chance-2.replit.app",
   apiPrefix: "/api",
   authentication: {
     overview: "All /api endpoints accept both session cookies (web) and JWT Bearer tokens (mobile). Include 'Authorization: Bearer <token>' header for mobile access.",
@@ -536,7 +536,7 @@ const API_DOCS = {
     authentication: {
       web: "Session-based - cookies sent automatically on connection",
       mobile: "JWT-based - connect with token query param: /ws?token=<jwt>",
-      example: "new WebSocket('wss://wisdom-and-chance.replit.app/ws?token=YOUR_JWT_TOKEN')",
+      example: "new WebSocket('wss://wisdom-and-chance-2.replit.app/ws?token=YOUR_JWT_TOKEN')",
     },
     connectionFlow: [
       "1. Connect to WebSocket URL (with token for mobile)",

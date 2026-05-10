@@ -25,12 +25,12 @@ Copy and paste this into the AI agent in your new project:
 ```
 I want to build a React Native + Expo mobile app for my existing card game called "Wisdom & Chance TCG". The backend already exists at this URL:
 
-BACKEND URL: https://wisdom-and-chance.replit.app
+BACKEND URL: https://wisdom-and-chance-2.replit.app
 
 The backend has a full REST API and WebSocket server already built. The mobile app should connect to it for ALL data - no local database needed.
 
 AUTHENTICATION:
-- POST https://wisdom-and-chance.replit.app/api/mobile/auth/login
+- POST https://wisdom-and-chance-2.replit.app/api/mobile/auth/login
   Body: { "email": "user@example.com", "firstName": "John", "lastName": "Doe", "provider": "google" }
   Returns: { "token": "JWT_TOKEN", "user": { id, email, firstName, lastName, profileImageUrl } }
 - The JWT token is valid for 7 days
@@ -39,7 +39,7 @@ AUTHENTICATION:
 - Get current user: GET /api/mobile/auth/me
 
 APP CONFIG (CALL THIS FIRST ON EVERY LAUNCH):
-- GET https://wisdom-and-chance.replit.app/api/config
+- GET https://wisdom-and-chance-2.replit.app/api/config
   Returns feature flags, API version, season info, maintenance status, and server time.
   - Check features.* booleans to show/hide UI sections (e.g. if economy_enabled is false, don't show shop)
   - Check maintenance.active — if true, show maintenance screen and block gameplay
@@ -48,14 +48,14 @@ APP CONFIG (CALL THIS FIRST ON EVERY LAUNCH):
   - Cache response for 5 minutes, then re-fetch
 
 HEALTH CHECK:
-- GET https://wisdom-and-chance.replit.app/api/health
+- GET https://wisdom-and-chance-2.replit.app/api/health
   Returns server status, database connectivity, and service availability
 
 FULL API DOCUMENTATION:
-- GET https://wisdom-and-chance.replit.app/api/docs
+- GET https://wisdom-and-chance-2.replit.app/api/docs
   Returns complete JSON documentation of ALL endpoints, request/response schemas, WebSocket events, and game rules. FETCH THIS AFTER CONFIG and use it as your reference.
 
-KEY API ENDPOINTS (all prefixed with https://wisdom-and-chance.replit.app):
+KEY API ENDPOINTS (all prefixed with https://wisdom-and-chance-2.replit.app):
 
 Public (no auth needed):
 - GET /api/config - Server config, feature flags, season info (CALL FIRST)
@@ -97,7 +97,7 @@ Protected (need Bearer token):
 - GET /api/users/search?q=query - Search users
 
 WEBSOCKET (for real-time multiplayer):
-- Connect: wss://wisdom-and-chance.replit.app/ws?token=JWT_TOKEN
+- Connect: wss://wisdom-and-chance-2.replit.app/ws?token=JWT_TOKEN
 - Message format: JSON { type: string, payload: object }
 - Client events: join_room, leave_room, join_game, leave_game, room_message, game_message, game_action
 - Server events: auth_success, auth_error, room_update, player_joined, player_left, player_ready_update, game_start, game_action, chat_message, friend_message, friend_request, presence_update
@@ -159,7 +159,7 @@ Now let's build the game battle system:
 ### Phase 4 Prompt:
 ```
 Now let's add multiplayer:
-- Connect to WebSocket at wss://wisdom-and-chance.replit.app/ws?token=JWT_TOKEN
+- Connect to WebSocket at wss://wisdom-and-chance-2.replit.app/ws?token=JWT_TOKEN
 - Game lobby showing public rooms (GET /api/rooms)
 - Create room (POST /api/rooms)
 - Join room with pre-game waiting area
@@ -193,7 +193,7 @@ Now let's add progression systems:
 
 ## Important Notes
 
-- **Backend URL**: https://wisdom-and-chance.replit.app
+- **Backend URL**: https://wisdom-and-chance-2.replit.app
 - **API Docs**: Always fetch GET /api/docs first - it has complete documentation
 - **Health Check**: Use GET /api/health to verify the backend is online
 - **Token Storage**: Use expo-secure-store for JWT tokens
