@@ -73,14 +73,10 @@ In the Steamworks portal under **Store Page**:
 
 ---
 
-## Step 5 — Submit for Review
-
-1. In the Steamworks portal click **"Submit for review"**
-2. Valve reviews new games — typically **3–5 business days**
-3. Once approved, set your **release date** and click **Publish**
-
-> Your game goes live on Steam at the scheduled release time. It will appear in
-> search, new releases, and be discoverable by the Steam algorithm.
+After completing Step 4, click **"Submit for review"** in the Steamworks portal.
+Valve reviews new games in **3–5 business days**. Once approved, set your release
+date and click **Publish** — the game goes live at the scheduled time and appears
+in Steam search, new releases, and the algorithm-driven discovery pages.
 
 ---
 

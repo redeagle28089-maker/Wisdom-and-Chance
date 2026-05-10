@@ -70,12 +70,12 @@ waitForPort = 8080
 name = "Start desktop app"
 author = "agent"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd electron && npm install && npm start"
-
 [workflows.workflow.metadata]
 outputType = "vnc"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd electron && ([ -d node_modules ] && echo 'deps ready' || npm install) && npm start"
 
 [agent]
 integrations = ["javascript_log_in_with_replit:2.0.0", "javascript_gemini_ai_integrations:2.0.0", "stripe:1.0.0", "javascript_paypal:1.0.0"]
