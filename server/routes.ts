@@ -1,5 +1,7 @@
 import type { Express } from "express";
 import type { Server } from "http";
+import fs from "fs";
+import path from "path";
 import { z } from "zod";
 import { eq, or, and, lt, lte, desc, sql, isNull } from "drizzle-orm";
 import { storage } from "./storage";
@@ -16,10 +18,11 @@ import { generateImage, generateText } from "./replit_integrations/image/client"
 import { getWebSocketServer } from "./websocket";
 import { filterObscenity } from "./obscenity-filter";
 import { gameEngine } from "./gameEngine";
-import { ensureCurrencies, grantGold, grantStarterCollection, grantBattlePassXP } from "./economyService";
+import { ensureCurrencies, grantGold, grantStarterCollection, grantBattlePassXP, grantPresentationCards } from "./economyService";
 import archiver from "archiver";
 
 import { ADMIN_EMAIL } from "./adminConfig";
+import { startSeasonChecker, checkAndTransitionSeason } from "./seasonService";
 
 const deckSuggestionSchema = z.object({
   commanderId: z.string().min(1, "Commander is required"),
@@ -1621,7 +1624,6 @@ IMPORTANT:
 
   app.post("/api/admin/grant-all-cards", isAuthenticated, isAdmin, async (req, res) => {
     try {
-      const { grantPresentationCards } = await import("./economyService");
       const allUsers = await db.select({ id: users.id }).from(users);
       let cardsGranted = 0;
       for (const user of allUsers) {
@@ -2460,9 +2462,6 @@ Return ONLY a raw JSON array, no prose, no markdown fences. Each element shape:
 
   app.get("/api/admin/database-export", isAuthenticated, isAdmin, async (req: any, res) => {
     try {
-      const fs = await import("fs");
-      const path = await import("path");
-
       const tables = [
         "users", "user_decks", "friend_requests", "friendships", "friend_messages",
         "game_rooms", "room_spectators", "chat_messages",
@@ -2890,10 +2889,8 @@ Return ONLY a raw JSON array, no prose, no markdown fences. Each element shape:
   }
 
   seedCurrentSeason().catch(e => console.error("[season] Failed to seed season:", e));
-  import("./seasonService").then(({ startSeasonChecker, checkAndTransitionSeason }) => {
-    checkAndTransitionSeason().catch(e => console.error("[season] Initial transition check error:", e));
-    startSeasonChecker();
-  });
+  checkAndTransitionSeason().catch(e => console.error("[season] Initial transition check error:", e));
+  startSeasonChecker();
 
   app.get("/api/season/current", async (_req, res) => {
     try {

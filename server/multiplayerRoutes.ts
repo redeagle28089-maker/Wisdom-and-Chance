@@ -18,13 +18,15 @@ import {
   userDecks,
   featureFlags,
   GAME_CONSTANTS,
-  ECONOMY_CONSTANTS
+  ECONOMY_CONSTANTS,
+  BATTLE_PASS_XP
 } from "@shared/schema";
 import { eq, and, or, desc, sql, gte, lt } from "drizzle-orm";
 import { getWebSocketServer } from "./websocket";
 import { storage } from "./storage";
 import { filterObscenity } from "./obscenity-filter";
 import { gameEngine } from "./gameEngine";
+import { grantGold, grantBattlePassXP } from "./economyService";
 export function registerMultiplayerRoutes(app: Express) {
   app.get("/api/friends", async (req, res) => {
     if (!req.user) {
@@ -837,10 +839,8 @@ export function registerMultiplayerRoutes(app: Express) {
     try {
       const flag = await db.select().from(featureFlags).where(eq(featureFlags.key, "economy_enabled")).limit(1);
       if (flag.length > 0 && flag[0].enabled) {
-        const { grantGold, grantBattlePassXP } = await import("./economyService");
         await grantGold(userId, ECONOMY_CONSTANTS.REWARDS.DAILY_CHALLENGE_GOLD, "daily_challenge");
-        const { BATTLE_PASS_XP: BP_XP } = await import("@shared/schema");
-        await grantBattlePassXP(userId, BP_XP.DAILY_CHALLENGE, "daily_challenge");
+        await grantBattlePassXP(userId, BATTLE_PASS_XP.DAILY_CHALLENGE, "daily_challenge");
       }
     } catch (e) {
       console.warn("[multiplayer] Failed to grant challenge gold:", e);

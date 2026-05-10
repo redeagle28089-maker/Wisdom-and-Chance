@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { eq, and, sql, lte, gte } from "drizzle-orm";
-import { playerCurrencies, playerCollection, ECONOMY_CONSTANTS, GAME_CONSTANTS, featureFlags, seasons, playerBattlePass, battlePassLevels, BATTLE_PASS_XP, weeklyChallenges, playerWeeklyChallenges, users } from "@shared/schema";
+import { playerCurrencies, playerCollection, ECONOMY_CONSTANTS, GAME_CONSTANTS, featureFlags, seasons, playerBattlePass, battlePassLevels, BATTLE_PASS_XP, weeklyChallenges, playerWeeklyChallenges, users, PACK_TYPES } from "@shared/schema";
 import { storage } from "./storage";
 
 const MAX = ECONOMY_CONSTANTS.MAX_CURRENCY;
@@ -207,8 +207,6 @@ export async function updateWeeklyChallengeProgress(userId: string, challengeTyp
 
 export async function openPackForUser(userId: string, packType: string) {
   try {
-    const { PACK_TYPES } = await import("@shared/schema");
-    const { playerCollection } = await import("@shared/schema");
     const packDef = PACK_TYPES[packType as keyof typeof PACK_TYPES];
     if (!packDef) return;
     const allCards = await storage.getCards();

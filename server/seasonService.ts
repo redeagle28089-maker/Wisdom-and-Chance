@@ -7,7 +7,7 @@ import {
   RANKED_TIERS, SEASON_REWARDS, BATTLE_PASS_XP,
 } from "@shared/schema";
 import { serverConfig } from "@shared/schema";
-import { grantGold, ensureCurrencies } from "./economyService";
+import { grantGold, ensureCurrencies, openPackForUser } from "./economyService";
 
 function getTierForRating(rating: number): string {
   let tier = "Bronze";
@@ -70,7 +70,6 @@ export async function checkAndTransitionSeason() {
             .where(eq(playerCurrencies.userId, pr.userId));
         }
         if (rewards.packs > 0) {
-          const { openPackForUser } = await import("./economyService");
           for (let p = 0; p < rewards.packs; p++) {
             await openPackForUser(pr.userId, rewards.packs >= 5 ? "premium" : "standard");
           }

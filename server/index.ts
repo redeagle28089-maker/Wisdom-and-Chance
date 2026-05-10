@@ -126,6 +126,9 @@ iframe{width:100%;height:100%;border:none}
   if (process.env.NODE_ENV === "production") {
     serveStatic(app);
   } else {
+    // Intentional dev-only lazy load: Vite must not be bundled into the
+    // production artifact; esbuild excludes it via the dynamic import at
+    // runtime, which is safe here because this branch never executes in prod.
     const { setupVite } = await import("./vite");
     await setupVite(httpServer, app);
   }
