@@ -41,6 +41,10 @@ args = "Start application"
 task = "workflow.run"
 args = "Start mobile app"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Start desktop app"
+
 [[workflows.workflow]]
 name = "Start application"
 author = "agent"
@@ -61,6 +65,17 @@ outputType = "console"
 task = "shell.exec"
 args = "cd mobile && npm run expo:dev"
 waitForPort = 8080
+
+[[workflows.workflow]]
+name = "Start desktop app"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd electron && npm install && npm start"
+
+[workflows.workflow.metadata]
+outputType = "vnc"
 
 [agent]
 integrations = ["javascript_log_in_with_replit:2.0.0", "javascript_gemini_ai_integrations:2.0.0", "stripe:1.0.0", "javascript_paypal:1.0.0"]

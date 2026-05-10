@@ -102,14 +102,15 @@ Key features include:
 - **SQL Backups:** Full SQL dumps can be created via `pg_dump` and are stored in the `backups/` directory. These include all data including card images.
 - **GitHub Backup:** The project is connected to GitHub for code version control. Database backup files in `backups/` can be committed and pushed to GitHub for offsite storage.
 
-### Monorepo Structure (v2.6.0)
-This project is a monorepo containing both the web app and mobile app:
+### Monorepo Structure (v2.7.1)
+This project is a monorepo containing the web app, mobile app, and desktop app:
 - **`/client`** — React web frontend (live at wisdom-and-chance.replit.app)
-- **`/server`** — Shared Express.js backend serving both web and mobile apps
-- **`/shared`** — Shared TypeScript types and schemas (used by both apps)
+- **`/server`** — Shared Express.js backend serving all clients
+- **`/shared`** — Shared TypeScript types and schemas (used by all clients)
 - **`/mobile`** — Expo/React Native mobile app (deploys to Google Play and Apple App Store via EAS Build)
+- **`/electron`** — Electron desktop app for Steam, Windows, Mac, and Linux distribution
 
-Both apps connect to the same server and database. The web app connects directly (same origin), the mobile app connects remotely to `https://wisdom-and-chance.replit.app/api/...` using JWT auth.
+All clients connect to the same server and database. The web app connects directly (same origin), the mobile app connects remotely using JWT auth, and the desktop app loads the production URL (`https://wisdom-and-chance.replit.app`) inside an Electron BrowserWindow.
 
 - **Mobile Framework:** Expo SDK 54 with React Native 0.81, TypeScript, expo-router for navigation
 - **Mobile Auth:** JWT Bearer tokens via `/api/mobile/auth/login` and `/api/mobile/auth/refresh`

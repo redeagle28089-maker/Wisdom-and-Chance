@@ -1,0 +1,70 @@
+{
+  "name": "wisdom-and-chance-desktop",
+  "version": "1.0.0",
+  "description": "Wisdom & Chance TCG — Desktop client for Steam, Windows, Mac, and Linux",
+  "main": "main.js",
+  "author": "Jason Myers",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac",
+    "build:linux": "electron-builder --linux"
+  },
+  "devDependencies": {
+    "electron": "^28.3.3",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.wisdomandchance.desktop",
+    "productName": "Wisdom & Chance TCG",
+    "copyright": "Copyright © 2026 Jason Myers",
+    "icon": "icons/icon",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "icons/icon.ico"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
+        }
+      ],
+      "icon": "icons/icon.icns",
+      "category": "public.app-category.games"
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "icons/icon.png",
+      "category": "Game"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "icons/icon.ico",
+      "uninstallerIcon": "icons/icon.ico",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Wisdom & Chance TCG"
+    },
+    "dmg": {
+      "title": "Wisdom & Chance TCG",
+      "icon": "icons/icon.icns"
+    }
+  }
+}
