@@ -76,6 +76,22 @@ function createWindow() {
     }
   });
 
+  // did-navigate: fired after every committed navigation (including OAuth callback).
+  // Ensures the callback URL completed loading inside the window and resets the title
+  // in case the OAuth provider set it to something unexpected.
+  win.webContents.on('did-navigate', (event, url) => {
+    // If OAuth callback just landed, the server will redirect to the home page.
+    // We confirm we're back on the game domain and restore the window title.
+    if (url.startsWith(GAME_URL)) {
+      win.setTitle('Wisdom & Chance TCG');
+    }
+    // External domains should never appear here (will-navigate blocks them),
+    // but log a warning for debugging if they somehow do.
+    if (!isAllowedDomain(url)) {
+      console.warn('[electron] Unexpected navigation to external URL:', url);
+    }
+  });
+
   win.loadURL(GAME_URL);
 
   // Open DevTools only in development

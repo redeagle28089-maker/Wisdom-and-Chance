@@ -20,7 +20,7 @@
     "appId": "com.wisdomandchance.desktop",
     "productName": "Wisdom & Chance TCG",
     "copyright": "Copyright © 2026 Jason Myers",
-    "icon": "icons/icon",
+    "icon": "icons/icon.png",
     "directories": {
       "output": "dist"
     },
@@ -30,8 +30,7 @@
           "target": "nsis",
           "arch": ["x64"]
         }
-      ],
-      "icon": "icons/icon.ico"
+      ]
     },
     "mac": {
       "target": [
@@ -40,7 +39,6 @@
           "arch": ["x64", "arm64"]
         }
       ],
-      "icon": "icons/icon.icns",
       "category": "public.app-category.games"
     },
     "linux": {
@@ -50,21 +48,17 @@
           "arch": ["x64"]
         }
       ],
-      "icon": "icons/icon.png",
       "category": "Game"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "installerIcon": "icons/icon.ico",
-      "uninstallerIcon": "icons/icon.ico",
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Wisdom & Chance TCG"
     },
     "dmg": {
-      "title": "Wisdom & Chance TCG",
-      "icon": "icons/icon.icns"
+      "title": "Wisdom & Chance TCG"
     }
   }
 }
