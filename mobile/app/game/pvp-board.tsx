@@ -743,7 +743,7 @@ export default function PvPGameBoardScreen() {
                 <View style={styles.fieldCardActive}>
                   <Text style={styles.fieldCardName} numberOfLines={1}>{gameState.battlefieldActiveCards.myCard.name}</Text>
                   <Text style={styles.fieldCardEffect} numberOfLines={1}>
-                    {(gameState.battlefieldActiveCards.myCard.effects || []).map((e: any) => {
+                    {(gameState.battlefieldActiveCards.myCard.effects as FieldCardEffect[]).map(e => {
                       if (e.type === "element_buff") return `+${e.value} ${e.element}`;
                       if (e.type === "element_debuff") return `-${e.value} ${e.element}`;
                       if (e.type === "all_units_debuff") return `All -${e.value}`;
@@ -763,7 +763,7 @@ export default function PvPGameBoardScreen() {
                 <View style={styles.fieldCardActive}>
                   <Text style={styles.fieldCardName} numberOfLines={1}>{gameState.battlefieldActiveCards.oppCard.name}</Text>
                   <Text style={styles.fieldCardEffect} numberOfLines={1}>
-                    {(gameState.battlefieldActiveCards.oppCard.effects || []).map((e: any) => {
+                    {(gameState.battlefieldActiveCards.oppCard.effects as FieldCardEffect[]).map(e => {
                       if (e.type === "element_buff") return `+${e.value} ${e.element}`;
                       if (e.type === "element_debuff") return `-${e.value} ${e.element}`;
                       if (e.type === "all_units_debuff") return `All -${e.value}`;

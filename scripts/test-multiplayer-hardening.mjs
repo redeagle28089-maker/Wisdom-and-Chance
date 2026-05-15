@@ -1454,6 +1454,90 @@ async function main() {
     await pgClient.query(`DELETE FROM game_rooms WHERE id = $1`, [bfRoom5.id]);
   });
 
+  // CP-BF6: Spectators receive spectator_battlefield_update when battlefield
+  // cards are flipped. They should NOT receive game_state (which is private).
+  await checkpoint("BF-CP6: Spectator receives spectator_battlefield_update after Draw phase", async () => {
+    const fieldCardsCheck = await api("/api/cards/battlefield", "GET", null, admin.token).catch(() => []);
+    if (!Array.isArray(fieldCardsCheck) || fieldCardsCheck.length < 7) {
+      throw new Error("Need at least 7 battlefield field cards seeded — seed them first");
+    }
+    const fieldIds = fieldCardsCheck.slice(0, 7).map((c) => c.id);
+
+    const bfUser11 = new TestClient("BF-U11");
+    const bfUser12 = new TestClient("BF-U12");
+    const bfSpec = new TestClient("BF-Spec");
+    await bfUser11.login(`mp-hard-bf11-${STAMP}@test.local`, "BF-User11");
+    await bfUser12.login(`mp-hard-bf12-${STAMP}@test.local`, "BF-User12");
+    await bfSpec.login(`mp-hard-bfspec-${STAMP}@test.local`, "BF-Spec");
+    await bfUser11.getDecks();
+    await bfUser12.getDecks();
+
+    await api("/api/decks/battlefield", "PUT", { cardIds: fieldIds }, bfUser11.token);
+    await api("/api/decks/battlefield", "PUT", { cardIds: fieldIds }, bfUser12.token);
+
+    const bfRoom6 = await api("/api/rooms", "POST", {
+      name: `bf-test-room6-${STAMP}`,
+      isPrivate: false,
+      battlefieldMode: true,
+      gameMode: "standard",
+    }, bfUser11.token);
+    if (!bfRoom6?.id) throw new Error("BF-CP6 room creation returned no id");
+
+    await api(`/api/rooms/${bfRoom6.id}/join`, "POST", {}, bfUser12.token);
+    await api(`/api/rooms/${bfRoom6.id}/deck`, "POST", { deckId: bfUser11.deck.id }, bfUser11.token);
+    await api(`/api/rooms/${bfRoom6.id}/deck`, "POST", { deckId: bfUser12.deck.id }, bfUser12.token);
+
+    // Spectator joins via HTTP then WS room channel
+    await api(`/api/rooms/${bfRoom6.id}/spectate`, "POST", {}, bfSpec.token);
+
+    await bfUser11.connectWS();
+    await bfUser12.connectWS();
+    await bfSpec.connectWS();
+
+    bfUser11.send("join_room", { roomId: bfRoom6.id });
+    bfUser12.send("join_room", { roomId: bfRoom6.id });
+    bfSpec.send("join_room", { roomId: bfRoom6.id });
+    await sleep(400);
+
+    bfUser11.send("player_ready", { roomId: bfRoom6.id, deckId: bfUser11.deck.id });
+    bfUser12.send("player_ready", { roomId: bfRoom6.id, deckId: bfUser12.deck.id });
+    await sleep(400);
+
+    await api(`/api/rooms/${bfRoom6.id}/start`, "POST", {}, bfUser11.token);
+    await sleep(600);
+
+    const gameStartEv11 = bfUser11.events.findLast((e) => e.type === "game_state");
+    if (!gameStartEv11) throw new Error("BF-U11 did not receive initial game_state after start");
+    const gameId6 = gameStartEv11.payload?.gameId;
+
+    bfUser11.send("join_game", { gameId: gameId6 });
+    bfUser12.send("join_game", { gameId: gameId6 });
+    await sleep(400);
+
+    // Spectator must NOT receive game_state (private hand/HP data)
+    const specLeakedState = bfSpec.events.find((e) => e.type === "game_state");
+    if (specLeakedState) throw new Error("BF-CP6: spectator received game_state — private data leaked");
+
+    // Both players draw — this triggers battlefield card flip
+    const mSpec = bfSpec.mark();
+    bfUser11.send("game_action", { gameId: gameId6, type: "draw" });
+    bfUser12.send("game_action", { gameId: gameId6, type: "draw" });
+
+    // Spectator should receive spectator_battlefield_update with p1Card + p2Card non-null
+    const bfUpdateEv = await bfSpec.waitForAfter(
+      mSpec,
+      (e) => e.type === "spectator_battlefield_update" && e.payload?.p1Card != null && e.payload?.p2Card != null,
+      5000,
+      "spectator_battlefield_update with p1Card+p2Card",
+    );
+    if (!bfUpdateEv.payload.battlefieldModeEnabled) {
+      throw new Error(`BF-CP6: spectator_battlefield_update missing battlefieldModeEnabled flag`);
+    }
+
+    bfUser11.close(); bfUser12.close(); bfSpec.close();
+    await pgClient.query(`DELETE FROM game_rooms WHERE id = $1`, [bfRoom6.id]);
+  });
+
   // ===========================================================================
   // Cleanup
   // ===========================================================================

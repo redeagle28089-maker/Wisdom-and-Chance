@@ -777,6 +777,47 @@ class GameWebSocketServer {
         });
       }
     });
+
+    // Deliver battlefield zone to spectators (they are in the room channel but
+    // not subscribed to the game channel). Battlefield cards apply globally, so
+    // their name/effects are not private; only HP, hand, and deck contents are.
+    this.sendBattlefieldStateToSpectators(gameId, gamePlayers);
+  }
+
+  private sendBattlefieldStateToSpectators(gameId: string, gamePlayers: Set<string>) {
+    const active = gameEngine.getActiveGame(gameId);
+    if (!active?.battlefieldMode) return;
+
+    // Locate the roomId via any participant's ConnectedUser.roomId
+    let roomId: string | undefined;
+    gamePlayers.forEach((pid) => {
+      if (!roomId) {
+        const cu = this.users.get(pid);
+        if (cu?.roomId) roomId = cu.roomId;
+      }
+    });
+    if (!roomId) return;
+
+    const gs = active.game.gameState as any;
+    const payload = {
+      gameId,
+      battlefieldModeEnabled: true,
+      p1Card: active.p1ActiveFieldCard,
+      p2Card: active.p2ActiveFieldCard,
+      p1DeckRemaining: (gs.p1BattlefieldDeck as string[] | undefined)?.length ?? 0,
+      p2DeckRemaining: (gs.p2BattlefieldDeck as string[] | undefined)?.length ?? 0,
+    };
+
+    const data = JSON.stringify({ type: "spectator_battlefield_update", payload });
+    const room = this.rooms.get(roomId);
+    if (!room) return;
+    room.forEach((uid) => {
+      if (gamePlayers.has(uid)) return; // participants already got game_state
+      const cu = this.users.get(uid);
+      if (cu?.ws.readyState === WebSocket.OPEN) {
+        cu.ws.send(data);
+      }
+    });
   }
 
   private broadcastToRoom(roomId: string, message: WSMessage, excludeUserId?: string) {
