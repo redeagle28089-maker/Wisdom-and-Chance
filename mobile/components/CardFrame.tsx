@@ -66,11 +66,15 @@ const TRAIT_ICONS: Record<string, string> = {
 };
 
 // Land/field-card-only trait icons — separate subsection from card traits.
-// hasNumber: false = icon only, no numeric slot rendered.
-// Future land traits that carry a value should set hasNumber: true.
-export const LAND_TRAIT_ICONS: Record<string, { icon: string; hasNumber: boolean }> = {
-  'heal_doubled':      { icon: 'heart-multiple', hasNumber: false },
-  'guardian_disabled': { icon: 'shield-c',       hasNumber: false },
+// Discriminated union: 'mci' entries render a MaterialCommunityIcons icon by name;
+// 'composite' entries render a hand-rolled composite component (currently ShieldC).
+// hasNumber: false = icon only, no numeric slot rendered alongside.
+type LandTraitIconEntry =
+  | { kind: 'mci';       icon: MciName;  hasNumber: boolean }
+  | { kind: 'composite'; composite: 'ShieldC'; hasNumber: boolean };
+export const LAND_TRAIT_ICONS: Record<string, LandTraitIconEntry> = {
+  'heal_doubled':      { kind: 'mci',       icon: 'heart-multiple', hasNumber: false },
+  'guardian_disabled': { kind: 'composite', composite: 'ShieldC',   hasNumber: false },
 };
 
 function getElementBorder(element: string): string {

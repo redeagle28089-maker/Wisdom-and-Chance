@@ -31,8 +31,8 @@ function FieldEffectRow({ effects }: { effects: FieldCardEffect[] }) {
     if (e.type === "unique_effect") {
       const entry = e.key ? LAND_TRAIT_ICONS[e.key] : undefined;
       if (entry) {
-        if (entry.icon === 'shield-c') return <ShieldCIcon key={i} size={8} color="#94A3B8" />;
-        return <MaterialCommunityIcons key={i} name={entry.icon as any} size={8} color="#94A3B8" />;
+        if (entry.kind === 'composite') return <ShieldCIcon key={i} size={8} color="#94A3B8" />;
+        return <MaterialCommunityIcons key={i} name={entry.icon} size={8} color="#94A3B8" />;
       }
     }
     return null;
