@@ -586,8 +586,8 @@ class ServerGameEngine {
       const overrides: number[] = [active.p1ActiveFieldCard, active.p2ActiveFieldCard]
         .filter((fc): fc is FieldCard => fc !== null)
         .flatMap(fc => fc.effects)
-        .filter((eff): eff is any => eff.type === "deploy_limit_override")
-        .map((eff: any) => eff.value as number);
+        .filter((eff): eff is Extract<FieldCard["effects"][number], { type: "deploy_limit_override" }> => eff.type === "deploy_limit_override")
+        .map(eff => eff.value);
       if (overrides.length > 0) {
         maxDeploy = Math.max(1, Math.min(maxDeploy, ...overrides));
       }
@@ -1043,7 +1043,7 @@ class ServerGameEngine {
 
     // Compute unique field card effect flags BEFORE generateCombatSummary so guardian_disabled
     // is applied from first principles (skip trait-Guardian blocks during computation, not after).
-    const allFieldEffects = activeFieldCards.flatMap(fc => fc.effects as any[]);
+    const allFieldEffects = activeFieldCards.flatMap(fc => fc.effects);
     const hasHealDoubled = allFieldEffects.some(e => e.type === "unique_effect" && e.key === "heal_doubled");
     const hasGuardianDisabled = allFieldEffects.some(e => e.type === "unique_effect" && e.key === "guardian_disabled");
 
@@ -1339,7 +1339,7 @@ class ServerGameEngine {
       // Battlefield mode: apply global field card effects (element_buff / element_debuff / all_units_debuff)
       if (activeFieldCards && activeFieldCards.length > 0) {
         for (const fc of activeFieldCards) {
-          for (const eff of fc.effects as any[]) {
+          for (const eff of fc.effects) {
             if (eff.type === "element_buff" && eff.element) {
               if (normEl(card.element) === normEl(eff.element)) {
                 buffBonuses.push({ fromCard: card, amount: eff.value });

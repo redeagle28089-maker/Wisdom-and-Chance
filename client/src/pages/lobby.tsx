@@ -306,7 +306,7 @@ export default function LobbyPage() {
                   </div>
                   <Button 
                     onClick={() => createRoomMutation.mutate()}
-                    disabled={!roomName || createRoomMutation.isPending || (battlefieldMode && !fieldDeckLoading && !hasValidFieldDeck)}
+                    disabled={!roomName || createRoomMutation.isPending || (battlefieldMode && (fieldDeckLoading || !hasValidFieldDeck))}
                     className="w-full bg-gradient-to-r from-purple-600 to-pink-600"
                     data-testid="button-create-confirm"
                   >

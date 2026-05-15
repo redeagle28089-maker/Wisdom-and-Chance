@@ -13,6 +13,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { Heart, Swords, Trophy, Flag, ArrowRight, Shield, Flame, Droplet, Mountain, Wind, Leaf, RotateCcw, LogIn, MessageSquare, Eye, Send, X, Zap, Sparkles, Plus, Scroll, History, Crown } from "lucide-react";
 import type { Game, Card as CardType, Element, BattlefieldCard, GameMode, Commander, CommanderAbility } from "@shared/schema";
+import type { FieldCard, FieldCardEffect } from "@shared/models/cards";
 import { GAME_CONSTANTS, GAME_MODE_CONFIG } from "@shared/schema";
 import { getCardIdFromInstance } from "@/lib/card-utils";
 
@@ -238,12 +239,12 @@ function ActiveFieldCardStrip({
   p1DeckRemaining,
   p2DeckRemaining,
 }: {
-  p1Card: { name: string; description: string; effects: any[] } | null;
-  p2Card: { name: string; description: string; effects: any[] } | null;
+  p1Card: FieldCard | null;
+  p2Card: FieldCard | null;
   p1DeckRemaining: number;
   p2DeckRemaining: number;
 }) {
-  function renderEffects(effects: any[]) {
+  function renderEffects(effects: FieldCardEffect[]) {
     return effects.map((eff, i) => {
       if (eff.type === "element_buff") return <span key={i} className="text-green-300">+{eff.value} {eff.element}</span>;
       if (eff.type === "element_debuff") return <span key={i} className="text-red-300">-{eff.value} {eff.element}</span>;
@@ -2052,9 +2053,9 @@ export default function GameBoardPage() {
   const [isAIProcessing, setIsAIProcessing] = useState(false);
   // Battlefield mode practice state
   const [practiceFieldEnabled, setPracticeFieldEnabled] = useState(false);
-  const [practiceP1FieldDeck, setPracticeP1FieldDeck] = useState<any[]>([]);
-  const [practiceP2FieldDeck, setPracticeP2FieldDeck] = useState<any[]>([]);
-  const [practiceActiveFieldCards, setPracticeActiveFieldCards] = useState<{ p1Card: any | null; p2Card: any | null }>({ p1Card: null, p2Card: null });
+  const [practiceP1FieldDeck, setPracticeP1FieldDeck] = useState<FieldCard[]>([]);
+  const [practiceP2FieldDeck, setPracticeP2FieldDeck] = useState<FieldCard[]>([]);
+  const [practiceActiveFieldCards, setPracticeActiveFieldCards] = useState<{ p1Card: FieldCard | null; p2Card: FieldCard | null }>({ p1Card: null, p2Card: null });
 
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const { joinGame, leaveGame, subscribe, sendGameMessage, sendGameAction, isConnected: wsConnected, pendingCount: wsPendingCount } = useWebSocket();
@@ -2090,7 +2091,7 @@ export default function GameBoardPage() {
     queryKey: ["/api/commanders"],
   });
 
-  const { data: allFieldCards = [] } = useQuery<any[]>({
+  const { data: allFieldCards = [] } = useQuery<FieldCard[]>({
     queryKey: ["/api/cards/battlefield"],
   });
 
@@ -2114,11 +2115,11 @@ export default function GameBoardPage() {
     }
 
     // Use player's saved field deck if available, else all available field cards (take first 7)
-    let p1Pool: any[];
+    let p1Pool: FieldCard[];
     if (myFieldDeckData?.cardIds?.length) {
       p1Pool = myFieldDeckData.cardIds
-        .map((id: string) => allFieldCards.find((fc: any) => fc.id === id))
-        .filter(Boolean);
+        .map((id: string) => allFieldCards.find(fc => fc.id === id))
+        .filter((fc): fc is FieldCard => fc !== undefined);
     } else {
       p1Pool = allFieldCards.slice(0, 7);
     }
@@ -2469,10 +2470,10 @@ export default function GameBoardPage() {
         ...(practiceActiveFieldCards.p2Card?.effects || []),
       ]
     : [];
-  const allActiveFieldEffects: any[] = useServerState ? serverFieldEffects : practiceFieldActiveEffects;
+  const allActiveFieldEffects: FieldCardEffect[] = useServerState ? serverFieldEffects : practiceFieldActiveEffects;
   const fieldDeployOverrides = allActiveFieldEffects
-    .filter((e: any) => e.type === "deploy_limit_override")
-    .map((e: any) => e.value as number);
+    .filter((e): e is Extract<FieldCardEffect, { type: "deploy_limit_override" }> => e.type === "deploy_limit_override")
+    .map(e => e.value);
   const cardsToDeploy = fieldDeployOverrides.length > 0
     ? Math.max(1, Math.min(baseCardsToDeploy + myExtraDeploy, ...fieldDeployOverrides))
     : baseCardsToDeploy + myExtraDeploy;
@@ -2850,17 +2851,17 @@ export default function GameBoardPage() {
         
         const gs = game.gameState;
         // Battlefield mode field effects for practice AI auto-resolution
-        const aiFieldEffects: any[] = practiceFieldEnabled
+        const aiFieldEffects: FieldCardEffect[] = practiceFieldEnabled
           ? [
               ...(practiceActiveFieldCards.p1Card?.effects || []),
               ...(practiceActiveFieldCards.p2Card?.effects || []),
             ]
           : [];
         const aiGuardianDisabled = aiFieldEffects.some(
-          (e: any) => e.type === "unique_effect" && e.key === "guardian_disabled"
+          e => e.type === "unique_effect" && e.key === "guardian_disabled"
         );
         const aiHealDoubled = aiFieldEffects.some(
-          (e: any) => e.type === "unique_effect" && e.key === "heal_doubled"
+          e => e.type === "unique_effect" && e.key === "heal_doubled"
         );
         const player1Breakdown = calculateBattlePower(
           p1Cards, p2Cards, getCardById,
@@ -3687,7 +3688,7 @@ export default function GameBoardPage() {
     
     const gs2 = newGameState;
     // Battlefield mode field effects for practice
-    const p1FieldEffects: any[] = practiceFieldEnabled
+    const p1FieldEffects: FieldCardEffect[] = practiceFieldEnabled
       ? [...(practiceActiveFieldCards.p1Card?.effects || []), ...(practiceActiveFieldCards.p2Card?.effects || [])]
       : [];
     const player1Breakdown = calculateBattlePower(
@@ -3704,7 +3705,7 @@ export default function GameBoardPage() {
     const player1Total = player1Breakdown.reduce((sum, b) => sum + b.finalPower, 0);
     const player2Total = player2Breakdown.reduce((sum, b) => sum + b.finalPower, 0);
     const practiceGuardianDisabled = practiceFieldEnabled
-      ? p1FieldEffects.some((e: any) => e.type === "unique_effect" && e.key === "guardian_disabled")
+      ? p1FieldEffects.some(e => e.type === "unique_effect" && e.key === "guardian_disabled")
       : false;
     const summary = generateCombatLog(
       player1Breakdown, player2Breakdown, player1Total, player2Total,
@@ -3778,7 +3779,7 @@ export default function GameBoardPage() {
       const p1Cards = mapBattlefieldToCards(game.gameState.player1Battlefield, getCardById);
       const p2Cards = mapBattlefieldToCards(game.gameState.player2Battlefield, getCardById);
       const gs3 = game.gameState;
-      const fieldEffectsFallback: any[] = practiceFieldEnabled
+      const fieldEffectsFallback: FieldCardEffect[] = practiceFieldEnabled
         ? [...(practiceActiveFieldCards.p1Card?.effects || []), ...(practiceActiveFieldCards.p2Card?.effects || [])]
         : [];
       player1Breakdown = calculateBattlePower(
@@ -3796,11 +3797,11 @@ export default function GameBoardPage() {
       const p1T = player1Breakdown.reduce((sum, b) => sum + b.finalPower, 0);
       const p2T = player2Breakdown.reduce((sum, b) => sum + b.finalPower, 0);
       const gs3 = game.gameState;
-      const allFieldEffForSummary: any[] = practiceFieldEnabled
+      const allFieldEffForSummary: FieldCardEffect[] = practiceFieldEnabled
         ? [...(practiceActiveFieldCards.p1Card?.effects || []), ...(practiceActiveFieldCards.p2Card?.effects || [])]
         : [];
       const guardianDisabledForSummary = allFieldEffForSummary
-        .some((e: any) => e.type === "unique_effect" && e.key === "guardian_disabled");
+        .some(e => e.type === "unique_effect" && e.key === "guardian_disabled");
       currentSummary = generateCombatLog(
         player1Breakdown, player2Breakdown, p1T, p2T,
         gs3.player1AbilityBuffs || [], gs3.player2AbilityBuffs || [],
@@ -3824,11 +3825,11 @@ export default function GameBoardPage() {
     let p1HealMultiplier = 1;
     let p2HealMultiplier = 1;
     if (practiceFieldEnabled) {
-      const allFieldEffects = [
+      const allFieldEffects: FieldCardEffect[] = [
         ...(practiceActiveFieldCards.p1Card?.effects || []),
         ...(practiceActiveFieldCards.p2Card?.effects || []),
-      ] as any[];
-      const hasHealDoubled = allFieldEffects.some((e: any) => e.type === "unique_effect" && e.key === "heal_doubled");
+      ];
+      const hasHealDoubled = allFieldEffects.some(e => e.type === "unique_effect" && e.key === "heal_doubled");
       if (hasHealDoubled) { p1HealMultiplier = 2; p2HealMultiplier = 2; }
       // Clear active field cards at round end
       setPracticeActiveFieldCards({ p1Card: null, p2Card: null });
