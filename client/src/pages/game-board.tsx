@@ -2126,6 +2126,8 @@ export default function GameBoardPage() {
     const p2Pool = shuffleArr([...allFieldCards]).slice(0, 7);
     setPracticeP1FieldDeck(shuffleArr(p1Pool));
     setPracticeP2FieldDeck(shuffleArr(p2Pool));
+    // Intentional: practice mode auto-enables battlefield whenever field cards
+    // are available. Multiplayer uses an explicit per-room toggle in the lobby.
     if (p1Pool.length > 0 || p2Pool.length > 0) {
       setPracticeFieldEnabled(true);
     }
