@@ -71,6 +71,19 @@ function getAbilityPhaseBg(phase: string): string {
   return '#475569';
 }
 
+interface FieldCardEffect {
+  type: string;
+  element?: string;
+  value?: number;
+  key?: string;
+}
+
+interface ActiveFieldCard {
+  id: string;
+  name: string;
+  effects: FieldCardEffect[];
+}
+
 interface PvPGameState {
   phase: GamePhase;
   round: number;
@@ -99,6 +112,15 @@ interface PvPGameState {
   log: string[];
   winner?: string;
   turnEndedBy?: string[];
+  battlefieldModeEnabled?: boolean;
+  battlefieldActiveCards?: {
+    myCard: ActiveFieldCard | null;
+    oppCard: ActiveFieldCard | null;
+  } | null;
+  battlefieldDeckRemaining?: {
+    myCount: number;
+    oppCount: number;
+  } | null;
 }
 
 function PhaseIndicator({ phase }: { phase: GamePhase }) {
@@ -260,6 +282,9 @@ function adaptServerState(raw: any): PvPGameState {
     log: raw.log || [],
     winner: raw.winner,
     turnEndedBy: raw.turnEndedBy || [],
+    battlefieldModeEnabled: raw.battlefieldModeEnabled ?? false,
+    battlefieldActiveCards: raw.battlefieldActiveCards ?? null,
+    battlefieldDeckRemaining: raw.battlefieldDeckRemaining ?? null,
   };
 }
 
@@ -706,6 +731,54 @@ export default function PvPGameBoardScreen() {
           )}
         </View>
       </View>
+
+      {/* === BATTLEFIELD FIELD CARD STRIP (Battlefield Mode) === */}
+      {gameState.battlefieldModeEnabled && (
+        <View style={styles.fieldCardStrip} testID="battlefield-field-strip">
+          <Text style={styles.fieldCardStripLabel}>⚔ Battlefield Cards</Text>
+          <View style={styles.fieldCardRow}>
+            <View style={styles.fieldCardSlot}>
+              <Text style={styles.fieldCardSlotLabel}>Your field ({gameState.battlefieldDeckRemaining?.myCount ?? 0} left)</Text>
+              {gameState.battlefieldActiveCards?.myCard ? (
+                <View style={styles.fieldCardActive}>
+                  <Text style={styles.fieldCardName} numberOfLines={1}>{gameState.battlefieldActiveCards.myCard.name}</Text>
+                  <Text style={styles.fieldCardEffect} numberOfLines={1}>
+                    {(gameState.battlefieldActiveCards.myCard.effects || []).map((e: any) => {
+                      if (e.type === "element_buff") return `+${e.value} ${e.element}`;
+                      if (e.type === "element_debuff") return `-${e.value} ${e.element}`;
+                      if (e.type === "all_units_debuff") return `All -${e.value}`;
+                      if (e.type === "deploy_limit_override") return `Deploy:${e.value}`;
+                      if (e.type === "unique_effect" && e.key === "heal_doubled") return "Heal×2";
+                      if (e.type === "unique_effect" && e.key === "guardian_disabled") return "No Guard";
+                      return "";
+                    }).filter(Boolean).join(", ")}
+                  </Text>
+                </View>
+              ) : <Text style={styles.fieldCardEmpty}>—</Text>}
+            </View>
+            <View style={styles.fieldCardDivider} />
+            <View style={styles.fieldCardSlot}>
+              <Text style={styles.fieldCardSlotLabel}>Opp. field ({gameState.battlefieldDeckRemaining?.oppCount ?? 0} left)</Text>
+              {gameState.battlefieldActiveCards?.oppCard ? (
+                <View style={styles.fieldCardActive}>
+                  <Text style={styles.fieldCardName} numberOfLines={1}>{gameState.battlefieldActiveCards.oppCard.name}</Text>
+                  <Text style={styles.fieldCardEffect} numberOfLines={1}>
+                    {(gameState.battlefieldActiveCards.oppCard.effects || []).map((e: any) => {
+                      if (e.type === "element_buff") return `+${e.value} ${e.element}`;
+                      if (e.type === "element_debuff") return `-${e.value} ${e.element}`;
+                      if (e.type === "all_units_debuff") return `All -${e.value}`;
+                      if (e.type === "deploy_limit_override") return `Deploy:${e.value}`;
+                      if (e.type === "unique_effect" && e.key === "heal_doubled") return "Heal×2";
+                      if (e.type === "unique_effect" && e.key === "guardian_disabled") return "No Guard";
+                      return "";
+                    }).filter(Boolean).join(", ")}
+                  </Text>
+                </View>
+              ) : <Text style={styles.fieldCardEmpty}>—</Text>}
+            </View>
+          </View>
+        </View>
+      )}
 
       {/* === CENTER STRIP === */}
       <View style={[styles.centerStrip, { height: centerStripH }]}>
@@ -1276,6 +1349,20 @@ const styles = StyleSheet.create({
     borderRadius: 7, backgroundColor: '#0F172AE6', borderWidth: 1, borderColor: '#EF444440',
     alignItems: 'center', justifyContent: 'center',
   },
+
+  fieldCardStrip: {
+    backgroundColor: '#0F172A', borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#7C3AED30',
+    paddingHorizontal: 6, paddingVertical: 3,
+  },
+  fieldCardStripLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 7, color: '#7C3AED', marginBottom: 2 },
+  fieldCardRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 4 },
+  fieldCardSlot: { flex: 1 },
+  fieldCardSlotLabel: { fontFamily: 'Inter_400Regular', fontSize: 6, color: '#64748B', marginBottom: 1 },
+  fieldCardActive: { backgroundColor: '#1E293B', borderRadius: 4, padding: 3, borderWidth: 1, borderColor: '#7C3AED40' },
+  fieldCardName: { fontFamily: 'Inter_600SemiBold', fontSize: 7, color: '#E2E8F0' },
+  fieldCardEffect: { fontFamily: 'Inter_400Regular', fontSize: 6, color: '#94A3B8', marginTop: 1 },
+  fieldCardEmpty: { fontFamily: 'Inter_400Regular', fontSize: 8, color: '#334155' },
+  fieldCardDivider: { width: 1, backgroundColor: '#334155', alignSelf: 'stretch' },
 
   centerStrip: { justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
   combatStepsRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 2, paddingHorizontal: 4 },

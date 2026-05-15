@@ -304,6 +304,7 @@ function generateCombatLog(
   p2AbilityBuffs: AbilityBuff[] = [],
   abilityLog: any[] = [],
   currentTurn: number = 0,
+  guardianDisabled?: boolean,
 ): CombatSummary {
   const log: CombatLogEntry[] = [];
   let step = 1;
@@ -472,15 +473,18 @@ function generateCombatLog(
   const totalIncomingToP2 = baseDamageToPlayer2 + player1QuickStrikeDamage;
 
   // Phase 4: Guardian blocks (reduces ALL incoming damage, including Quick Strike)
-  const player1Guardians = player1Breakdown.filter(b => b.traitInfo?.trait === "Guardian");
-  const player2Guardians = player2Breakdown.filter(b => b.traitInfo?.trait === "Guardian");
+  // Skip if guardianDisabled field effect is active this round
+  const player1Guardians = guardianDisabled ? [] : player1Breakdown.filter(b => b.traitInfo?.trait === "Guardian");
+  const player2Guardians = guardianDisabled ? [] : player2Breakdown.filter(b => b.traitInfo?.trait === "Guardian");
   
   if ((player1Guardians.length > 0 && totalIncomingToP1 > 0) || 
       (player2Guardians.length > 0 && totalIncomingToP2 > 0)) {
     log.push({
       step: step++,
       phase: "guardian_block",
-      description: "Guardian Phase - Defensive traits block incoming damage!",
+      description: guardianDisabled
+        ? "Guardian Phase - DISABLED by Battlefield Card this round!"
+        : "Guardian Phase - Defensive traits block incoming damage!",
       icon: "shield",
       actor: "system"
     });
@@ -2443,13 +2447,23 @@ export default function GameBoardPage() {
   const baseCardsToDeploy = modeConfig.cardsToDeploy;
   const myExtraDeploy = useServerState ? (serverState.extraDeploy || 0) : (game ? (isPlayer1 ? (game.gameState.player1ExtraDeploy || 0) : (game.gameState.player2ExtraDeploy || 0)) : 0);
   // Battlefield mode: apply deploy_limit_override from active field cards (minimum wins)
-  const practiceFieldActiveEffects = [
-    ...(practiceActiveFieldCards.p1Card?.effects || []),
-    ...(practiceActiveFieldCards.p2Card?.effects || []),
-  ];
-  const fieldDeployOverrides = practiceFieldEnabled
-    ? practiceFieldActiveEffects.filter((e: any) => e.type === "deploy_limit_override").map((e: any) => e.value as number)
+  // Multiplayer: read from serverState.battlefieldActiveCards; Practice: read from local state
+  const serverFieldEffects = (useServerState && serverState?.battlefieldModeEnabled)
+    ? [
+        ...(serverState.battlefieldActiveCards?.p1Card?.effects || []),
+        ...(serverState.battlefieldActiveCards?.p2Card?.effects || []),
+      ]
     : [];
+  const practiceFieldActiveEffects = practiceFieldEnabled
+    ? [
+        ...(practiceActiveFieldCards.p1Card?.effects || []),
+        ...(practiceActiveFieldCards.p2Card?.effects || []),
+      ]
+    : [];
+  const allActiveFieldEffects: any[] = useServerState ? serverFieldEffects : practiceFieldActiveEffects;
+  const fieldDeployOverrides = allActiveFieldEffects
+    .filter((e: any) => e.type === "deploy_limit_override")
+    .map((e: any) => e.value as number);
   const cardsToDeploy = fieldDeployOverrides.length > 0
     ? Math.max(1, Math.min(baseCardsToDeploy + myExtraDeploy, ...fieldDeployOverrides))
     : baseCardsToDeploy + myExtraDeploy;
@@ -3660,10 +3674,13 @@ export default function GameBoardPage() {
     
     const player1Total = player1Breakdown.reduce((sum, b) => sum + b.finalPower, 0);
     const player2Total = player2Breakdown.reduce((sum, b) => sum + b.finalPower, 0);
+    const practiceGuardianDisabled = practiceFieldEnabled
+      ? p1FieldEffects.some((e: any) => e.type === "unique_effect" && e.key === "guardian_disabled")
+      : false;
     const summary = generateCombatLog(
       player1Breakdown, player2Breakdown, player1Total, player2Total,
       gs2.player1AbilityBuffs || [], gs2.player2AbilityBuffs || [],
-      game.gameState.abilityLog || [], game.currentTurn
+      game.gameState.abilityLog || [], game.currentTurn, practiceGuardianDisabled
     );
     
     setCombatBreakdown({ player1: player1Breakdown, player2: player2Breakdown });
@@ -3750,10 +3767,15 @@ export default function GameBoardPage() {
       const p1T = player1Breakdown.reduce((sum, b) => sum + b.finalPower, 0);
       const p2T = player2Breakdown.reduce((sum, b) => sum + b.finalPower, 0);
       const gs3 = game.gameState;
+      const allFieldEffForSummary: any[] = practiceFieldEnabled
+        ? [...(practiceActiveFieldCards.p1Card?.effects || []), ...(practiceActiveFieldCards.p2Card?.effects || [])]
+        : [];
+      const guardianDisabledForSummary = allFieldEffForSummary
+        .some((e: any) => e.type === "unique_effect" && e.key === "guardian_disabled");
       currentSummary = generateCombatLog(
         player1Breakdown, player2Breakdown, p1T, p2T,
         gs3.player1AbilityBuffs || [], gs3.player2AbilityBuffs || [],
-        gs3.abilityLog || [], game.currentTurn
+        gs3.abilityLog || [], game.currentTurn, guardianDisabledForSummary
       );
     }
     
@@ -3768,6 +3790,8 @@ export default function GameBoardPage() {
     let newP2WP = game.player2WithdrawalPoints;
 
     // Battlefield mode unique effects in practice mode
+    // heal_doubled: double healing this round
+    // guardian_disabled: guardian block is already excluded from finalDamage via generateCombatLog(guardianDisabled=true)
     let p1HealMultiplier = 1;
     let p2HealMultiplier = 1;
     if (practiceFieldEnabled) {
@@ -3776,12 +3800,7 @@ export default function GameBoardPage() {
         ...(practiceActiveFieldCards.p2Card?.effects || []),
       ] as any[];
       const hasHealDoubled = allFieldEffects.some((e: any) => e.type === "unique_effect" && e.key === "heal_doubled");
-      const hasGuardianDisabled = allFieldEffects.some((e: any) => e.type === "unique_effect" && e.key === "guardian_disabled");
       if (hasHealDoubled) { p1HealMultiplier = 2; p2HealMultiplier = 2; }
-      if (hasGuardianDisabled) {
-        // guardian_disabled: heal is zeroed to simulate guardian trait having no effect
-        p1HealMultiplier = 0; p2HealMultiplier = 0;
-      }
       // Clear active field cards at round end
       setPracticeActiveFieldCards({ p1Card: null, p2Card: null });
     }

@@ -1041,19 +1041,27 @@ async function main() {
       gameMode: "standard",
     }, bfUser1.token);
 
+    if (!bfRoom?.id) throw new Error("Room creation returned no ID");
+    if (!bfRoom?.settings?.battlefieldMode) throw new Error("Room settings.battlefieldMode was not persisted");
+
     // Guest joins the room
     await api(`/api/rooms/${bfRoom.id}/join`, "POST", {}, bfUser2.token);
 
-    // Neither player has a battlefield deck — starting should be rejected
-    const startRes = await fetch(`${BASE}/api/rooms/${bfRoom.id}/start`, {
+    // Neither player has a battlefield deck — starting MUST be rejected (4xx)
+    const startHttpRes = await fetch(`${BASE}/api/rooms/${bfRoom.id}/start`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${bfUser1.token}`,
       },
     });
-    if (startRes.ok) {
-      throw new Error("Expected room start to fail without battlefield decks, but it succeeded");
+    if (startHttpRes.ok) {
+      throw new Error(`Expected room start to fail with 4xx without battlefield decks, got HTTP ${startHttpRes.status}`);
+    }
+    const errText = await startHttpRes.text();
+    const lowerErr = errText.toLowerCase();
+    if (!lowerErr.includes("battlefield") && !lowerErr.includes("field deck") && !lowerErr.includes("7-card")) {
+      throw new Error(`Expected error to mention battlefield deck requirement; got: ${errText}`);
     }
     // Clean up the room
     await pgClient.query(`DELETE FROM game_rooms WHERE id = $1`, [bfRoom.id]);
@@ -1061,7 +1069,18 @@ async function main() {
 
   // CP-BF2: battlefieldMode room can start when both players have saved field
   //          decks, and the resulting game_state contains battlefieldModeEnabled=true.
-  await checkpoint("BF-CP2: Battlefield mode game starts and battlefieldModeEnabled=true in state", async () => {
+  await checkpoint("BF-CP2: Battlefield mode game starts and battlefieldModeEnabled=true in WS state", async () => {
+    // Pre-flight: need ≥7 seeded field cards; if not, fail clearly so it's obvious what's missing
+    const fieldCardsCheck = await api("/api/cards/battlefield", "GET", null, admin.token).catch(() => []);
+    if (!Array.isArray(fieldCardsCheck)) throw new Error("GET /api/cards/battlefield did not return an array");
+    if (fieldCardsCheck.length < 7) {
+      throw new Error(
+        `BF-CP2 requires at least 7 seeded field cards but only found ${fieldCardsCheck.length}. ` +
+        "Seed field cards first (see task #91) — do NOT skip this checkpoint."
+      );
+    }
+    const fieldIds = fieldCardsCheck.slice(0, 7).map((c) => c.id);
+
     const bfUser3 = new TestClient("BF-U3");
     const bfUser4 = new TestClient("BF-U4");
     await bfUser3.login(`mp-hard-bf3-${STAMP}@test.local`, "BF-User3");
@@ -1069,35 +1088,24 @@ async function main() {
     await bfUser3.getDecks();
     await bfUser4.getDecks();
 
-    // Give both users a battlefield deck via the API
-    await api("/api/decks/battlefield", "PUT", { cardIds: ["field-001","field-002","field-003","field-004","field-005","field-006","field-007"] }, bfUser3.token).catch(() => {});
-    await api("/api/decks/battlefield", "PUT", { cardIds: ["field-001","field-002","field-003","field-004","field-005","field-006","field-007"] }, bfUser4.token).catch(() => {});
-
-    // Fetch all field cards from the API to get valid IDs
-    const fieldCards = await api("/api/cards/battlefield", "GET", null, bfUser3.token).catch(() => []);
-    if (!Array.isArray(fieldCards) || fieldCards.length < 7) {
-      log("BF-CP2", `Only ${fieldCards.length} field cards available — skipping room-start subtest`);
-      return; // not enough field cards seeded, skip gracefully
-    }
-    const fieldIds = fieldCards.slice(0, 7).map((c) => c.id);
+    // Give both players a valid 7-card battlefield deck
     await api("/api/decks/battlefield", "PUT", { cardIds: fieldIds }, bfUser3.token);
     await api("/api/decks/battlefield", "PUT", { cardIds: fieldIds }, bfUser4.token);
 
-    // Create and start a battlefield room
+    // Create a battlefield room
     const bfRoom2 = await api("/api/rooms", "POST", {
       name: `bf-test-room2-${STAMP}`,
       isPrivate: false,
       battlefieldMode: true,
       gameMode: "standard",
     }, bfUser3.token);
+    if (!bfRoom2?.id) throw new Error("Room creation returned no id");
 
     await api(`/api/rooms/${bfRoom2.id}/join`, "POST", {}, bfUser4.token);
-
-    // Set decks
     await api(`/api/rooms/${bfRoom2.id}/deck`, "POST", { deckId: bfUser3.deck.id }, bfUser3.token);
     await api(`/api/rooms/${bfRoom2.id}/deck`, "POST", { deckId: bfUser4.deck.id }, bfUser4.token);
 
-    // Connect WebSockets
+    // Connect and ready up
     await bfUser3.connectWS();
     await bfUser4.connectWS();
     bfUser3.send("join_room", { roomId: bfRoom2.id });
@@ -1107,37 +1115,110 @@ async function main() {
     bfUser4.send("player_ready", { roomId: bfRoom2.id, deckId: bfUser4.deck.id });
     await sleep(400);
 
-    const startRes = await api(`/api/rooms/${bfRoom2.id}/start`, "POST", {}, bfUser3.token).catch((e) => ({ _error: e.message }));
-    if (startRes._error) {
-      // Both players have decks but start might still fail if field deck validation
-      // is strict — count this as a graceful skip rather than a hard failure
-      log("BF-CP2", `Room start returned error: ${startRes._error} — field deck may not be wired yet`);
-      return;
-    }
+    const startRes = await api(`/api/rooms/${bfRoom2.id}/start`, "POST", {}, bfUser3.token);
+    if (!startRes) throw new Error("Room start returned null");
 
-    // The game state in the returned object must have battlefieldMode=true
+    // The HTTP response game state must have battlefieldMode=true
     const gs = startRes.gameState || {};
     if (!gs.battlefieldMode) {
-      throw new Error(`Expected gameState.battlefieldMode=true, got: ${JSON.stringify(gs.battlefieldMode)}`);
+      throw new Error(`Expected gameState.battlefieldMode=true in start response, got: ${JSON.stringify(gs.battlefieldMode)}`);
+    }
+
+    // Wait for game_state WS event and verify battlefieldModeEnabled is true
+    const mark3 = bfUser3.mark();
+    await sleep(600);
+    const wsState3 = await bfUser3.waitForState(
+      mark3,
+      (s) => s.battlefieldModeEnabled === true,
+      4000,
+      "game_state with battlefieldModeEnabled=true"
+    ).catch(() => null);
+    if (!wsState3) {
+      const latest = bfUser3.latestState();
+      throw new Error(
+        `BF-U3 did not receive game_state with battlefieldModeEnabled=true. ` +
+        `Latest state: ${JSON.stringify(latest?.battlefieldModeEnabled)}`
+      );
     }
 
     bfUser3.close(); bfUser4.close();
     await pgClient.query(`DELETE FROM game_rooms WHERE id = $1`, [bfRoom2.id]);
   });
 
-  // CP-BF3: After a Draw action in a battlefield game, the active field cards are
-  //          present in the sanitized game state.
-  await checkpoint("BF-CP3: After Draw phase, battlefieldActiveCards are non-null in server state", async () => {
-    // Verify that getGameStateForPlayer includes battlefieldActiveCards when mode is on.
-    // We test this by checking the schema of a battlefield game state returned from
-    // /api/rooms/:id/start — if battlefieldModeEnabled key exists it counts as passing.
-    // (Full WS draw-phase test requires a working battlefield deck, which is CP-BF2 above.)
+  // CP-BF3: After both players draw in a battlefield game, battlefieldActiveCards
+  //          in the WS game_state are non-null (both p1Card and p2Card populated).
+  await checkpoint("BF-CP3: After Draw phase, battlefieldActiveCards are non-null in WS game_state", async () => {
+    // Verify the endpoint exists and returns an array first
     const fieldCards = await api("/api/cards/battlefield", "GET", null, admin.token).catch(() => []);
     if (!Array.isArray(fieldCards)) {
-      throw new Error("GET /api/cards/battlefield did not return an array");
+      throw new Error("GET /api/cards/battlefield did not return an array — endpoint missing or broken");
     }
-    // The endpoint must exist and return an array (may be empty if no field cards seeded)
-    log("BF-CP3", `GET /api/cards/battlefield returned ${fieldCards.length} cards — endpoint OK`);
+    if (fieldCards.length < 7) {
+      throw new Error(
+        `BF-CP3 requires ≥7 seeded field cards but found ${fieldCards.length}. ` +
+        "Seed field cards first (task #91)."
+      );
+    }
+    const fieldIds = fieldCards.slice(0, 7).map((c) => c.id);
+
+    const bfUser5 = new TestClient("BF-U5");
+    const bfUser6 = new TestClient("BF-U6");
+    await bfUser5.login(`mp-hard-bf5-${STAMP}@test.local`, "BF-User5");
+    await bfUser6.login(`mp-hard-bf6-${STAMP}@test.local`, "BF-User6");
+    await bfUser5.getDecks();
+    await bfUser6.getDecks();
+
+    await api("/api/decks/battlefield", "PUT", { cardIds: fieldIds }, bfUser5.token);
+    await api("/api/decks/battlefield", "PUT", { cardIds: fieldIds }, bfUser6.token);
+
+    const bfRoom3 = await api("/api/rooms", "POST", {
+      name: `bf-test-room3-${STAMP}`,
+      isPrivate: false,
+      battlefieldMode: true,
+      gameMode: "standard",
+    }, bfUser5.token);
+    if (!bfRoom3?.id) throw new Error("Room creation returned no id");
+
+    await api(`/api/rooms/${bfRoom3.id}/join`, "POST", {}, bfUser6.token);
+    await api(`/api/rooms/${bfRoom3.id}/deck`, "POST", { deckId: bfUser5.deck.id }, bfUser5.token);
+    await api(`/api/rooms/${bfRoom3.id}/deck`, "POST", { deckId: bfUser6.deck.id }, bfUser6.token);
+
+    await bfUser5.connectWS();
+    await bfUser6.connectWS();
+    bfUser5.send("join_room", { roomId: bfRoom3.id });
+    bfUser6.send("join_room", { roomId: bfRoom3.id });
+    await sleep(400);
+    bfUser5.send("player_ready", { roomId: bfRoom3.id, deckId: bfUser5.deck.id });
+    bfUser6.send("player_ready", { roomId: bfRoom3.id, deckId: bfUser6.deck.id });
+    await sleep(400);
+
+    await api(`/api/rooms/${bfRoom3.id}/start`, "POST", {}, bfUser5.token);
+    await sleep(400);
+
+    // Both players draw — this triggers the field card flip in the engine
+    // Mark BEFORE sending draw actions so we catch the game_state that follows
+    const markDraw = bfUser5.mark();
+    bfUser5.send("game_action", { type: "draw" });
+    await sleep(200);
+    bfUser6.send("game_action", { type: "draw" });
+    await sleep(600);
+    const gsAfterDraw = await bfUser5.waitForState(
+      markDraw,
+      (s) => s.battlefieldActiveCards?.p1Card != null && s.battlefieldActiveCards?.p2Card != null,
+      5000,
+      "game_state with battlefieldActiveCards.p1Card and p2Card non-null"
+    ).catch(() => null);
+    if (!gsAfterDraw) {
+      const latest = bfUser5.latestState();
+      throw new Error(
+        `BF-U5 did not receive game_state with both battlefieldActiveCards after draw. ` +
+        `Latest battlefieldActiveCards: ${JSON.stringify(latest?.battlefieldActiveCards)}`
+      );
+    }
+    log("BF-CP3", `p1Card=${gsAfterDraw.battlefieldActiveCards.p1Card.name}, p2Card=${gsAfterDraw.battlefieldActiveCards.p2Card.name}`);
+
+    bfUser5.close(); bfUser6.close();
+    await pgClient.query(`DELETE FROM game_rooms WHERE id = $1`, [bfRoom3.id]);
   });
 
   // ===========================================================================
