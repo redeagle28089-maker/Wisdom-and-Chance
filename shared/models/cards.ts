@@ -173,6 +173,10 @@ export const commanderAbilityEffectSchema = z
     type: z.enum(ABILITY_EFFECT_TYPES),
     value: z.number().int().min(0).max(20).optional(),
     target: z.string().optional(),
+    // Optional second numeric parameter used by effects that need two configurable
+    // values (e.g. heal_and_buff uses `value` for the heal amount and
+    // `secondaryValue` for the buff amount granted to target-element units).
+    secondaryValue: z.number().int().min(0).max(20).optional(),
   })
   .superRefine((effect, ctx) => {
     const spec = ABILITY_EFFECT_BY_TYPE[effect.type];

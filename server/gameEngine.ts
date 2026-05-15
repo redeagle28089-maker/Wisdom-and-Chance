@@ -871,10 +871,10 @@ class ServerGameEngine {
         break;
       }
       case "heal_and_buff": {
+        // effect.value = heal HP amount (default 4)
+        // effect.secondaryValue = unit buff amount (default 2) — configurable per commander
         const healAmount = effect.value || 4;
-        // Buff scales with the configured heal value (half, minimum 1) so higher-value
-        // heal_and_buff commanders provide a proportionally stronger buff.
-        const healBuffAmount = Math.max(1, Math.round(healAmount / 2));
+        const healBuffAmount = effect.secondaryValue ?? 2;
         if (isP1) game.player1HP = Math.min(GAME_CONSTANTS.STARTING_HP, game.player1HP + healAmount);
         else game.player2HP = Math.min(GAME_CONSTANTS.STARTING_HP, game.player2HP + healAmount);
         const healBuffEl = normEl(effect.target || commander.element);
