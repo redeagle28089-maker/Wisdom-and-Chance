@@ -2427,17 +2427,26 @@ export default function GameBoardPage() {
   const isBattlefieldMode = useServerState
     ? !!serverState.battlefieldModeEnabled
     : practiceFieldEnabled;
+  // Server sends myCard/oppCard (player-perspective). Convert back to global p1/p2 for UI.
   const bfActiveP1Card = useServerState
-    ? (serverState.battlefieldActiveCards?.p1Card || null)
+    ? (isPlayer1
+        ? (serverState.battlefieldActiveCards?.myCard || null)
+        : (serverState.battlefieldActiveCards?.oppCard || null))
     : practiceActiveFieldCards.p1Card;
   const bfActiveP2Card = useServerState
-    ? (serverState.battlefieldActiveCards?.p2Card || null)
+    ? (isPlayer1
+        ? (serverState.battlefieldActiveCards?.oppCard || null)
+        : (serverState.battlefieldActiveCards?.myCard || null))
     : practiceActiveFieldCards.p2Card;
   const bfP1Remaining = useServerState
-    ? (serverState.battlefieldDeckRemaining?.p1 ?? 0)
+    ? (isPlayer1
+        ? (serverState.battlefieldDeckRemaining?.myCount ?? 0)
+        : (serverState.battlefieldDeckRemaining?.oppCount ?? 0))
     : practiceP1FieldDeck.length;
   const bfP2Remaining = useServerState
-    ? (serverState.battlefieldDeckRemaining?.p2 ?? 0)
+    ? (isPlayer1
+        ? (serverState.battlefieldDeckRemaining?.oppCount ?? 0)
+        : (serverState.battlefieldDeckRemaining?.myCount ?? 0))
     : practiceP2FieldDeck.length;
   
   // Get game mode config (draw/deploy counts)
@@ -2450,8 +2459,8 @@ export default function GameBoardPage() {
   // Multiplayer: read from serverState.battlefieldActiveCards; Practice: read from local state
   const serverFieldEffects = (useServerState && serverState?.battlefieldModeEnabled)
     ? [
-        ...(serverState.battlefieldActiveCards?.p1Card?.effects || []),
-        ...(serverState.battlefieldActiveCards?.p2Card?.effects || []),
+        ...(serverState.battlefieldActiveCards?.myCard?.effects || []),
+        ...(serverState.battlefieldActiveCards?.oppCard?.effects || []),
       ]
     : [];
   const practiceFieldActiveEffects = practiceFieldEnabled

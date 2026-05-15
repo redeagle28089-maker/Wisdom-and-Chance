@@ -1204,21 +1204,202 @@ async function main() {
     await sleep(600);
     const gsAfterDraw = await bfUser5.waitForState(
       markDraw,
-      (s) => s.battlefieldActiveCards?.p1Card != null && s.battlefieldActiveCards?.p2Card != null,
+      (s) => s.battlefieldActiveCards?.myCard != null && s.battlefieldActiveCards?.oppCard != null,
       5000,
-      "game_state with battlefieldActiveCards.p1Card and p2Card non-null"
+      "game_state with battlefieldActiveCards.myCard and oppCard non-null"
     ).catch(() => null);
     if (!gsAfterDraw) {
       const latest = bfUser5.latestState();
       throw new Error(
-        `BF-U5 did not receive game_state with both battlefieldActiveCards after draw. ` +
+        `BF-U5 did not receive game_state with both battlefieldActiveCards (myCard/oppCard) after draw. ` +
         `Latest battlefieldActiveCards: ${JSON.stringify(latest?.battlefieldActiveCards)}`
       );
     }
-    log("BF-CP3", `p1Card=${gsAfterDraw.battlefieldActiveCards.p1Card.name}, p2Card=${gsAfterDraw.battlefieldActiveCards.p2Card.name}`);
+    const myCard = gsAfterDraw.battlefieldActiveCards.myCard;
+    const oppCard = gsAfterDraw.battlefieldActiveCards.oppCard;
+    if (!Array.isArray(myCard.effects) || myCard.effects.length === 0) {
+      throw new Error(`Expected myCard.effects to be a non-empty array; got: ${JSON.stringify(myCard.effects)}`);
+    }
+    log("BF-CP3", `myCard=${myCard.name} effects=[${myCard.effects.map(e=>e.type).join(",")}], oppCard=${oppCard.name}`);
 
     bfUser5.close(); bfUser6.close();
     await pgClient.query(`DELETE FROM game_rooms WHERE id = $1`, [bfRoom3.id]);
+  });
+
+  // CP-BF4: deploy_limit_override enforcement — a field deck of all bf-narrow-pass
+  //          forces exactly 1 deployment; sending 3 cards must fail with a clear error.
+  await checkpoint("BF-CP4: deploy_limit_override enforced — 3-card deploy rejected when limit=1", async () => {
+    const fieldCards = await api("/api/cards/battlefield", "GET", null, admin.token).catch(() => []);
+    const narrowPass = (fieldCards || []).find((c) => c.id === "bf-narrow-pass");
+    if (!narrowPass) {
+      throw new Error("bf-narrow-pass field card not found — seed battlefield cards first (task #91)");
+    }
+    // All 7 slots are narrow-pass so both players always draw a limit=1 card
+    const narrowDeck = Array.from({ length: 7 }, () => narrowPass.id);
+
+    const bfUser7 = new TestClient("BF-U7");
+    const bfUser8 = new TestClient("BF-U8");
+    await bfUser7.login(`mp-hard-bf7-${STAMP}@test.local`, "BF-User7");
+    await bfUser8.login(`mp-hard-bf8-${STAMP}@test.local`, "BF-User8");
+    await bfUser7.getDecks();
+    await bfUser8.getDecks();
+
+    await api("/api/decks/battlefield", "PUT", { cardIds: narrowDeck }, bfUser7.token);
+    await api("/api/decks/battlefield", "PUT", { cardIds: narrowDeck }, bfUser8.token);
+
+    const bfRoom4 = await api("/api/rooms", "POST", {
+      name: `bf-test-room4-${STAMP}`, isPrivate: false, battlefieldMode: true, gameMode: "standard",
+    }, bfUser7.token);
+    if (!bfRoom4?.id) throw new Error("Room creation returned no id");
+
+    await api(`/api/rooms/${bfRoom4.id}/join`, "POST", {}, bfUser8.token);
+    await api(`/api/rooms/${bfRoom4.id}/deck`, "POST", { deckId: bfUser7.deck.id }, bfUser7.token);
+    await api(`/api/rooms/${bfRoom4.id}/deck`, "POST", { deckId: bfUser8.deck.id }, bfUser8.token);
+
+    await bfUser7.connectWS();
+    await bfUser8.connectWS();
+    bfUser7.send("join_room", { roomId: bfRoom4.id });
+    bfUser8.send("join_room", { roomId: bfRoom4.id });
+    await sleep(400);
+    bfUser7.send("player_ready", { roomId: bfRoom4.id, deckId: bfUser7.deck.id });
+    bfUser8.send("player_ready", { roomId: bfRoom4.id, deckId: bfUser8.deck.id });
+    await sleep(400);
+
+    await api(`/api/rooms/${bfRoom4.id}/start`, "POST", {}, bfUser7.token);
+    await sleep(400);
+
+    // Both players draw — triggers narrow-pass flip (deploy limit = 1)
+    const md7 = bfUser7.mark(), md8 = bfUser8.mark();
+    bfUser7.send("game_action", { type: "draw" });
+    bfUser8.send("game_action", { type: "draw" });
+    // Wait for both to enter deployment phase
+    await Promise.all([
+      bfUser7.waitForState(md7, (s) => s.currentPhase === "deployment", 4000, "BF-U7 deployment phase"),
+      bfUser8.waitForState(md8, (s) => s.currentPhase === "deployment", 4000, "BF-U8 deployment phase"),
+    ]);
+
+    // Verify active card is narrow-pass (deploy_limit_override=1)
+    const stateAfterDraw = bfUser7.latestState();
+    const activeCard = stateAfterDraw?.battlefieldActiveCards?.myCard;
+    if (!activeCard) throw new Error("Expected myCard to be set after draw in narrow-pass game");
+    const limitEff = (activeCard.effects || []).find((e) => e.type === "deploy_limit_override");
+    if (!limitEff || limitEff.value !== 1) {
+      throw new Error(`Expected deploy_limit_override=1 from bf-narrow-pass; got: ${JSON.stringify(activeCard.effects)}`);
+    }
+
+    // Now try to deploy 3 cards — must be rejected with "exactly 1"
+    const mErr = bfUser7.mark();
+    bfUser7.send("game_action", { type: "deploy", data: { cardIds: ["fake-a", "fake-b", "fake-c"] } });
+    const err4 = await bfUser7.expectErrorAfter(mErr, "exactly 1", 3000, "deploy limit rejection").catch(() => null);
+    if (!err4) {
+      throw new Error("Expected game_error mentioning 'exactly 1' when deploying 3 cards with narrow-pass active");
+    }
+    log("BF-CP4", `Got expected error: ${err4.payload?.error}`);
+
+    bfUser7.close(); bfUser8.close();
+    await pgClient.query(`DELETE FROM game_rooms WHERE id = $1`, [bfRoom4.id]);
+  });
+
+  // CP-BF5: element_buff affects combat power — volcanic-surge (+2 Fire) game plays
+  //         one full round; combat resolves without error and round advances to 2.
+  await checkpoint("BF-CP5: element_buff (volcanic-surge) — combat resolves correctly with buff active", async () => {
+    const fieldCards = await api("/api/cards/battlefield", "GET", null, admin.token).catch(() => []);
+    const volcanicSurge = (fieldCards || []).find((c) => c.id === "bf-volcanic-surge");
+    if (!volcanicSurge) {
+      throw new Error("bf-volcanic-surge field card not found — seed battlefield cards first (task #91)");
+    }
+    const surgeDeck = Array.from({ length: 7 }, () => volcanicSurge.id);
+
+    const bfUser9 = new TestClient("BF-U9");
+    const bfUser10 = new TestClient("BF-U10");
+    await bfUser9.login(`mp-hard-bf9-${STAMP}@test.local`, "BF-User9");
+    await bfUser10.login(`mp-hard-bf10-${STAMP}@test.local`, "BF-User10");
+    await bfUser9.getDecks();
+    await bfUser10.getDecks();
+
+    await api("/api/decks/battlefield", "PUT", { cardIds: surgeDeck }, bfUser9.token);
+    await api("/api/decks/battlefield", "PUT", { cardIds: surgeDeck }, bfUser10.token);
+
+    const bfRoom5 = await api("/api/rooms", "POST", {
+      name: `bf-test-room5-${STAMP}`, isPrivate: false, battlefieldMode: true, gameMode: "standard",
+    }, bfUser9.token);
+    if (!bfRoom5?.id) throw new Error("Room creation returned no id");
+
+    await api(`/api/rooms/${bfRoom5.id}/join`, "POST", {}, bfUser10.token);
+    await api(`/api/rooms/${bfRoom5.id}/deck`, "POST", { deckId: bfUser9.deck.id }, bfUser9.token);
+    await api(`/api/rooms/${bfRoom5.id}/deck`, "POST", { deckId: bfUser10.deck.id }, bfUser10.token);
+
+    await bfUser9.connectWS();
+    await bfUser10.connectWS();
+    bfUser9.send("join_room", { roomId: bfRoom5.id });
+    bfUser10.send("join_room", { roomId: bfRoom5.id });
+    await sleep(400);
+    bfUser9.send("player_ready", { roomId: bfRoom5.id, deckId: bfUser9.deck.id });
+    bfUser10.send("player_ready", { roomId: bfRoom5.id, deckId: bfUser10.deck.id });
+    await sleep(400);
+
+    await api(`/api/rooms/${bfRoom5.id}/start`, "POST", {}, bfUser9.token);
+    await sleep(400);
+
+    // Draw phase — triggers volcanic-surge flip
+    const md9 = bfUser9.mark(), md10 = bfUser10.mark();
+    bfUser9.send("game_action", { type: "draw" });
+    bfUser10.send("game_action", { type: "draw" });
+    await Promise.all([
+      bfUser9.waitForState(md9, (s) => s.currentPhase === "deployment", 4000, "BF-U9 deployment"),
+      bfUser10.waitForState(md10, (s) => s.currentPhase === "deployment", 4000, "BF-U10 deployment"),
+    ]);
+
+    // Verify element_buff effect is present in active card
+    const state9 = bfUser9.latestState();
+    const surge = state9?.battlefieldActiveCards?.myCard;
+    if (!surge) throw new Error("Expected myCard to be set after draw in volcanic-surge game");
+    const buffEff = (surge.effects || []).find((e) => e.type === "element_buff" && e.element === "Fire");
+    if (!buffEff) {
+      throw new Error(`Expected element_buff Fire effect from bf-volcanic-surge; got: ${JSON.stringify(surge.effects)}`);
+    }
+    log("BF-CP5", `element_buff confirmed in active card: +${buffEff.value} ${buffEff.element}`);
+
+    // Deploy available hand cards (standard mode = 2) and resolve combat
+    const hand9 = state9?.myHand?.slice(0, 2) || [];
+    const state10 = bfUser10.latestState();
+    const hand10 = state10?.myHand?.slice(0, 2) || [];
+
+    const md9b = bfUser9.mark(), md10b = bfUser10.mark();
+    if (hand9.length > 0) {
+      bfUser9.send("game_action", { type: "deploy", data: { cardIds: hand9 } });
+    } else {
+      bfUser9.send("game_action", { type: "end_turn" });
+    }
+    if (hand10.length > 0) {
+      bfUser10.send("game_action", { type: "deploy", data: { cardIds: hand10 } });
+    } else {
+      bfUser10.send("game_action", { type: "end_turn" });
+    }
+    await Promise.all([
+      bfUser9.waitForState(md9b, (s) => s.currentPhase === "combat", 4000, "BF-U9 combat"),
+      bfUser10.waitForState(md10b, (s) => s.currentPhase === "combat", 4000, "BF-U10 combat"),
+    ]);
+
+    // End turn × 2 — should trigger combat resolution with element_buff active
+    const mCombat9 = bfUser9.mark();
+    bfUser9.send("game_action", { type: "end_turn" });
+    bfUser10.send("game_action", { type: "end_turn" });
+
+    // Verify combat resolves successfully (combat_result event or game_state with round=2)
+    const combatEv = await bfUser9.waitForAfter(
+      mCombat9,
+      (e) => e.type === "combat_result" || (e.type === "game_state" && (e.payload?.currentTurn > 1 || e.payload?.round > 1)),
+      5000,
+      "combat_result or next-round game_state"
+    ).catch(() => null);
+    if (!combatEv) {
+      throw new Error("Combat did not resolve within 5s when element_buff (volcanic-surge) was active");
+    }
+    log("BF-CP5", `Combat resolved OK with volcanic-surge active (event: ${combatEv.type})`);
+
+    bfUser9.close(); bfUser10.close();
+    await pgClient.query(`DELETE FROM game_rooms WHERE id = $1`, [bfRoom5.id]);
   });
 
   // ===========================================================================

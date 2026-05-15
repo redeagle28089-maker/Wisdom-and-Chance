@@ -181,8 +181,8 @@ export interface SanitizedGameState {
   responsiblePlayerIds: string[];
   consecutiveTimeouts: { player1: number; player2: number };
   battlefieldModeEnabled?: boolean;
-  battlefieldActiveCards?: { p1Card: FieldCard | null; p2Card: FieldCard | null };
-  battlefieldDeckRemaining?: { p1: number; p2: number };
+  battlefieldActiveCards?: { myCard: FieldCard | null; oppCard: FieldCard | null } | null;
+  battlefieldDeckRemaining?: { myCount: number; oppCount: number } | null;
 }
 
 export interface CombatResult {
@@ -1056,12 +1056,29 @@ class ServerGameEngine {
               combatSummary.player1Healing *= 2;
               combatSummary.player2Healing *= 2;
             } else if (eff.key === "guardian_disabled") {
-              combatSummary.player1GuardianBlocked = 0;
-              combatSummary.player2GuardianBlocked = 0;
+              // Only suppress Guardian TRAIT blocks; commander shield ability buffs still apply
               const totalIncomingP1 = combatSummary.baseDamageToPlayer1 + combatSummary.player2QuickStrikeDamage;
               const totalIncomingP2 = combatSummary.baseDamageToPlayer2 + combatSummary.player1QuickStrikeDamage;
-              combatSummary.finalDamageToPlayer1 = Math.max(0, totalIncomingP1);
-              combatSummary.finalDamageToPlayer2 = Math.max(0, totalIncomingP2);
+              // Compute Guardian-trait-only blocked amounts from the breakdown
+              let p1TraitBlocked = 0;
+              for (const b of p1Breakdown) {
+                if (b.traitInfo?.trait === "Guardian") {
+                  const blockable = Math.max(0, totalIncomingP1 - p1TraitBlocked);
+                  p1TraitBlocked += Math.min(b.traitInfo.value, blockable);
+                }
+              }
+              let p2TraitBlocked = 0;
+              for (const b of p2Breakdown) {
+                if (b.traitInfo?.trait === "Guardian") {
+                  const blockable = Math.max(0, totalIncomingP2 - p2TraitBlocked);
+                  p2TraitBlocked += Math.min(b.traitInfo.value, blockable);
+                }
+              }
+              // Remove only the trait-portion; shield ability buffs remain
+              combatSummary.player1GuardianBlocked = Math.max(0, combatSummary.player1GuardianBlocked - p1TraitBlocked);
+              combatSummary.player2GuardianBlocked = Math.max(0, combatSummary.player2GuardianBlocked - p2TraitBlocked);
+              combatSummary.finalDamageToPlayer1 = Math.max(0, totalIncomingP1 - combatSummary.player1GuardianBlocked);
+              combatSummary.finalDamageToPlayer2 = Math.max(0, totalIncomingP2 - combatSummary.player2GuardianBlocked);
             }
           }
         }
@@ -1546,14 +1563,21 @@ class ServerGameEngine {
       },
       battlefieldModeEnabled: active.battlefieldMode || false,
       battlefieldActiveCards: active.battlefieldMode
-        ? { p1Card: active.p1ActiveFieldCard, p2Card: active.p2ActiveFieldCard }
-        : undefined,
+        ? {
+            myCard: isP1 ? active.p1ActiveFieldCard : active.p2ActiveFieldCard,
+            oppCard: isP1 ? active.p2ActiveFieldCard : active.p1ActiveFieldCard,
+          }
+        : null,
       battlefieldDeckRemaining: active.battlefieldMode
         ? {
-            p1: ((gs as any).p1BattlefieldDeck || []).length,
-            p2: ((gs as any).p2BattlefieldDeck || []).length,
+            myCount: isP1
+              ? ((gs as any).p1BattlefieldDeck || []).length
+              : ((gs as any).p2BattlefieldDeck || []).length,
+            oppCount: isP1
+              ? ((gs as any).p2BattlefieldDeck || []).length
+              : ((gs as any).p1BattlefieldDeck || []).length,
           }
-        : undefined,
+        : null,
     };
   }
 
