@@ -65,6 +65,14 @@ const TRAIT_ICONS: Record<string, string> = {
   'Care Package': 'package-variant',
 };
 
+// Land/field-card-only trait icons — separate subsection from card traits.
+// hasNumber: false = icon only, no numeric slot rendered.
+// Future land traits that carry a value should set hasNumber: true.
+export const LAND_TRAIT_ICONS: Record<string, { icon: string; hasNumber: boolean }> = {
+  'heal_doubled':      { icon: 'heart-multiple', hasNumber: false },
+  'guardian_disabled': { icon: 'shield-c',       hasNumber: false },
+};
+
 function getElementBorder(element: string): string {
   return ELEMENT_BORDERS[element.toLowerCase()] ?? ELEMENT_BORDERS.fire;
 }

@@ -1,7 +1,8 @@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { FieldCard, FieldCardEffect } from "@shared/schema";
 import { FIELD_CARD_UNIQUE_EFFECT_LABELS } from "@shared/schema";
-import { Mountain, Zap, Shield, Swords, Droplets, Flame, Wind, Leaf, Globe } from "lucide-react";
+import { Mountain, Swords, Droplets, Flame, Wind, Leaf, Globe, HeartHandshake } from "lucide-react";
+import { ShieldC } from "@/components/shield-c";
 
 function effectSummary(effect: FieldCardEffect): string {
   switch (effect.type) {
@@ -35,9 +36,9 @@ function ElementIcon({ element, className }: { element: string; className?: stri
 function UniqueEffectIcon({ effectKey, className }: { effectKey: string; className?: string }) {
   const cls = className ?? "w-3 h-3";
   switch (effectKey) {
-    case "heal_doubled": return <Zap className={cls} />;
-    case "guardian_disabled": return <Shield className={cls} />;
-    default: return <Swords className={cls} />;
+    case "heal_doubled":      return <HeartHandshake className={cls} />;
+    case "guardian_disabled": return <ShieldC className={cls} />;
+    default:                  return <Swords className={cls} />;
   }
 }
 
@@ -76,9 +77,11 @@ function EffectPill({ effect }: { effect: FieldCardEffect }) {
   }
   if (effect.type === "unique_effect") {
     return (
-      <div className="flex items-center gap-1 bg-purple-700/70 text-purple-100 rounded-sm px-1.5 py-0.5 text-[10px] font-bold">
-        <UniqueEffectIcon effectKey={effect.key} className="w-2.5 h-2.5" />
-        <span>{FIELD_CARD_UNIQUE_EFFECT_LABELS[effect.key]}</span>
+      <div
+        className="flex items-center justify-center bg-purple-700/70 text-purple-100 rounded-sm px-1.5 py-0.5"
+        title={FIELD_CARD_UNIQUE_EFFECT_LABELS[effect.key]}
+      >
+        <UniqueEffectIcon effectKey={effect.key} className="w-3 h-3" />
       </div>
     );
   }

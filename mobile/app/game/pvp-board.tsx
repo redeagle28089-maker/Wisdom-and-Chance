@@ -17,8 +17,37 @@ import { useWebSocket } from '@/lib/websocket';
 import { getCardImageUrl } from '@/constants/card-art';
 import AuthImage from '@/components/AuthImage';
 import { useThrottledCallback, useNavigationGuard } from '@/hooks/useThrottledCallback';
+import { ShieldCIcon } from '@/components/ShieldCIcon';
 
 function safeHaptic(fn: () => void) { try { fn(); } catch {} }
+
+function FieldEffectRow({ effects }: { effects: FieldCardEffect[] }) {
+  const items = effects.map((e, i) => {
+    if (e.type === "element_buff")           return <Text key={i} style={pvpFieldEffectTextStyle}>+{e.value} {e.element}</Text>;
+    if (e.type === "element_debuff")         return <Text key={i} style={pvpFieldEffectTextStyle}>-{e.value} {e.element}</Text>;
+    if (e.type === "all_units_debuff")       return <Text key={i} style={pvpFieldEffectTextStyle}>All -{e.value}</Text>;
+    if (e.type === "deploy_limit_override")  return <Text key={i} style={pvpFieldEffectTextStyle}>Deploy:{e.value}</Text>;
+    if (e.type === "unique_effect") {
+      if (e.key === "heal_doubled")
+        return <MaterialCommunityIcons key={i} name="heart-multiple" size={8} color="#94A3B8" />;
+      if (e.key === "guardian_disabled")
+        return <ShieldCIcon key={i} size={8} color="#94A3B8" />;
+    }
+    return null;
+  }).filter(Boolean);
+
+  return (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 2, marginTop: 1 }}>
+      {items}
+    </View>
+  );
+}
+
+const pvpFieldEffectTextStyle = {
+  fontFamily: 'Inter_400Regular' as const,
+  fontSize: 6,
+  color: '#94A3B8',
+} as const;
 
 const ELEMENT_ART: Record<string, string> = {
   fire: 'https://wisdom-and-chance-2.replit.app/assets/fire_element_card_art-CVY0E2Oz.png',
@@ -742,17 +771,7 @@ export default function PvPGameBoardScreen() {
               {gameState.battlefieldActiveCards?.myCard ? (
                 <View style={styles.fieldCardActive}>
                   <Text style={styles.fieldCardName} numberOfLines={1}>{gameState.battlefieldActiveCards.myCard.name}</Text>
-                  <Text style={styles.fieldCardEffect} numberOfLines={1}>
-                    {(gameState.battlefieldActiveCards.myCard.effects as FieldCardEffect[]).map(e => {
-                      if (e.type === "element_buff") return `+${e.value} ${e.element}`;
-                      if (e.type === "element_debuff") return `-${e.value} ${e.element}`;
-                      if (e.type === "all_units_debuff") return `All -${e.value}`;
-                      if (e.type === "deploy_limit_override") return `Deploy:${e.value}`;
-                      if (e.type === "unique_effect" && e.key === "heal_doubled") return "Heal×2";
-                      if (e.type === "unique_effect" && e.key === "guardian_disabled") return "No Guard";
-                      return "";
-                    }).filter(Boolean).join(", ")}
-                  </Text>
+                  <FieldEffectRow effects={gameState.battlefieldActiveCards.myCard.effects as FieldCardEffect[]} />
                 </View>
               ) : <Text style={styles.fieldCardEmpty}>—</Text>}
             </View>
@@ -762,17 +781,7 @@ export default function PvPGameBoardScreen() {
               {gameState.battlefieldActiveCards?.oppCard ? (
                 <View style={styles.fieldCardActive}>
                   <Text style={styles.fieldCardName} numberOfLines={1}>{gameState.battlefieldActiveCards.oppCard.name}</Text>
-                  <Text style={styles.fieldCardEffect} numberOfLines={1}>
-                    {(gameState.battlefieldActiveCards.oppCard.effects as FieldCardEffect[]).map(e => {
-                      if (e.type === "element_buff") return `+${e.value} ${e.element}`;
-                      if (e.type === "element_debuff") return `-${e.value} ${e.element}`;
-                      if (e.type === "all_units_debuff") return `All -${e.value}`;
-                      if (e.type === "deploy_limit_override") return `Deploy:${e.value}`;
-                      if (e.type === "unique_effect" && e.key === "heal_doubled") return "Heal×2";
-                      if (e.type === "unique_effect" && e.key === "guardian_disabled") return "No Guard";
-                      return "";
-                    }).filter(Boolean).join(", ")}
-                  </Text>
+                  <FieldEffectRow effects={gameState.battlefieldActiveCards.oppCard.effects as FieldCardEffect[]} />
                 </View>
               ) : <Text style={styles.fieldCardEmpty}>—</Text>}
             </View>

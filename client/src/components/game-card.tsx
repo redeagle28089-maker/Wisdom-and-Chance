@@ -1,8 +1,10 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Flame, Droplet, Mountain, Wind, Leaf, Zap, Plus, Minus, Heart, Shield, Swords, Crown } from "lucide-react";
+import { Flame, Droplet, Mountain, Wind, Leaf, Zap, Plus, Minus, Heart, Shield, Swords, Crown, HeartHandshake } from "lucide-react";
+import type { ComponentType } from "react";
 import type { Card as CardType, Element, Commander } from "@shared/schema";
+import { ShieldC } from "@/components/shield-c";
 
 import fireCardArt from "@assets/generated_images/fire_element_card_art.png";
 import waterCardArt from "@assets/generated_images/water_element_card_art.png";
@@ -83,6 +85,14 @@ export const traitIcons: Record<string, typeof Zap> = {
   "Care Package": Plus,
   "Restoration": Heart,
   "Guardian": Shield,
+};
+
+// Land/field-card-only trait icons — structurally separate from card traits.
+// hasNumber: false means no numeric slot is shown alongside the icon.
+// Future land traits that carry a value should set hasNumber: true.
+export const landTraitIcons: Record<string, { icon: ComponentType<{ className?: string }>; hasNumber: boolean }> = {
+  "heal_doubled":       { icon: HeartHandshake, hasNumber: false },
+  "guardian_disabled":  { icon: ShieldC,        hasNumber: false },
 };
 
 export const buffDebuffColorMap: Record<string, { bg: string; text: string; border: string }> = {
