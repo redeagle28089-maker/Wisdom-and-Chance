@@ -79,11 +79,18 @@ export interface RoundResult {
   abilityEffects?: AbilityEffect[];
 }
 
+export type FieldCardEffect =
+  | { type: 'deploy_limit_override'; value: number }
+  | { type: 'element_buff'; element: string; value: number }
+  | { type: 'element_debuff'; element: string; value: number }
+  | { type: 'all_units_debuff'; value: number }
+  | { type: 'unique_effect'; key: 'heal_doubled' | 'guardian_disabled' };
+
 export interface FieldCard {
   id: string;
   name: string;
   description?: string;
-  effects: any[];
+  effects: FieldCardEffect[];
 }
 
 export interface GameState {
@@ -228,7 +235,9 @@ export function deployCard(state: GameState, player: 'p1' | 'p2', cardIndex: num
   if (cardIndex < 0 || cardIndex >= ps.hand.length) return state;
   const activeFCsDeploy = ([state.p1ActiveFieldCard, state.p2ActiveFieldCard].filter(Boolean)) as FieldCard[];
   const deployOverrides = activeFCsDeploy
-    .flatMap(fc => (fc.effects as any[]).filter((e: any) => e.type === 'deploy_limit_override').map((e: any) => e.value as number));
+    .flatMap(fc => fc.effects
+      .filter((e): e is Extract<FieldCardEffect, { type: 'deploy_limit_override' }> => e.type === 'deploy_limit_override')
+      .map(e => e.value));
   const effectiveDeployLimit = deployOverrides.length > 0 ? Math.min(...deployOverrides) : state.cardsDeployedPerTurn;
   if (ps.deployed.length >= effectiveDeployLimit) return state;
 
@@ -352,7 +361,7 @@ export function resolveCombat(state: GameState): GameState {
   const activeFCs = state.battlefieldMode
     ? ([state.p1ActiveFieldCard, state.p2ActiveFieldCard].filter(Boolean) as FieldCard[])
     : [];
-  const allFCEffects: any[] = activeFCs.flatMap(fc => (fc.effects as any[]) || []);
+  const allFCEffects: FieldCardEffect[] = activeFCs.flatMap(fc => fc.effects);
   const bfHasHealDoubled = allFCEffects.some(e => e.type === 'unique_effect' && e.key === 'heal_doubled');
   const bfHasGuardianDisabled = allFCEffects.some(e => e.type === 'unique_effect' && e.key === 'guardian_disabled');
 
@@ -370,19 +379,19 @@ export function resolveCombat(state: GameState): GameState {
     for (const eff of allFCEffects) {
       if (eff.type === 'element_buff') {
         for (const c of allDeployed) {
-          if ((c.element || '').toLowerCase() === (eff.element || '').toLowerCase()) {
-            c.currentPower += eff.value || 0;
+          if ((c.element || '').toLowerCase() === eff.element.toLowerCase()) {
+            c.currentPower += eff.value;
           }
         }
       } else if (eff.type === 'element_debuff') {
         for (const c of allDeployed) {
-          if ((c.element || '').toLowerCase() === (eff.element || '').toLowerCase()) {
-            c.currentPower = Math.max(1, c.currentPower - (eff.value || 0));
+          if ((c.element || '').toLowerCase() === eff.element.toLowerCase()) {
+            c.currentPower = Math.max(1, c.currentPower - eff.value);
           }
         }
       } else if (eff.type === 'all_units_debuff') {
         for (const c of allDeployed) {
-          c.currentPower = Math.max(1, c.currentPower - (eff.value || 0));
+          c.currentPower = Math.max(1, c.currentPower - eff.value);
         }
       }
     }

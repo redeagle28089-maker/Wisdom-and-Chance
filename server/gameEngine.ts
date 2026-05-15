@@ -1041,48 +1041,24 @@ class ServerGameEngine {
     const p2Total = p2Breakdown.reduce((sum, b) => sum + b.finalPower, 0);
     const winner: "player1" | "player2" | "tie" = p1Total > p2Total ? "player1" : p2Total > p1Total ? "player2" : "tie";
 
+    // Compute unique field card effect flags BEFORE generateCombatSummary so guardian_disabled
+    // is applied from first principles (skip trait-Guardian blocks during computation, not after).
+    const allFieldEffects = activeFieldCards.flatMap(fc => fc.effects as any[]);
+    const hasHealDoubled = allFieldEffects.some(e => e.type === "unique_effect" && e.key === "heal_doubled");
+    const hasGuardianDisabled = allFieldEffects.some(e => e.type === "unique_effect" && e.key === "guardian_disabled");
+
     const combatSummary = this.generateCombatSummary(
       p1Breakdown, p2Breakdown, p1Total, p2Total,
       gs.player1AbilityBuffs || [], gs.player2AbilityBuffs || [],
-      gs.abilityLog || [], game.currentTurn
+      gs.abilityLog || [], game.currentTurn,
+      hasGuardianDisabled
     );
 
-    // Apply unique field card effects: compute boolean flags once to prevent double-application
-    if (activeFieldCards.length > 0) {
-      const allFieldEffects = activeFieldCards.flatMap(fc => fc.effects as any[]);
-      const hasHealDoubled = allFieldEffects.some(e => e.type === "unique_effect" && e.key === "heal_doubled");
-      const hasGuardianDisabled = allFieldEffects.some(e => e.type === "unique_effect" && e.key === "guardian_disabled");
-
-      if (hasHealDoubled) {
-        combatSummary.player1Healing *= 2;
-        combatSummary.player2Healing *= 2;
-      }
-
-      if (hasGuardianDisabled) {
-        // Only suppress Guardian TRAIT blocks; commander shield ability buffs still apply
-        const totalIncomingP1 = combatSummary.baseDamageToPlayer1 + combatSummary.player2QuickStrikeDamage;
-        const totalIncomingP2 = combatSummary.baseDamageToPlayer2 + combatSummary.player1QuickStrikeDamage;
-        // Compute Guardian-trait-only blocked amounts from the breakdown
-        let p1TraitBlocked = 0;
-        for (const b of p1Breakdown) {
-          if (b.traitInfo?.trait === "Guardian") {
-            const blockable = Math.max(0, totalIncomingP1 - p1TraitBlocked);
-            p1TraitBlocked += Math.min(b.traitInfo.value, blockable);
-          }
-        }
-        let p2TraitBlocked = 0;
-        for (const b of p2Breakdown) {
-          if (b.traitInfo?.trait === "Guardian") {
-            const blockable = Math.max(0, totalIncomingP2 - p2TraitBlocked);
-            p2TraitBlocked += Math.min(b.traitInfo.value, blockable);
-          }
-        }
-        // Remove only the trait-portion; shield ability buffs remain
-        combatSummary.player1GuardianBlocked = Math.max(0, combatSummary.player1GuardianBlocked - p1TraitBlocked);
-        combatSummary.player2GuardianBlocked = Math.max(0, combatSummary.player2GuardianBlocked - p2TraitBlocked);
-        combatSummary.finalDamageToPlayer1 = Math.max(0, totalIncomingP1 - combatSummary.player1GuardianBlocked);
-        combatSummary.finalDamageToPlayer2 = Math.max(0, totalIncomingP2 - combatSummary.player2GuardianBlocked);
-      }
+    // Apply heal_doubled post-hoc (healing is accumulated in generateCombatSummary)
+    if (hasHealDoubled) {
+      combatSummary.player1Healing *= 2;
+      combatSummary.player2Healing *= 2;
+      // Recompute final damage is unaffected by healing; healing is applied to HP separately
     }
 
     let newP1HP = Math.min(GAME_CONSTANTS.STARTING_HP, game.player1HP + combatSummary.player1Healing);
@@ -1401,6 +1377,7 @@ class ServerGameEngine {
     p2AbilityBuffs: AbilityBuff[] = [],
     abilityLog: any[] = [],
     currentTurn: number = 0,
+    guardianDisabled: boolean = false,
   ): CombatSummary {
     let player1QuickStrikeDamage = 0;
     let player2QuickStrikeDamage = 0;
@@ -1432,14 +1409,17 @@ class ServerGameEngine {
     const totalIncomingToP1 = baseDamageToPlayer1 + player2QuickStrikeDamage;
     const totalIncomingToP2 = baseDamageToPlayer2 + player1QuickStrikeDamage;
 
-    p1Breakdown.filter(b => b.traitInfo?.trait === "Guardian").forEach(b => {
-      const blockAmount = Math.min(b.traitInfo!.value, totalIncomingToP1 - player1GuardianBlocked);
-      if (blockAmount > 0) player1GuardianBlocked += blockAmount;
-    });
-    p2Breakdown.filter(b => b.traitInfo?.trait === "Guardian").forEach(b => {
-      const blockAmount = Math.min(b.traitInfo!.value, totalIncomingToP2 - player2GuardianBlocked);
-      if (blockAmount > 0) player2GuardianBlocked += blockAmount;
-    });
+    // Guardian trait blocks: skip when guardian_disabled field effect is active
+    if (!guardianDisabled) {
+      p1Breakdown.filter(b => b.traitInfo?.trait === "Guardian").forEach(b => {
+        const blockAmount = Math.min(b.traitInfo!.value, totalIncomingToP1 - player1GuardianBlocked);
+        if (blockAmount > 0) player1GuardianBlocked += blockAmount;
+      });
+      p2Breakdown.filter(b => b.traitInfo?.trait === "Guardian").forEach(b => {
+        const blockAmount = Math.min(b.traitInfo!.value, totalIncomingToP2 - player2GuardianBlocked);
+        if (blockAmount > 0) player2GuardianBlocked += blockAmount;
+      });
+    }
 
     p1AbilityBuffs.filter(ab => ab.type === "shield").forEach(ab => {
       const blockAmount = Math.min(ab.amount, totalIncomingToP1 - player1GuardianBlocked);

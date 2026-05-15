@@ -397,28 +397,34 @@ export default function GameBoardScreen() {
     const aiCommanderIdx = Math.floor(Math.random() * allCommanders.length);
     const aiCommander = allCommanders[aiCommanderIdx];
 
-    // Battlefield mode: use saved field deck if player has one (7 cards)
-    const rawFieldIds = battlefieldDeckQuery.data?.cardIds ?? [];
+    // Battlefield mode: build field decks from player's saved deck or the full catalog as fallback
+    const shuffle = <T,>(arr: T[]): T[] => {
+      const a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    };
+    const catalogCards: FieldCard[] = battlefieldCardsQuery.data ?? [];
+    const fieldCardMap = new Map<string, FieldCard>();
+    for (const fc of catalogCards) {
+      if (fc?.id) fieldCardMap.set(fc.id, fc);
+    }
+    const toFieldCard = (id: string): FieldCard =>
+      fieldCardMap.get(id) ?? { id, name: id, effects: [] };
+
     let p1FieldDeck: FieldCard[] | undefined;
     let p2FieldDeck: FieldCard[] | undefined;
-    if (rawFieldIds.length >= 7) {
-      const shuffle = <T,>(arr: T[]): T[] => {
-        const a = [...arr];
-        for (let i = a.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [a[i], a[j]] = [a[j], a[i]];
-        }
-        return a;
-      };
-      // Build a lookup of full FieldCard objects (with real effects) from the catalog query
-      const fieldCardMap = new Map<string, FieldCard>();
-      for (const fc of (battlefieldCardsQuery.data || [])) {
-        if (fc?.id) fieldCardMap.set(fc.id, fc);
-      }
-      const toFieldCard = (id: string): FieldCard =>
-        fieldCardMap.get(id) ?? { id, name: id, effects: [] };
-      p1FieldDeck = shuffle(rawFieldIds.slice(0, 7)).map(toFieldCard);
-      p2FieldDeck = shuffle(rawFieldIds.slice(0, 7)).map(toFieldCard);
+
+    if (catalogCards.length > 0) {
+      // Player deck: use saved deck if valid (>=7 cards), else fall back to full catalog
+      const rawFieldIds = battlefieldDeckQuery.data?.cardIds ?? [];
+      const p1Ids = rawFieldIds.length >= 7 ? rawFieldIds.slice(0, 7) : catalogCards.map(fc => fc.id).slice(0, 7);
+      // AI always uses the full catalog shuffled independently so its deck differs from the player's
+      const aiIds = catalogCards.map(fc => fc.id).slice(0, 7);
+      p1FieldDeck = shuffle(p1Ids).map(toFieldCard);
+      p2FieldDeck = shuffle(aiIds).map(toFieldCard);
     }
 
     const initialState = initializeGame(playerCards, playerCommander, aiCards, aiCommander, {
