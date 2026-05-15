@@ -15,6 +15,7 @@ import { Heart, Swords, Trophy, Flag, ArrowRight, Shield, Flame, Droplet, Mounta
 import { landTraitIcons } from "@/components/game-card";
 import type { Game, Card as CardType, Element, BattlefieldCard, GameMode, Commander, CommanderAbility } from "@shared/schema";
 import type { FieldCard, FieldCardEffect } from "@shared/models/cards";
+import { FIELD_CARD_UNIQUE_EFFECT_LABELS } from "@shared/models/cards";
 import { GAME_CONSTANTS, GAME_MODE_CONFIG } from "@shared/schema";
 import { getCardIdFromInstance } from "@/lib/card-utils";
 
@@ -257,7 +258,7 @@ function ActiveFieldCardStrip({
           const Icon = entry.icon;
           const colorClass = eff.key === "heal_doubled" ? "text-emerald-300" : "text-orange-300";
           return (
-            <span key={i} title={eff.key.replace(/_/g, " ")} className="inline-flex items-center">
+            <span key={i} title={FIELD_CARD_UNIQUE_EFFECT_LABELS[eff.key as keyof typeof FIELD_CARD_UNIQUE_EFFECT_LABELS] ?? eff.key} className="inline-flex items-center">
               <Icon className={`w-3 h-3 ${colorClass}`} />
             </span>
           );
