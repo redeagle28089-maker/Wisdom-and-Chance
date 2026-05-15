@@ -6,6 +6,7 @@ import { createServer, request as httpRequest } from "http";
 import { initializeWebSocket } from "./websocket";
 import { preWarmOidc } from "./replit_integrations/auth/replitAuth";
 import { storage } from "./storage";
+import { seedBattlefieldCards } from "./starter-battlefield-cards";
 
 const app = express();
 const httpServer = createServer(app);
@@ -75,6 +76,7 @@ app.use((req, res, next) => {
 
 (async () => {
   await storage.initialize();
+  await seedBattlefieldCards();
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

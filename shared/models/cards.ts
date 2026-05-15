@@ -228,6 +228,58 @@ export const commanderAbilityEffectSchema = z
 
 export type CommanderAbilityEffect = z.infer<typeof commanderAbilityEffectSchema>;
 
+// ─── Battlefield (Field) Card types ──────────────────────────────────────────
+
+export const FIELD_CARD_UNIQUE_EFFECTS = ["heal_doubled", "guardian_disabled"] as const;
+export type FieldCardUniqueEffect = typeof FIELD_CARD_UNIQUE_EFFECTS[number];
+
+export const FIELD_CARD_UNIQUE_EFFECT_LABELS: Record<FieldCardUniqueEffect, string> = {
+  heal_doubled: "All healing doubled",
+  guardian_disabled: "Guardian trait disabled",
+};
+
+const ELEMENTS_LOWERCASE = ["Fire", "Water", "Earth", "Air", "Nature"] as const;
+
+export const fieldCardEffectSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("deploy_limit_override"), value: z.number().int().min(1).max(4) }),
+  z.object({ type: z.literal("element_buff"), element: z.enum(ELEMENTS_LOWERCASE), value: z.number().int().min(1).max(5) }),
+  z.object({ type: z.literal("element_debuff"), element: z.enum(ELEMENTS_LOWERCASE), value: z.number().int().min(1).max(5) }),
+  z.object({ type: z.literal("all_units_debuff"), value: z.number().int().min(1).max(5) }),
+  z.object({ type: z.literal("unique_effect"), key: z.enum(FIELD_CARD_UNIQUE_EFFECTS) }),
+]);
+
+export type FieldCardEffect = z.infer<typeof fieldCardEffectSchema>;
+
+export const fieldCardSchema = z.object({
+  id: z.string(),
+  name: z.string().min(1).max(80),
+  description: z.string().min(1).max(300),
+  effects: z.array(fieldCardEffectSchema).min(1).max(5),
+  imageUrl: z.string().optional(),
+});
+
+export type FieldCard = z.infer<typeof fieldCardSchema>;
+export const insertFieldCardSchema = fieldCardSchema.omit({ id: true });
+export type InsertFieldCard = z.infer<typeof insertFieldCardSchema>;
+
+// Drizzle table for battlefield cards
+export const battlefieldCards = pgTable("battlefield_cards", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  effects: jsonb("effects").notNull().default(sql`'[]'::jsonb`),
+  imageUrl: text("image_url"),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
+// Drizzle table for each player's saved battlefield deck (exactly 7 card IDs)
+export const playerBattlefieldDecks = pgTable("player_battlefield_decks", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().unique(),
+  cardIds: jsonb("card_ids").notNull().default(sql`'[]'::jsonb`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+});
+
 // Persisted card and commander tables. These hold AI-generated entries created
 // via the admin generator so they survive server restarts. The seeded built-in
 // cards/commanders continue to live in `MemStorage` only; on startup we hydrate

@@ -8,11 +8,12 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { Plus, Minus, Save, Trash2, Crown, LogIn, Share2, Download, Copy, Check, Sparkles, Loader2, FolderOpen, Edit2 } from "lucide-react";
+import { Plus, Minus, Save, Trash2, Crown, LogIn, Share2, Download, Copy, Check, Sparkles, Loader2, FolderOpen, Edit2, LayoutGrid } from "lucide-react";
 import { elementConfig, CommanderWithPopup, CardWithPopup, DeckBuilderCard } from "@/components/game-card";
+import { BattlefieldFieldCard } from "@/components/battlefield-field-card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { Card as CardType, Commander, Element, UserDeck } from "@shared/schema";
+import type { Card as CardType, Commander, Element, UserDeck, FieldCard } from "@shared/schema";
 import { GAME_CONSTANTS, getCardRarity } from "@shared/schema";
 import { useFeatureFlag } from "@/lib/config";
 
@@ -57,6 +58,9 @@ export default function DeckBuilderPage() {
     queryKey: ["/api/commanders"],
   });
 
+  const [selectedBattlefieldIds, setSelectedBattlefieldIds] = useState<string[]>([]);
+  const [bfSectionOpen, setBfSectionOpen] = useState(false);
+
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const economyEnabled = useFeatureFlag("economy_enabled");
 
@@ -74,6 +78,30 @@ export default function DeckBuilderPage() {
   const { data: savedDecks = [], isLoading: decksLoading } = useQuery<UserDeck[]>({
     queryKey: ["/api/user-decks"],
     enabled: isAuthenticated,
+  });
+
+  const { data: fieldCards = [] } = useQuery<FieldCard[]>({
+    queryKey: ["/api/cards/battlefield"],
+  });
+
+  useQuery<{ cardIds: string[] }>({
+    queryKey: ["/api/decks/battlefield"],
+    enabled: isAuthenticated,
+    select: (d) => { setSelectedBattlefieldIds((prev) => prev.length === 0 ? d.cardIds : prev); return d; },
+  });
+
+  const saveBfDeckMutation = useMutation({
+    mutationFn: async (cardIds: string[]) => {
+      const res = await apiRequest("PUT", "/api/decks/battlefield", { cardIds });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/decks/battlefield"] });
+      toast({ title: "Battlefield deck saved!" });
+    },
+    onError: () => {
+      toast({ title: "Failed to save battlefield deck", variant: "destructive" });
+    },
   });
 
   const saveDeckMutation = useMutation({
@@ -972,6 +1000,116 @@ export default function DeckBuilderPage() {
               </CardContent>
             </Card>
           </div>
+        </div>
+
+        {/* ── Battlefield Deck ─────────────────────────────────── */}
+        <div className="mt-8">
+          <Card className="bg-slate-800/50 border-amber-500/20">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-white flex items-center gap-2">
+                  <LayoutGrid className="w-5 h-5 text-amber-400" />
+                  Battlefield Deck
+                  <Badge className="bg-amber-700/60 text-amber-100 text-xs">
+                    {selectedBattlefieldIds.length}/7
+                  </Badge>
+                </CardTitle>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setBfSectionOpen((o) => !o)}
+                    data-testid="button-toggle-bf-section"
+                  >
+                    {bfSectionOpen ? "Hide Cards" : "Choose Cards"}
+                  </Button>
+                  {isAuthenticated && (
+                    <Button
+                      size="sm"
+                      className="bg-amber-600 hover:bg-amber-700"
+                      disabled={selectedBattlefieldIds.length !== 7 || saveBfDeckMutation.isPending}
+                      onClick={() => saveBfDeckMutation.mutate(selectedBattlefieldIds)}
+                      data-testid="button-save-bf-deck"
+                    >
+                      {saveBfDeckMutation.isPending ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <><Save className="w-4 h-4 mr-2" />Save Battlefield Deck</>
+                      )}
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <p className="text-slate-400 text-sm mt-1">
+                Select exactly 7 battlefield cards. These will modify the playing field when a battle takes place.
+              </p>
+            </CardHeader>
+
+            {/* Selected slots */}
+            <CardContent>
+              <div className="flex flex-wrap gap-3 mb-4 min-h-[80px] p-3 rounded-lg bg-slate-900/40 border border-amber-500/10">
+                {selectedBattlefieldIds.length === 0 ? (
+                  <p className="text-slate-500 text-sm self-center">No cards selected yet. Choose 7 cards below.</p>
+                ) : (
+                  selectedBattlefieldIds.map((id) => {
+                    const fc = fieldCards.find((c) => c.id === id);
+                    if (!fc) return null;
+                    return (
+                      <div key={id} className="relative group">
+                        <BattlefieldFieldCard card={fc} size="sm" />
+                        <button
+                          className="absolute -top-1 -right-1 bg-red-600 hover:bg-red-500 rounded-full w-4 h-4 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => setSelectedBattlefieldIds((prev) => prev.filter((x) => x !== id))}
+                          data-testid={`bf-remove-${id}`}
+                        >
+                          <span className="text-white text-[10px] leading-none">×</span>
+                        </button>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {bfSectionOpen && (
+                <>
+                  <p className="text-slate-400 text-xs mb-3">Click a card to add it to your battlefield deck (max 7 unique cards):</p>
+                  <ScrollArea className="h-[320px]">
+                    <div className="flex flex-wrap gap-4">
+                      {fieldCards.length === 0 ? (
+                        <p className="text-slate-500 text-sm">No battlefield cards available.</p>
+                      ) : (
+                        fieldCards.map((fc) => {
+                          const alreadySelected = selectedBattlefieldIds.includes(fc.id);
+                          return (
+                            <div
+                              key={fc.id}
+                              className={`relative cursor-pointer transition-all ${alreadySelected ? "opacity-40 cursor-not-allowed" : "hover:scale-105"}`}
+                              onClick={() => {
+                                if (alreadySelected) return;
+                                if (selectedBattlefieldIds.length >= 7) {
+                                  toast({ title: "Battlefield deck is full (7 cards)", variant: "destructive" });
+                                  return;
+                                }
+                                setSelectedBattlefieldIds((prev) => [...prev, fc.id]);
+                              }}
+                              data-testid={`bf-card-${fc.id}`}
+                            >
+                              <BattlefieldFieldCard card={fc} size="md" />
+                              {alreadySelected && (
+                                <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/40">
+                                  <Check className="w-6 h-6 text-green-400" />
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </ScrollArea>
+                </>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

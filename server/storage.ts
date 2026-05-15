@@ -14,6 +14,8 @@ import {
   type Trait,
   type BuffDebuffColor,
   type CardRarity,
+  type FieldCard,
+  type InsertFieldCard,
   ELEMENTS,
   TRAITS,
   BUFF_DEBUFF_COLORS,
@@ -22,9 +24,12 @@ import {
   commanderImageMappings,
   cards as cardsTable,
   commanders as commandersTable,
+  battlefieldCards as battlefieldCardsTable,
+  playerBattlefieldDecks as playerBattlefieldDecksTable,
+  fieldCardSchema,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
-import { eq } from "drizzle-orm";
+import { eq, sql as drizzleSql } from "drizzle-orm";
 import { db } from "./db";
 
 export interface IStorage {
@@ -59,6 +64,13 @@ export interface IStorage {
   createGame(game: InsertGame): Promise<Game>;
   updateGame(id: string, updates: Partial<Game>): Promise<Game | undefined>;
   deleteGame(id: string): Promise<boolean>;
+
+  getFieldCards(): Promise<FieldCard[]>;
+  getFieldCard(id: string): Promise<FieldCard | undefined>;
+  createFieldCard(card: InsertFieldCard): Promise<FieldCard>;
+  deleteFieldCard(id: string): Promise<boolean>;
+  getPlayerBattlefieldDeck(userId: string): Promise<string[]>;
+  upsertPlayerBattlefieldDeck(userId: string, cardIds: string[]): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -67,6 +79,7 @@ export class MemStorage implements IStorage {
   private decks: Map<string, Deck>;
   private players: Map<string, Player>;
   private games: Map<string, Game>;
+  private fieldCards: Map<string, FieldCard>;
 
   constructor() {
     this.cards = new Map();
@@ -74,11 +87,32 @@ export class MemStorage implements IStorage {
     this.decks = new Map();
     this.players = new Map();
     this.games = new Map();
+    this.fieldCards = new Map();
     this.seedData();
   }
 
   async initialize(): Promise<void> {
     try {
+      // Ensure new tables exist (idempotent CREATE TABLE IF NOT EXISTS)
+      await db.execute(drizzleSql`
+        CREATE TABLE IF NOT EXISTS battlefield_cards (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          description TEXT NOT NULL,
+          effects JSONB NOT NULL DEFAULT '[]'::jsonb,
+          image_url TEXT,
+          created_at TIMESTAMP NOT NULL DEFAULT now()
+        )
+      `);
+      await db.execute(drizzleSql`
+        CREATE TABLE IF NOT EXISTS player_battlefield_decks (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL UNIQUE,
+          card_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
+          updated_at TIMESTAMP NOT NULL DEFAULT now()
+        )
+      `);
+
       // Hydrate persisted cards (e.g. AI-generated) from Postgres so they
       // survive server restarts. These live alongside the seeded in-memory
       // cards in the same map.
@@ -111,6 +145,20 @@ export class MemStorage implements IStorage {
         }
       }
       console.log(`[storage] Loaded ${commanderMappings.length} commander image mappings from database`);
+
+      // Load battlefield (field) cards from DB
+      const dbFieldCards = await db.select().from(battlefieldCardsTable);
+      for (const row of dbFieldCards) {
+        const parsed = fieldCardSchema.safeParse({
+          id: row.id,
+          name: row.name,
+          description: row.description,
+          effects: row.effects,
+          imageUrl: row.imageUrl ?? undefined,
+        });
+        if (parsed.success) this.fieldCards.set(row.id, parsed.data);
+      }
+      console.log(`[storage] Loaded ${dbFieldCards.length} battlefield cards from database`);
     } catch (error) {
       console.error("[storage] Failed to load persisted cards/commanders:", error);
     }
@@ -963,6 +1011,70 @@ export class MemStorage implements IStorage {
 
   async deleteGame(id: string): Promise<boolean> {
     return this.games.delete(id);
+  }
+
+  // ─── Field (Battlefield) Cards ───────────────────────────────────────────
+
+  async getFieldCards(): Promise<FieldCard[]> {
+    return Array.from(this.fieldCards.values());
+  }
+
+  async getFieldCard(id: string): Promise<FieldCard | undefined> {
+    return this.fieldCards.get(id);
+  }
+
+  async createFieldCard(card: InsertFieldCard): Promise<FieldCard> {
+    const id = randomUUID();
+    const fieldCard: FieldCard = { ...card, id };
+    // Persist to DB
+    await db.insert(battlefieldCardsTable).values({
+      id,
+      name: card.name,
+      description: card.description,
+      effects: card.effects as any,
+      imageUrl: card.imageUrl ?? null,
+    });
+    this.fieldCards.set(id, fieldCard);
+    return fieldCard;
+  }
+
+  async deleteFieldCard(id: string): Promise<boolean> {
+    if (!this.fieldCards.has(id)) return false;
+    await db.delete(battlefieldCardsTable).where(eq(battlefieldCardsTable.id, id));
+    this.fieldCards.delete(id);
+    return true;
+  }
+
+  async getPlayerBattlefieldDeck(userId: string): Promise<string[]> {
+    const rows = await db
+      .select()
+      .from(playerBattlefieldDecksTable)
+      .where(eq(playerBattlefieldDecksTable.userId, userId))
+      .limit(1);
+    if (rows.length === 0) return [];
+    return (rows[0].cardIds as string[]) ?? [];
+  }
+
+  async upsertPlayerBattlefieldDeck(userId: string, cardIds: string[]): Promise<void> {
+    const existing = await db
+      .select({ id: playerBattlefieldDecksTable.id })
+      .from(playerBattlefieldDecksTable)
+      .where(eq(playerBattlefieldDecksTable.userId, userId))
+      .limit(1);
+
+    if (existing.length > 0) {
+      await db
+        .update(playerBattlefieldDecksTable)
+        .set({ cardIds: cardIds as any, updatedAt: new Date() })
+        .where(eq(playerBattlefieldDecksTable.userId, userId));
+    } else {
+      await db.insert(playerBattlefieldDecksTable).values({
+        id: randomUUID(),
+        userId,
+        cardIds: cardIds as any,
+        updatedAt: new Date(),
+      });
+    }
   }
 }
 

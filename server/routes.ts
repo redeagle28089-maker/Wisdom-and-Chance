@@ -235,6 +235,11 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
     res.json(cards);
   });
 
+  app.get("/api/cards/battlefield", async (_req, res) => {
+    const fieldCards = await storage.getFieldCards();
+    res.json(fieldCards);
+  });
+
   app.get("/api/cards/:id", async (req, res) => {
     const card = await storage.getCard(req.params.id);
     if (!card) {
@@ -246,6 +251,46 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
   app.get("/api/cards/element/:element", async (req, res) => {
     const cards = await storage.getCardsByElement(req.params.element);
     res.json(cards);
+  });
+
+  app.get("/api/decks/battlefield", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+      const cardIds = await storage.getPlayerBattlefieldDeck(userId);
+      res.json({ cardIds });
+    } catch (error) {
+      console.error("[battlefield-deck] Get error:", error);
+      res.status(500).json({ message: "Failed to get battlefield deck" });
+    }
+  });
+
+  app.put("/api/decks/battlefield", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+      const bodySchema = z.object({
+        cardIds: z.array(z.string()).length(7, "Battlefield deck must have exactly 7 cards"),
+      });
+      const result = bodySchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid battlefield deck", errors: result.error.flatten() });
+      }
+
+      const fieldCards = await storage.getFieldCards();
+      const validIds = new Set(fieldCards.map(c => c.id));
+      const invalid = result.data.cardIds.filter(id => !validIds.has(id));
+      if (invalid.length > 0) {
+        return res.status(400).json({ message: `Unknown battlefield card IDs: ${invalid.join(", ")}` });
+      }
+
+      await storage.upsertPlayerBattlefieldDeck(userId, result.data.cardIds);
+      res.json({ success: true, cardIds: result.data.cardIds });
+    } catch (error) {
+      console.error("[battlefield-deck] Save error:", error);
+      res.status(500).json({ message: "Failed to save battlefield deck" });
+    }
   });
 
   app.get("/api/commanders", async (req, res) => {
@@ -1440,6 +1485,27 @@ IMPORTANT:
     }
   };
 
+  app.post("/api/admin/battlefield-cards", isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const { insertFieldCardSchema } = await import("@shared/schema");
+      const result = insertFieldCardSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid battlefield card data", errors: result.error.flatten() });
+      }
+      const card = await storage.createFieldCard(result.data);
+      res.status(201).json(card);
+    } catch (error) {
+      console.error("[battlefield-cards] Create error:", error);
+      res.status(500).json({ message: "Failed to create battlefield card" });
+    }
+  });
+
+  app.delete("/api/admin/battlefield-cards/:id", isAuthenticated, isAdmin, async (req, res) => {
+    const deleted = await storage.deleteFieldCard(req.params.id);
+    if (!deleted) return res.status(404).json({ message: "Battlefield card not found" });
+    res.json({ success: true });
+  });
+
   // Admin routes for card art generation
   app.get("/api/admin/check", isAuthenticated, async (req: any, res) => {
     const userId = req.user?.claims?.sub;
@@ -2047,17 +2113,24 @@ IMPORTANT:
   // Source of truth for allowed effects lives in shared/models/cards.ts so the
   // generator and gameEngine.processAbility cannot drift apart.
   const generateBatchSchema = z.object({
-    kind: z.enum(["unit", "commander"]),
+    kind: z.enum(["unit", "commander", "battlefield"]),
     count: z.number().int().min(1).max(10),
     element: z.enum(ELEMENTS).optional(),
     powerRange: z.tuple([z.number().int().min(1).max(10), z.number().int().min(1).max(10)]).optional(),
     costRange: z.tuple([z.number().int().min(0).max(4), z.number().int().min(0).max(4)]).optional(),
+    deployLimitRange: z.tuple([z.number().int().min(1).max(4), z.number().int().min(1).max(4)]).optional(),
     stylePrompt: z.string().max(500).optional(),
   });
 
   const saveGeneratedSchema = z.discriminatedUnion("kind", [
     z.object({ kind: z.literal("unit"), payload: insertCardSchema }),
     z.object({ kind: z.literal("commander"), payload: insertCommanderSchema }),
+    z.object({ kind: z.literal("battlefield"), payload: z.object({
+      name: z.string().min(1).max(80),
+      description: z.string().min(1).max(300),
+      effects: z.array(z.any()).min(1).max(5),
+      imageUrl: z.string().optional(),
+    }) }),
   ]);
 
   function extractJsonArray(raw: string): any[] | null {
@@ -2156,7 +2229,29 @@ IMPORTANT:
       const styleHint = opts.stylePrompt ? `Stylistic guidance: ${opts.stylePrompt}` : "";
 
       let prompt: string;
-      if (opts.kind === "unit") {
+      if (opts.kind === "battlefield") {
+        const dlMin = opts.deployLimitRange?.[0] ?? 1;
+        const dlMax = opts.deployLimitRange?.[1] ?? 4;
+        prompt = `You are designing Battlefield cards for the Wisdom & Chance TCG. These cards modify the playing field and affect BOTH players equally.
+
+Generate exactly ${opts.count} unique, balanced Battlefield cards.
+
+Hard rules:
+- Each card has a "name" (2-4 words, evocative of terrain or weather), a "description" (1 vivid sentence under 150 chars), and an "effects" array.
+- effects array must have 1-3 entries. Each effect is one of:
+  * { "type": "deploy_limit_override", "value": <int 1-4> }  — sets both players' deploy limit per turn. Value must be in [${dlMin}, ${dlMax}].
+  * { "type": "element_buff", "element": "Fire"|"Water"|"Earth"|"Air"|"Nature", "value": <int 1-3> }  — buffs all units of that element on both sides.
+  * { "type": "element_debuff", "element": "Fire"|"Water"|"Earth"|"Air"|"Nature", "value": <int 1-2> }  — debuffs all units of that element on both sides.
+  * { "type": "all_units_debuff", "value": <int 1-2> }  — debuffs every unit on both sides.
+  * { "type": "unique_effect", "key": "heal_doubled"|"guardian_disabled" }  — special effect (use at most once per card).
+- A single card should NOT have both element_buff and element_debuff for the same element.
+- A single card should NOT have more than one deploy_limit_override effect.
+- Do not include id or imageUrl.
+${styleHint ? `Stylistic guidance: ${styleHint}` : ""}
+
+Return ONLY a raw JSON array, no prose, no markdown fences. Each element shape:
+{ "name": string, "description": string, "effects": [ <effect objects as above> ] }`;
+      } else if (opts.kind === "unit") {
         prompt = `You are designing playable units for the Wisdom & Chance TCG. Generate exactly ${opts.count} unique, balanced unit cards.
 
 Hard rules:
@@ -2220,9 +2315,17 @@ Return ONLY a raw JSON array, no prose, no markdown fences. Each element shape:
           } else {
             rejected.push({ index: i, errors: result.error.flatten() });
           }
-        } else {
+        } else if (opts.kind === "commander") {
           const normalized = normalizeCommander(candidate);
           const result = insertCommanderSchema.safeParse(normalized);
+          if (result.success) {
+            valid.push(result.data);
+          } else {
+            rejected.push({ index: i, errors: result.error.flatten() });
+          }
+        } else {
+          const { insertFieldCardSchema: bfSchema } = await import("@shared/schema");
+          const result = bfSchema.safeParse(candidate);
           if (result.success) {
             valid.push(result.data);
           } else {
@@ -2254,9 +2357,17 @@ Return ONLY a raw JSON array, no prose, no markdown fences. Each element shape:
       if (data.kind === "unit") {
         const created = await storage.createCard(data.payload);
         return res.status(201).json({ kind: "unit", record: created });
-      } else {
+      } else if (data.kind === "commander") {
         const created = await storage.createCommander(data.payload);
         return res.status(201).json({ kind: "commander", record: created });
+      } else {
+        const { insertFieldCardSchema: bfSchema } = await import("@shared/schema");
+        const bfParsed = bfSchema.safeParse(data.payload);
+        if (!bfParsed.success) {
+          return res.status(400).json({ error: "Invalid battlefield card", errors: bfParsed.error.flatten() });
+        }
+        const created = await storage.createFieldCard(bfParsed.data);
+        return res.status(201).json({ kind: "battlefield", record: created });
       }
     } catch (error) {
       console.error("[ai-generator] Save error:", error);

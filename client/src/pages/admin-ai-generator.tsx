@@ -15,14 +15,15 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { CardWithPopup, CommanderWithPopup } from "@/components/game-card";
-import type { Card as CardType, Commander, Element, InsertCard, InsertCommander } from "@shared/schema";
+import type { Card as CardType, Commander, Element, InsertCard, InsertCommander, FieldCard, InsertFieldCard } from "@shared/schema";
 import { ELEMENTS, ALLOWED_ABILITY_EFFECTS } from "@shared/schema";
+import { BattlefieldFieldCard } from "@/components/battlefield-field-card";
 
-type Kind = "unit" | "commander";
+type Kind = "unit" | "commander" | "battlefield";
 
 type GenerateResponse = {
   kind: Kind;
-  candidates: (InsertCard | InsertCommander)[];
+  candidates: (InsertCard | InsertCommander | InsertFieldCard)[];
   rejectedCount: number;
   rejectedDetails: { index: number; errors: any }[];
   totalReturnedByAi: number;
@@ -114,6 +115,8 @@ export default function AdminAiGeneratorPage() {
   const [powerMax, setPowerMax] = useState<number>(10);
   const [costMin, setCostMin] = useState<number>(0);
   const [costMax, setCostMax] = useState<number>(2);
+  const [deployLimitMin, setDeployLimitMin] = useState<number>(1);
+  const [deployLimitMax, setDeployLimitMax] = useState<number>(4);
   const [stylePrompt, setStylePrompt] = useState("");
   const [artReferenceText, setArtReferenceText] = useState("");
   const [artReferenceImage, setArtReferenceImage] = useState<string | null>(null);
@@ -175,13 +178,15 @@ export default function AdminAiGeneratorPage() {
       const body: any = {
         kind,
         count,
-        ...(element !== "any" && { element }),
+        ...(element !== "any" && kind !== "battlefield" && { element }),
         ...(stylePrompt.trim() && { stylePrompt: stylePrompt.trim() }),
       };
       if (kind === "unit") {
         body.powerRange = [powerMin, powerMax];
-      } else {
+      } else if (kind === "commander") {
         body.costRange = [costMin, costMax];
+      } else {
+        body.deployLimitRange = [deployLimitMin, deployLimitMax];
       }
       const res = await apiRequest("POST", "/api/admin/generate-cards", body);
       return (await res.json()) as GenerateResponse;
@@ -225,7 +230,7 @@ export default function AdminAiGeneratorPage() {
   });
 
   const saveMutation = useMutation({
-    mutationFn: async (args: { index: number; payload: InsertCard | InsertCommander }) => {
+    mutationFn: async (args: { index: number; payload: InsertCard | InsertCommander | InsertFieldCard }) => {
       setCandidateStates((s) => ({ ...s, [args.index]: "saving" }));
       const art = generatedArt[args.index];
       const payloadWithArt = art ? { ...args.payload, imageUrl: art } : args.payload;
@@ -239,7 +244,9 @@ export default function AdminAiGeneratorPage() {
       setCandidateStates((s) => ({ ...s, [data.index]: "saved" }));
       queryClient.invalidateQueries({ queryKey: ["/api/cards"] });
       queryClient.invalidateQueries({ queryKey: ["/api/commanders"] });
-      toast({ title: "Saved", description: `Added to ${kind === "unit" ? "card" : "commander"} database.` });
+      if (kind === "battlefield") queryClient.invalidateQueries({ queryKey: ["/api/cards/battlefield"] });
+      const label = kind === "unit" ? "card" : kind === "commander" ? "commander" : "battlefield card";
+      toast({ title: "Saved", description: `Added to ${label} database.` });
     },
     onError: (error: any, vars) => {
       setCandidateStates((s) => ({ ...s, [vars.index]: "error" }));
@@ -361,6 +368,7 @@ export default function AdminAiGeneratorPage() {
                 <SelectContent>
                   <SelectItem value="unit">Unit</SelectItem>
                   <SelectItem value="commander">Commander</SelectItem>
+                  <SelectItem value="battlefield">Battlefield</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -380,7 +388,7 @@ export default function AdminAiGeneratorPage() {
 
             <div>
               <Label htmlFor="element">Element filter</Label>
-              <Select value={element} onValueChange={(v) => setElement(v as Element | "any")}>
+              <Select value={element} onValueChange={(v) => setElement(v as Element | "any")} disabled={kind === "battlefield"}>
                 <SelectTrigger id="element" data-testid="select-element"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="any">Any element</SelectItem>
@@ -389,6 +397,7 @@ export default function AdminAiGeneratorPage() {
                   ))}
                 </SelectContent>
               </Select>
+              {kind === "battlefield" && <p className="text-xs text-slate-500 mt-1">Not applicable to battlefield cards.</p>}
             </div>
           </div>
 
@@ -407,7 +416,7 @@ export default function AdminAiGeneratorPage() {
                   data-testid="input-power-max" />
               </div>
             </div>
-          ) : (
+          ) : kind === "commander" ? (
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="cost-min">Ability cost min</Label>
@@ -420,6 +429,21 @@ export default function AdminAiGeneratorPage() {
                 <Input id="cost-max" type="number" min={0} max={4} value={costMax}
                   onChange={(e) => setCostMax(Math.max(0, Math.min(4, parseInt(e.target.value || "2", 10))))}
                   data-testid="input-cost-max" />
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="deploy-limit-min">Deploy limit min (1–4)</Label>
+                <Input id="deploy-limit-min" type="number" min={1} max={4} value={deployLimitMin}
+                  onChange={(e) => setDeployLimitMin(Math.max(1, Math.min(4, parseInt(e.target.value || "1", 10))))}
+                  data-testid="input-deploy-limit-min" />
+              </div>
+              <div>
+                <Label htmlFor="deploy-limit-max">Deploy limit max (1–4)</Label>
+                <Input id="deploy-limit-max" type="number" min={1} max={4} value={deployLimitMax}
+                  onChange={(e) => setDeployLimitMax(Math.max(1, Math.min(4, parseInt(e.target.value || "4", 10))))}
+                  data-testid="input-deploy-limit-max" />
               </div>
             </div>
           )}
@@ -605,7 +629,7 @@ export default function AdminAiGeneratorPage() {
                   );
                 })}
               </div>
-            ) : (
+            ) : results.kind === "commander" ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {(results.candidates as InsertCommander[]).map((payload, i) => {
                   const state = candidateStates[i] || "idle";
@@ -637,6 +661,53 @@ export default function AdminAiGeneratorPage() {
                         onDiscard={() => handleDiscard(i)}
                         onGenerateArt={() => artMutation.mutate({ index: i, payload })}
                       />
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {(results.candidates as InsertFieldCard[]).map((payload, i) => {
+                  const state = candidateStates[i] || "idle";
+                  const previewBf: FieldCard = { ...payload, id: `gen-bf-${i}` };
+                  return (
+                    <div
+                      key={i}
+                      className={`p-3 rounded-lg border ${state === "saved" ? "border-emerald-500/60 bg-emerald-900/20" : state === "discarded" ? "border-slate-700 bg-slate-900/30 opacity-50" : "border-slate-700 bg-slate-800/40"}`}
+                      data-testid={`candidate-${i}`}
+                    >
+                      <div className="flex justify-center mb-3">
+                        <BattlefieldFieldCard card={previewBf} size="md" />
+                      </div>
+                      <div className="text-center mb-3">
+                        <div className="text-white font-semibold text-sm truncate" data-testid={`candidate-name-${i}`}>
+                          {payload.name}
+                        </div>
+                        <div className="text-slate-400 text-xs">{payload.effects.length} effect(s)</div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => saveMutation.mutate({ index: i, payload })}
+                          disabled={state === "saving" || state === "saved" || state === "discarded"}
+                          data-testid={`button-save-${i}`}
+                        >
+                          {state === "saving" && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}
+                          {state === "saved" && <Check className="w-3 h-3 mr-1" />}
+                          {state !== "saving" && state !== "saved" && <Save className="w-3 h-3 mr-1" />}
+                          {state === "saved" ? "Saved" : state === "saving" ? "Saving…" : "Save"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDiscard(i)}
+                          disabled={state === "saved" || state === "discarded"}
+                          data-testid={`button-discard-${i}`}
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
+                      </div>
                     </div>
                   );
                 })}

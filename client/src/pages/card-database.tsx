@@ -5,8 +5,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, Flame, Droplet, Mountain, Wind, Leaf, Hammer, Trash2, Shield, Loader2, ImageIcon } from "lucide-react";
+import { Search, Flame, Droplet, Mountain, Wind, Leaf, Hammer, Trash2, Shield, Loader2, ImageIcon, LayoutGrid } from "lucide-react";
 import { CardWithPopup, elementConfig } from "@/components/game-card";
+import { BattlefieldFieldCard } from "@/components/battlefield-field-card";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -28,10 +29,13 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import type { Card as CardType, Element, CardImage } from "@shared/schema";
+import type { Card as CardType, Element, CardImage, FieldCard } from "@shared/schema";
+
+type ActiveTab = "units" | "battlefield";
 
 export default function CardDatabasePage() {
   const [, navigate] = useLocation();
+  const [activeTab, setActiveTab] = useState<ActiveTab>("units");
   const [search, setSearch] = useState("");
   const [selectedElement, setSelectedElement] = useState<Element | "all">("all");
   const [selectedPower, setSelectedPower] = useState<number | "all">("all");
@@ -39,11 +43,16 @@ export default function CardDatabasePage() {
   const [showSwapDialog, setShowSwapDialog] = useState(false);
   const [swapCardId, setSwapCardId] = useState<string | null>(null);
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
+  const [deletingFieldCardId, setDeletingFieldCardId] = useState<string | null>(null);
   const { isAuthenticated } = useAuth();
   const { toast } = useToast();
 
   const { data: cards = [], isLoading } = useQuery<CardType[]>({
     queryKey: ["/api/cards"],
+  });
+
+  const { data: fieldCards = [], isLoading: fieldCardsLoading } = useQuery<FieldCard[]>({
+    queryKey: ["/api/cards/battlefield"],
   });
 
   const { data: adminCheck } = useQuery<{ isAdmin: boolean }>({
@@ -79,6 +88,23 @@ export default function CardDatabasePage() {
         variant: "destructive",
       });
       setDeletingCardId(null);
+    },
+  });
+
+  const deleteFieldCardMutation = useMutation({
+    mutationFn: async (cardId: string) => {
+      setDeletingFieldCardId(cardId);
+      const res = await apiRequest("DELETE", `/api/admin/battlefield-cards/${cardId}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Battlefield Card Deleted" });
+      queryClient.invalidateQueries({ queryKey: ["/api/cards/battlefield"] });
+      setDeletingFieldCardId(null);
+    },
+    onError: () => {
+      toast({ title: "Delete Failed", variant: "destructive" });
+      setDeletingFieldCardId(null);
     },
   });
 
@@ -142,146 +168,231 @@ export default function CardDatabasePage() {
           </Button>
         </div>
 
-        <Card className="bg-slate-800/50 border-purple-500/20 mb-6">
-          <CardContent className="p-4">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-400" />
-                <Input
-                  placeholder="Search cards..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-10 bg-slate-900/50 border-purple-500/30 text-white"
-                  data-testid="input-search"
-                />
-              </div>
-              
-              <div className="flex gap-2 flex-wrap">
-                <Button
-                  variant={selectedElement === "all" ? "default" : "outline"}
-                  onClick={() => setSelectedElement("all")}
-                  className="text-sm"
-                  data-testid="filter-all"
-                >
-                  All
-                </Button>
-                {Object.entries(elementConfig).map(([element, config]) => {
-                  const Icon = config.icon;
-                  return (
+        <div className="flex gap-2 mb-6">
+          <Button
+            variant={activeTab === "units" ? "default" : "outline"}
+            onClick={() => setActiveTab("units")}
+            data-testid="tab-units"
+          >
+            Units
+          </Button>
+          <Button
+            variant={activeTab === "battlefield" ? "default" : "outline"}
+            onClick={() => setActiveTab("battlefield")}
+            data-testid="tab-battlefield"
+          >
+            <LayoutGrid className="w-4 h-4 mr-2" />
+            Battlefield Cards
+          </Button>
+        </div>
+
+        {activeTab === "units" ? (
+          <>
+            <Card className="bg-slate-800/50 border-purple-500/20 mb-6">
+              <CardContent className="p-4">
+                <div className="flex flex-col md:flex-row gap-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-400" />
+                    <Input
+                      placeholder="Search cards..."
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      className="pl-10 bg-slate-900/50 border-purple-500/30 text-white"
+                      data-testid="input-search"
+                    />
+                  </div>
+                  
+                  <div className="flex gap-2 flex-wrap">
                     <Button
-                      key={element}
-                      variant={selectedElement === element ? "default" : "outline"}
-                      onClick={() => setSelectedElement(element as Element)}
+                      variant={selectedElement === "all" ? "default" : "outline"}
+                      onClick={() => setSelectedElement("all")}
                       className="text-sm"
-                      data-testid={`filter-${element.toLowerCase()}`}
+                      data-testid="filter-all"
                     >
-                      <Icon className={`w-4 h-4 mr-1 ${config.color}`} />
-                      {element}
+                      All
                     </Button>
-                  );
-                })}
+                    {Object.entries(elementConfig).map(([element, config]) => {
+                      const Icon = config.icon;
+                      return (
+                        <Button
+                          key={element}
+                          variant={selectedElement === element ? "default" : "outline"}
+                          onClick={() => setSelectedElement(element as Element)}
+                          className="text-sm"
+                          data-testid={`filter-${element.toLowerCase()}`}
+                        >
+                          <Icon className={`w-4 h-4 mr-1 ${config.color}`} />
+                          {element}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="flex gap-2 mt-4 flex-wrap">
+                  <Button
+                    variant={selectedPower === "all" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setSelectedPower("all")}
+                    data-testid="power-all"
+                  >
+                    All Powers
+                  </Button>
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((power) => (
+                    <Button
+                      key={power}
+                      variant={selectedPower === power ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setSelectedPower(power)}
+                      data-testid={`power-${power}`}
+                    >
+                      {power}
+                    </Button>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {isLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin" />
               </div>
-            </div>
-
-            <div className="flex gap-2 mt-4 flex-wrap">
-              <Button
-                variant={selectedPower === "all" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSelectedPower("all")}
-                data-testid="power-all"
-              >
-                All Powers
-              </Button>
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((power) => (
-                <Button
-                  key={power}
-                  variant={selectedPower === power ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setSelectedPower(power)}
-                  data-testid={`power-${power}`}
-                >
-                  {power}
-                </Button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin" />
-          </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+                  <p className="text-purple-300" data-testid="text-card-count">
+                    Showing {displayCards.length} unique cards
+                  </p>
+                  {isAdmin && (
+                    <Badge className="bg-amber-600/50 text-amber-100 gap-1">
+                      <Shield className="w-3 h-3" />
+                      Admin Mode - Hover cards for delete/swap options
+                    </Badge>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-4 justify-start">
+                  {displayCards.map((card) => (
+                    <div key={card.id} className="relative group">
+                      <CardWithPopup card={card} size="xl" />
+                      {isAdmin && (
+                        <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                          <Button
+                            size="sm"
+                            variant="default"
+                            data-testid={`button-swap-image-${card.id}`}
+                            onClick={() => {
+                              setSwapCardId(card.id);
+                              setSelectedImageId(null);
+                              setShowSwapDialog(true);
+                            }}
+                          >
+                            <ImageIcon className="w-3 h-3" />
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                data-testid={`button-delete-card-${card.id}`}
+                                disabled={deletingCardId === card.id}
+                              >
+                                {deletingCardId === card.id ? (
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                ) : (
+                                  <Trash2 className="w-3 h-3" />
+                                )}
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent className="bg-slate-800 border-red-500/30">
+                              <AlertDialogHeader>
+                                <AlertDialogTitle className="text-white">Delete Card</AlertDialogTitle>
+                                <AlertDialogDescription className="text-slate-300">
+                                  Are you sure you want to delete "{card.name}"? This will permanently remove the card from the game database. This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel className="bg-slate-700 text-white border-slate-600 hover:bg-slate-600">
+                                  Cancel
+                                </AlertDialogCancel>
+                                <AlertDialogAction 
+                                  className="bg-red-600 hover:bg-red-700"
+                                  onClick={() => deleteMutation.mutate(card.id)}
+                                >
+                                  Delete Card
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </>
         ) : (
           <>
             <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-              <p className="text-purple-300" data-testid="text-card-count">
-                Showing {displayCards.length} unique cards
+              <p className="text-purple-300" data-testid="text-field-card-count">
+                {fieldCards.length} battlefield card{fieldCards.length !== 1 ? "s" : ""}
               </p>
               {isAdmin && (
                 <Badge className="bg-amber-600/50 text-amber-100 gap-1">
                   <Shield className="w-3 h-3" />
-                  Admin Mode - Hover cards for delete/swap options
+                  Admin Mode - Hover for delete
                 </Badge>
               )}
             </div>
-            <div className="flex flex-wrap gap-4 justify-start">
-              {displayCards.map((card) => (
-                <div key={card.id} className="relative group">
-                  <CardWithPopup card={card} size="xl" />
-                  {isAdmin && (
-                    <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                      <Button
-                        size="sm"
-                        variant="default"
-                        data-testid={`button-swap-image-${card.id}`}
-                        onClick={() => {
-                          setSwapCardId(card.id);
-                          setSelectedImageId(null);
-                          setShowSwapDialog(true);
-                        }}
-                      >
-                        <ImageIcon className="w-3 h-3" />
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            data-testid={`button-delete-card-${card.id}`}
-                            disabled={deletingCardId === card.id}
-                          >
-                            {deletingCardId === card.id ? (
-                              <Loader2 className="w-3 h-3 animate-spin" />
-                            ) : (
-                              <Trash2 className="w-3 h-3" />
-                            )}
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent className="bg-slate-800 border-red-500/30">
-                          <AlertDialogHeader>
-                            <AlertDialogTitle className="text-white">Delete Card</AlertDialogTitle>
-                            <AlertDialogDescription className="text-slate-300">
-                              Are you sure you want to delete "{card.name}"? This will permanently remove the card from the game database. This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel className="bg-slate-700 text-white border-slate-600 hover:bg-slate-600">
-                              Cancel
-                            </AlertDialogCancel>
-                            <AlertDialogAction 
-                              className="bg-red-600 hover:bg-red-700"
-                              onClick={() => deleteMutation.mutate(card.id)}
+            {fieldCardsLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : fieldCards.length === 0 ? (
+              <div className="text-center py-12 text-slate-400">No battlefield cards yet.</div>
+            ) : (
+              <div className="flex flex-wrap gap-6 justify-start">
+                {fieldCards.map((card) => (
+                  <div key={card.id} className="relative group">
+                    <BattlefieldFieldCard card={card} size="xl" />
+                    {isAdmin && (
+                      <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              data-testid={`button-delete-field-card-${card.id}`}
+                              disabled={deletingFieldCardId === card.id}
                             >
-                              Delete Card
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
+                              {deletingFieldCardId === card.id ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                              ) : (
+                                <Trash2 className="w-3 h-3" />
+                              )}
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent className="bg-slate-800 border-red-500/30">
+                            <AlertDialogHeader>
+                              <AlertDialogTitle className="text-white">Delete Battlefield Card</AlertDialogTitle>
+                              <AlertDialogDescription className="text-slate-300">
+                                Remove "{card.name}" from the game? This cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel className="bg-slate-700 text-white border-slate-600">Cancel</AlertDialogCancel>
+                              <AlertDialogAction className="bg-red-600 hover:bg-red-700" onClick={() => deleteFieldCardMutation.mutate(card.id)}>
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </>
         )}
       </div>
