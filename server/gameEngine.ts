@@ -56,6 +56,11 @@ const colorToElement: Record<string, string> = {
   Black: "Air",
 };
 
+/** Normalize element strings to lowercase for consistent comparison. */
+function normEl(s: string | null | undefined): string {
+  return (s ?? "").toLowerCase();
+}
+
 function getCardIdFromInstance(instanceId: string): string {
   return instanceId.split("::")[0];
 }
@@ -867,12 +872,15 @@ class ServerGameEngine {
       }
       case "heal_and_buff": {
         const healAmount = effect.value || 4;
+        // Buff scales with the configured heal value (half, minimum 1) so higher-value
+        // heal_and_buff commanders provide a proportionally stronger buff.
+        const healBuffAmount = Math.max(1, Math.round(healAmount / 2));
         if (isP1) game.player1HP = Math.min(GAME_CONSTANTS.STARTING_HP, game.player1HP + healAmount);
         else game.player2HP = Math.min(GAME_CONSTANTS.STARTING_HP, game.player2HP + healAmount);
-        const healBuffEl = (effect.target || commander.element).toLowerCase();
+        const healBuffEl = normEl(effect.target || commander.element);
         const currentHealBuffs: AbilityBuff[] = (gs as any)[myBuffsKey] || [];
-        (gs as any)[myBuffsKey] = [...currentHealBuffs, { targetElement: healBuffEl, amount: 2, type: "heal_buff" }];
-        effectDescription = `Healed ${healAmount} HP and buffed`;
+        (gs as any)[myBuffsKey] = [...currentHealBuffs, { targetElement: healBuffEl, amount: healBuffAmount, type: "heal_buff" }];
+        effectDescription = `Healed ${healAmount} HP and buffed +${healBuffAmount}`;
         break;
       }
     }
@@ -1195,42 +1203,59 @@ class ServerGameEngine {
         halvedPower = Math.floor(basePower / 2);
       }
 
+      // Friendly card-to-card buffs (suppressed if enemy blocked our effects).
       if (!enemyBlockedEffects) {
         friendlyCards.forEach(friendlyCard => {
           if (friendlyCard.id !== card.id && friendlyCard.buffModifier > 0 && friendlyCard.buffColor) {
-            const buffElement = colorToElement[friendlyCard.buffColor];
-            if (buffElement === card.element) {
+            const buffElement = normEl(colorToElement[friendlyCard.buffColor]);
+            if (buffElement === normEl(card.element)) {
               buffBonuses.push({ fromCard: friendlyCard, amount: friendlyCard.buffModifier });
             }
           }
         });
       }
 
-      if (friendlyAbilityBuffs) {
+      // Friendly commander ability positive buffs.
+      // Suppressed when enemy has negate_and_halve active (negates our commander effects).
+      if (friendlyAbilityBuffs && !enemyNegateAndHalve) {
         friendlyAbilityBuffs.forEach(ab => {
-          if (ab.amount > 0 && (ab.targetElement === "all" || ab.targetElement === card.element.toLowerCase())) {
+          if (ab.amount > 0 && (ab.targetElement === "all" || ab.targetElement === normEl(card.element))) {
             buffBonuses.push({ fromCard: card, amount: ab.amount });
           }
         });
       }
 
-      const isProtected = friendlyProtectedElement && card.element.toLowerCase() === friendlyProtectedElement.toLowerCase();
+      const isProtected = !!friendlyProtectedElement && normEl(card.element) === normEl(friendlyProtectedElement);
 
-      if (!enemyNegateAndHalve && !isProtected) {
+      // Enemy unit card debuffs — always apply unless this unit is protected.
+      // NOT gated by negate_and_halve: unit card debuffs are not commander effects.
+      if (!isProtected) {
         enemyCards.forEach(enemyCard => {
           if (enemyCard.debuffModifier > 0 && enemyCard.debuffColor) {
-            const debuffElement = colorToElement[enemyCard.debuffColor];
-            if (debuffElement === card.element) {
+            const debuffElement = normEl(colorToElement[enemyCard.debuffColor]);
+            if (debuffElement === normEl(card.element)) {
               debuffPenalties.push({ fromCard: enemyCard, amount: enemyCard.debuffModifier });
             }
           }
         });
       }
 
+      // Negative ability buffs — commander debuffs planted in our array by the enemy
+      // commander (e.g. debuff_enemy, reduce_power).  These are the ENEMY's commander
+      // effects, so they are NOT suppressed by our own negate_and_halve.
       if (friendlyAbilityBuffs && !isProtected) {
+        const cardElNorm = normEl(card.element);
         friendlyAbilityBuffs.forEach(ab => {
-          if (ab.amount < 0 && (ab.targetElement === "all" || ab.targetElement === card.element.toLowerCase())) {
-            debuffPenalties.push({ fromCard: card, amount: Math.abs(ab.amount) });
+          if (ab.amount < 0) {
+            const tgt = ab.targetElement ?? "";
+            const matches =
+              tgt === "all" ||
+              tgt === cardElNorm ||
+              // reduce_power uses "all_non_<element>" to target every element except one
+              (tgt.startsWith("all_non_") && tgt !== `all_non_${cardElNorm}`);
+            if (matches) {
+              debuffPenalties.push({ fromCard: card, amount: Math.abs(ab.amount) });
+            }
           }
         });
       }
