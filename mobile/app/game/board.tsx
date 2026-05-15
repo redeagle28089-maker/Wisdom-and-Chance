@@ -369,9 +369,16 @@ export default function GameBoardScreen() {
     queryKey: ['/api/decks/battlefield'],
     staleTime: 60_000,
   });
+  const battlefieldCardsQuery = useQuery<FieldCard[] | null>({
+    queryKey: ['/api/cards/battlefield'],
+    staleTime: 300_000,
+    enabled: !battlefieldDeckQuery.isLoading,
+  });
 
   useEffect(() => {
     if (!deckQuery.data || !cardsQuery.data || !commandersQuery.data || game) return;
+    // Wait for battlefield deck status before initialising (avoids silently disabling BF mode)
+    if (battlefieldDeckQuery.isLoading) return;
     const deck = deckQuery.data;
     const allCards = cardsQuery.data;
     const allCommanders = commandersQuery.data;
@@ -395,8 +402,6 @@ export default function GameBoardScreen() {
     let p1FieldDeck: FieldCard[] | undefined;
     let p2FieldDeck: FieldCard[] | undefined;
     if (rawFieldIds.length >= 7) {
-      // Treat each ID as a minimal FieldCard (full data loaded server-side for multiplayer; 
-      // practice mode only needs id/name/effects for display — server is authoritative for combat)
       const shuffle = <T,>(arr: T[]): T[] => {
         const a = [...arr];
         for (let i = a.length - 1; i > 0; i--) {
@@ -405,8 +410,13 @@ export default function GameBoardScreen() {
         }
         return a;
       };
-      // Build FieldCard stubs from IDs; effects will be empty until a full field-card catalog is available
-      const toFieldCard = (id: string): FieldCard => ({ id, name: id, effects: [] });
+      // Build a lookup of full FieldCard objects (with real effects) from the catalog query
+      const fieldCardMap = new Map<string, FieldCard>();
+      for (const fc of (battlefieldCardsQuery.data || [])) {
+        if (fc?.id) fieldCardMap.set(fc.id, fc);
+      }
+      const toFieldCard = (id: string): FieldCard =>
+        fieldCardMap.get(id) ?? { id, name: id, effects: [] };
       p1FieldDeck = shuffle(rawFieldIds.slice(0, 7)).map(toFieldCard);
       p2FieldDeck = shuffle(rawFieldIds.slice(0, 7)).map(toFieldCard);
     }
@@ -421,7 +431,7 @@ export default function GameBoardScreen() {
     // Flip field cards at the start of round 1 if battlefield mode is active
     const withFlips = flipFieldCards(afterDraws);
     setGame(withFlips);
-  }, [deckQuery.data, cardsQuery.data, commandersQuery.data, cardsPerTurn]);
+  }, [deckQuery.data, cardsQuery.data, commandersQuery.data, cardsPerTurn, battlefieldDeckQuery.data, battlefieldDeckQuery.isLoading, battlefieldCardsQuery.data]);
 
   const handleDeploy = useThrottledCallback((index: number) => {
     if (!game || (game.phase !== 'deployment' && game.phase !== 'card_draw') || isProcessing) return;
@@ -527,6 +537,8 @@ export default function GameBoardScreen() {
     setCombatResult(null);
     let state = nextRound(game);
     state = drawCards(state, 'p1');
+    // Flip one field card per player at the start of each new round
+    state = flipFieldCards(state);
     state = { ...state, phase: 'deployment' };
     setGame(state);
     setHandView('units');
