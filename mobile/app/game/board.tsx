@@ -14,8 +14,9 @@ import type { IoniconsName } from '@/lib/icon-types';
 import Colors, { getElementColor, getElementBg } from '@/constants/colors';
 import { api, Card, Commander, CommanderAbility } from '@/lib/api';
 import {
-  GameState, GamePhase, DeployedCard, RoundResult, AbilityEffect, initializeGame, drawCards, deployCard, undeployCard,
-  resolveCombat, nextRound, useCommanderAbility, GAME_CONSTANTS,
+  GameState, GamePhase, DeployedCard, RoundResult, AbilityEffect, FieldCard,
+  initializeGame, drawCards, deployCard, undeployCard,
+  resolveCombat, nextRound, useCommanderAbility, flipFieldCards, GAME_CONSTANTS,
 } from '@/lib/game-engine';
 import { aiTurn, AIDifficulty } from '@/lib/ai-player';
 import { getCardImageUrl } from '@/constants/card-art';
@@ -364,6 +365,10 @@ export default function GameBoardScreen() {
   });
   const cardsQuery = useQuery({ queryKey: ['cards'], queryFn: () => api.getCards() });
   const commandersQuery = useQuery({ queryKey: ['commanders'], queryFn: () => api.getCommanders() });
+  const battlefieldDeckQuery = useQuery<{ cardIds: string[] } | null>({
+    queryKey: ['/api/decks/battlefield'],
+    staleTime: 60_000,
+  });
 
   useEffect(() => {
     if (!deckQuery.data || !cardsQuery.data || !commandersQuery.data || game) return;
@@ -385,9 +390,37 @@ export default function GameBoardScreen() {
     const aiCommanderIdx = Math.floor(Math.random() * allCommanders.length);
     const aiCommander = allCommanders[aiCommanderIdx];
 
-    const initialState = initializeGame(playerCards, playerCommander, aiCards, aiCommander, { cardsDrawn: cardsPerTurn, cardsDeployed: cardsPerTurn });
-    const withDraws = drawCards(drawCards(initialState, 'p1'), 'p2');
-    setGame(withDraws);
+    // Battlefield mode: use saved field deck if player has one (7 cards)
+    const rawFieldIds = battlefieldDeckQuery.data?.cardIds ?? [];
+    let p1FieldDeck: FieldCard[] | undefined;
+    let p2FieldDeck: FieldCard[] | undefined;
+    if (rawFieldIds.length >= 7) {
+      // Treat each ID as a minimal FieldCard (full data loaded server-side for multiplayer; 
+      // practice mode only needs id/name/effects for display — server is authoritative for combat)
+      const shuffle = <T,>(arr: T[]): T[] => {
+        const a = [...arr];
+        for (let i = a.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [a[i], a[j]] = [a[j], a[i]];
+        }
+        return a;
+      };
+      // Build FieldCard stubs from IDs; effects will be empty until a full field-card catalog is available
+      const toFieldCard = (id: string): FieldCard => ({ id, name: id, effects: [] });
+      p1FieldDeck = shuffle(rawFieldIds.slice(0, 7)).map(toFieldCard);
+      p2FieldDeck = shuffle(rawFieldIds.slice(0, 7)).map(toFieldCard);
+    }
+
+    const initialState = initializeGame(playerCards, playerCommander, aiCards, aiCommander, {
+      cardsDrawn: cardsPerTurn,
+      cardsDeployed: cardsPerTurn,
+      p1FieldDeck,
+      p2FieldDeck,
+    });
+    const afterDraws = drawCards(drawCards(initialState, 'p1'), 'p2');
+    // Flip field cards at the start of round 1 if battlefield mode is active
+    const withFlips = flipFieldCards(afterDraws);
+    setGame(withFlips);
   }, [deckQuery.data, cardsQuery.data, commandersQuery.data, cardsPerTurn]);
 
   const handleDeploy = useThrottledCallback((index: number) => {

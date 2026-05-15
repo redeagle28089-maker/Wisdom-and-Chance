@@ -72,6 +72,12 @@ export default function LobbyPage() {
   const [selectedGameMode, setSelectedGameMode] = useState<GameMode>("standard");
   const [battlefieldMode, setBattlefieldMode] = useState(false);
 
+  const { data: fieldDeckData, isLoading: fieldDeckLoading } = useQuery<{ cardIds?: string[] } | null>({
+    queryKey: ["/api/decks/battlefield"],
+    enabled: battlefieldMode,
+  });
+  const hasValidFieldDeck = !!(fieldDeckData?.cardIds && fieldDeckData.cardIds.length >= 7);
+
   const { data: rooms = [], refetch, isLoading } = useQuery<GameRoom[]>({
     queryKey: ["/api/rooms"],
     refetchInterval: 5000,
@@ -276,21 +282,31 @@ export default function LobbyPage() {
                       })}
                     </div>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Swords className="w-4 h-4 text-amber-400" />
-                      <Label className="text-purple-200">Battlefield Mode</Label>
-                      <span className="text-purple-400 text-[10px]">(7-card field deck required)</span>
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Swords className="w-4 h-4 text-amber-400" />
+                        <Label className="text-purple-200">Battlefield Mode</Label>
+                        <span className="text-purple-400 text-[10px]">(7-card field deck required)</span>
+                      </div>
+                      <Switch
+                        checked={battlefieldMode}
+                        onCheckedChange={setBattlefieldMode}
+                        data-testid="switch-battlefield"
+                      />
                     </div>
-                    <Switch
-                      checked={battlefieldMode}
-                      onCheckedChange={setBattlefieldMode}
-                      data-testid="switch-battlefield"
-                    />
+                    {battlefieldMode && !fieldDeckLoading && !hasValidFieldDeck && (
+                      <p className="text-amber-400 text-xs">
+                        You need a saved 7-card battlefield deck. Build one in the Deck Builder before starting a Battlefield room.
+                      </p>
+                    )}
+                    {battlefieldMode && hasValidFieldDeck && (
+                      <p className="text-green-400 text-xs">Battlefield deck ready ({fieldDeckData!.cardIds!.length} cards).</p>
+                    )}
                   </div>
                   <Button 
                     onClick={() => createRoomMutation.mutate()}
-                    disabled={!roomName || createRoomMutation.isPending}
+                    disabled={!roomName || createRoomMutation.isPending || (battlefieldMode && !fieldDeckLoading && !hasValidFieldDeck)}
                     className="w-full bg-gradient-to-r from-purple-600 to-pink-600"
                     data-testid="button-create-confirm"
                   >

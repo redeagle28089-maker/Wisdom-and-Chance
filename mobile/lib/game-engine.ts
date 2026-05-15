@@ -79,6 +79,13 @@ export interface RoundResult {
   abilityEffects?: AbilityEffect[];
 }
 
+export interface FieldCard {
+  id: string;
+  name: string;
+  description?: string;
+  effects: any[];
+}
+
 export interface GameState {
   phase: GamePhase;
   round: number;
@@ -92,6 +99,11 @@ export interface GameState {
   turnActions: { p1Deployed: boolean; p2Deployed: boolean };
   cardsDrawnPerTurn: number;
   cardsDeployedPerTurn: number;
+  battlefieldMode?: boolean;
+  p1FieldDeck?: FieldCard[];
+  p2FieldDeck?: FieldCard[];
+  p1ActiveFieldCard?: FieldCard | null;
+  p2ActiveFieldCard?: FieldCard | null;
 }
 
 function shuffleDeck(cards: Card[]): Card[] {
@@ -127,10 +139,11 @@ export function createPlayerState(deckCards: Card[], commander: Commander): Play
 export function initializeGame(
   p1Cards: Card[], p1Commander: Commander,
   p2Cards: Card[], p2Commander: Commander,
-  options?: { cardsDrawn?: number; cardsDeployed?: number }
+  options?: { cardsDrawn?: number; cardsDeployed?: number; p1FieldDeck?: FieldCard[]; p2FieldDeck?: FieldCard[] }
 ): GameState {
   const cardsDrawnPerTurn = options?.cardsDrawn ?? GAME_CONSTANTS.cardsDrawnPerTurn;
   const cardsDeployedPerTurn = options?.cardsDeployed ?? GAME_CONSTANTS.cardsDeployedPerTurn;
+  const battlefieldMode = !!(options?.p1FieldDeck?.length || options?.p2FieldDeck?.length);
   return {
     phase: 'card_draw',
     round: 1,
@@ -144,6 +157,30 @@ export function initializeGame(
     turnActions: { p1Deployed: false, p2Deployed: false },
     cardsDrawnPerTurn,
     cardsDeployedPerTurn,
+    battlefieldMode,
+    p1FieldDeck: options?.p1FieldDeck ? [...options.p1FieldDeck] : [],
+    p2FieldDeck: options?.p2FieldDeck ? [...options.p2FieldDeck] : [],
+    p1ActiveFieldCard: null,
+    p2ActiveFieldCard: null,
+  };
+}
+
+export function flipFieldCards(state: GameState): GameState {
+  if (!state.battlefieldMode) return state;
+  const p1Deck = [...(state.p1FieldDeck || [])];
+  const p2Deck = [...(state.p2FieldDeck || [])];
+  const p1Card = p1Deck.length > 0 ? p1Deck.shift()! : null;
+  const p2Card = p2Deck.length > 0 ? p2Deck.shift()! : null;
+  const log = [...state.log];
+  if (p1Card) log.push(`Field card active: ${p1Card.name}`);
+  if (p2Card) log.push(`Opponent field card: ${p2Card.name}`);
+  return {
+    ...state,
+    p1FieldDeck: p1Deck,
+    p2FieldDeck: p2Deck,
+    p1ActiveFieldCard: p1Card,
+    p2ActiveFieldCard: p2Card,
+    log,
   };
 }
 
@@ -189,7 +226,11 @@ export function deployCard(state: GameState, player: 'p1' | 'p2', cardIndex: num
   const ps = player === 'p1' ? { ...state.player1 } : { ...state.player2 };
   const opp = player === 'p1' ? { ...state.player2 } : { ...state.player1 };
   if (cardIndex < 0 || cardIndex >= ps.hand.length) return state;
-  if (ps.deployed.length >= state.cardsDeployedPerTurn) return state;
+  const activeFCsDeploy = ([state.p1ActiveFieldCard, state.p2ActiveFieldCard].filter(Boolean)) as FieldCard[];
+  const deployOverrides = activeFCsDeploy
+    .flatMap(fc => (fc.effects as any[]).filter((e: any) => e.type === 'deploy_limit_override').map((e: any) => e.value as number));
+  const effectiveDeployLimit = deployOverrides.length > 0 ? Math.min(...deployOverrides) : state.cardsDeployedPerTurn;
+  if (ps.deployed.length >= effectiveDeployLimit) return state;
 
   const card = ps.hand[cardIndex];
   const deployed: DeployedCard = {
@@ -307,6 +348,14 @@ function applyBuffsDebuffs(attacker: PlayerState, defender: PlayerState): { atta
 }
 
 export function resolveCombat(state: GameState): GameState {
+  // Battlefield mode: compute flags once before combat
+  const activeFCs = state.battlefieldMode
+    ? ([state.p1ActiveFieldCard, state.p2ActiveFieldCard].filter(Boolean) as FieldCard[])
+    : [];
+  const allFCEffects: any[] = activeFCs.flatMap(fc => (fc.effects as any[]) || []);
+  const bfHasHealDoubled = allFCEffects.some(e => e.type === 'unique_effect' && e.key === 'heal_doubled');
+  const bfHasGuardianDisabled = allFCEffects.some(e => e.type === 'unique_effect' && e.key === 'guardian_disabled');
+
   let p1 = { ...state.player1, deployed: state.player1.deployed.map(c => ({ ...c, faceDown: false })), abilityBuffs: [...state.player1.abilityBuffs] };
   let p2 = { ...state.player2, deployed: state.player2.deployed.map(c => ({ ...c, faceDown: false })), abilityBuffs: [...state.player2.abilityBuffs] };
 
@@ -314,6 +363,30 @@ export function resolveCombat(state: GameState): GameState {
   const { attacker: p2Buffed, defender: p1Debuffed } = applyBuffsDebuffs(p2Debuffed, p1Buffed);
   p1 = p1Debuffed;
   p2 = p2Buffed;
+
+  // Apply battlefield field card element effects to deployed card power
+  if (state.battlefieldMode && allFCEffects.length > 0) {
+    const allDeployed = [...p1.deployed, ...p2.deployed];
+    for (const eff of allFCEffects) {
+      if (eff.type === 'element_buff') {
+        for (const c of allDeployed) {
+          if ((c.element || '').toLowerCase() === (eff.element || '').toLowerCase()) {
+            c.currentPower += eff.value || 0;
+          }
+        }
+      } else if (eff.type === 'element_debuff') {
+        for (const c of allDeployed) {
+          if ((c.element || '').toLowerCase() === (eff.element || '').toLowerCase()) {
+            c.currentPower = Math.max(1, c.currentPower - (eff.value || 0));
+          }
+        }
+      } else if (eff.type === 'all_units_debuff') {
+        for (const c of allDeployed) {
+          c.currentPower = Math.max(1, c.currentPower - (eff.value || 0));
+        }
+      }
+    }
+  }
 
   let p1AbilityFS = 0;
   let p2AbilityFS = 0;
@@ -360,23 +433,33 @@ export function resolveCombat(state: GameState): GameState {
 
   let p1Guard = 0;
   let p2Guard = 0;
+  let p1TraitGuard = 0;
+  let p2TraitGuard = 0;
   for (const c of p1.deployed) {
     if (c.trait === 'Guardian') {
-      p1Guard += c.traitValue || 3;
+      p1TraitGuard += c.traitValue || 3;
     }
   }
   for (const c of p2.deployed) {
     if (c.trait === 'Guardian') {
-      p2Guard += c.traitValue || 3;
+      p2TraitGuard += c.traitValue || 3;
     }
   }
-  p1Guard += p1AbilityShield;
-  p2Guard += p2AbilityShield;
+  // guardian_disabled: suppress trait Guardian only; ability shield still applies
+  const effectiveP1TraitGuard = bfHasGuardianDisabled ? 0 : p1TraitGuard;
+  const effectiveP2TraitGuard = bfHasGuardianDisabled ? 0 : p2TraitGuard;
+  p1Guard += effectiveP1TraitGuard + p1AbilityShield;
+  p2Guard += effectiveP2TraitGuard + p2AbilityShield;
   p1.guardianBlock = p1Guard;
   p2.guardianBlock = p2Guard;
 
   p1.healingAmount += p1AbilityHeal;
   p2.healingAmount += p2AbilityHeal;
+  // heal_doubled field effect: double healing exactly once
+  if (bfHasHealDoubled) {
+    p1.healingAmount *= 2;
+    p2.healingAmount *= 2;
+  }
 
   if (p1.healingAmount > 0) {
     p1.hp = Math.min(GAME_CONSTANTS.initialHP, p1.hp + p1.healingAmount);
@@ -481,6 +564,9 @@ export function nextRound(state: GameState): GameState {
     phase: 'card_draw',
     round: state.round + 1,
     turnActions: { p1Deployed: false, p2Deployed: false },
+    // Clear active field cards; field decks persist for future rounds
+    p1ActiveFieldCard: null,
+    p2ActiveFieldCard: null,
     player1: {
       ...state.player1,
       deployed: [],
