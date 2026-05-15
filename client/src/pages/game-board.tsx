@@ -11,8 +11,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useWebSocket } from "@/hooks/use-websocket";
-import { Heart, Swords, Trophy, Flag, ArrowRight, Shield, Flame, Droplet, Mountain, Wind, Leaf, RotateCcw, LogIn, MessageSquare, Eye, Send, X, Zap, Sparkles, Plus, Scroll, History, Crown, HeartHandshake } from "lucide-react";
-import { ShieldC } from "@/components/shield-c";
+import { Heart, Swords, Trophy, Flag, ArrowRight, Shield, Flame, Droplet, Mountain, Wind, Leaf, RotateCcw, LogIn, MessageSquare, Eye, Send, X, Zap, Sparkles, Plus, Scroll, History, Crown } from "lucide-react";
+import { landTraitIcons } from "@/components/game-card";
 import type { Game, Card as CardType, Element, BattlefieldCard, GameMode, Commander, CommanderAbility } from "@shared/schema";
 import type { FieldCard, FieldCardEffect } from "@shared/models/cards";
 import { GAME_CONSTANTS, GAME_MODE_CONFIG } from "@shared/schema";
@@ -252,10 +252,16 @@ function ActiveFieldCardStrip({
       if (eff.type === "all_units_debuff") return <span key={i} className="text-red-300">All units -{eff.value}</span>;
       if (eff.type === "deploy_limit_override") return <span key={i} className="text-blue-300">Deploy limit: {eff.value}</span>;
       if (eff.type === "unique_effect") {
-        if (eff.key === "heal_doubled")
-          return <span key={i} title="All healing doubled" className="inline-flex items-center"><HeartHandshake className="w-3 h-3 text-emerald-300" /></span>;
-        if (eff.key === "guardian_disabled")
-          return <span key={i} title="Guardians disabled" className="inline-flex items-center"><ShieldC className="w-3 h-3 text-orange-300" /></span>;
+        const entry = landTraitIcons[eff.key];
+        if (entry) {
+          const Icon = entry.icon;
+          const colorClass = eff.key === "heal_doubled" ? "text-emerald-300" : "text-orange-300";
+          return (
+            <span key={i} title={eff.key.replace(/_/g, " ")} className="inline-flex items-center">
+              <Icon className={`w-3 h-3 ${colorClass}`} />
+            </span>
+          );
+        }
       }
       return null;
     }).filter(Boolean);

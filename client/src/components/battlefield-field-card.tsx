@@ -1,8 +1,8 @@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { FieldCard, FieldCardEffect } from "@shared/schema";
 import { FIELD_CARD_UNIQUE_EFFECT_LABELS } from "@shared/schema";
-import { Mountain, Swords, Droplets, Flame, Wind, Leaf, Globe, HeartHandshake } from "lucide-react";
-import { ShieldC } from "@/components/shield-c";
+import { Mountain, Swords, Droplets, Flame, Wind, Leaf, Globe } from "lucide-react";
+import { landTraitIcons } from "@/components/game-card";
 
 function effectSummary(effect: FieldCardEffect): string {
   switch (effect.type) {
@@ -35,11 +35,12 @@ function ElementIcon({ element, className }: { element: string; className?: stri
 
 function UniqueEffectIcon({ effectKey, className }: { effectKey: string; className?: string }) {
   const cls = className ?? "w-3 h-3";
-  switch (effectKey) {
-    case "heal_doubled":      return <HeartHandshake className={cls} />;
-    case "guardian_disabled": return <ShieldC className={cls} />;
-    default:                  return <Swords className={cls} />;
+  const entry = landTraitIcons[effectKey];
+  if (entry) {
+    const Icon = entry.icon;
+    return <Icon className={cls} />;
   }
+  return <Swords className={cls} />;
 }
 
 function EffectPill({ effect }: { effect: FieldCardEffect }) {

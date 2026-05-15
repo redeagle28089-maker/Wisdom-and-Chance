@@ -18,6 +18,7 @@ import { getCardImageUrl } from '@/constants/card-art';
 import AuthImage from '@/components/AuthImage';
 import { useThrottledCallback, useNavigationGuard } from '@/hooks/useThrottledCallback';
 import { ShieldCIcon } from '@/components/ShieldCIcon';
+import { LAND_TRAIT_ICONS } from '@/components/CardFrame';
 
 function safeHaptic(fn: () => void) { try { fn(); } catch {} }
 
@@ -28,10 +29,11 @@ function FieldEffectRow({ effects }: { effects: FieldCardEffect[] }) {
     if (e.type === "all_units_debuff")       return <Text key={i} style={pvpFieldEffectTextStyle}>All -{e.value}</Text>;
     if (e.type === "deploy_limit_override")  return <Text key={i} style={pvpFieldEffectTextStyle}>Deploy:{e.value}</Text>;
     if (e.type === "unique_effect") {
-      if (e.key === "heal_doubled")
-        return <MaterialCommunityIcons key={i} name="heart-multiple" size={8} color="#94A3B8" />;
-      if (e.key === "guardian_disabled")
-        return <ShieldCIcon key={i} size={8} color="#94A3B8" />;
+      const entry = e.key ? LAND_TRAIT_ICONS[e.key] : undefined;
+      if (entry) {
+        if (entry.icon === 'shield-c') return <ShieldCIcon key={i} size={8} color="#94A3B8" />;
+        return <MaterialCommunityIcons key={i} name={entry.icon as any} size={8} color="#94A3B8" />;
+      }
     }
     return null;
   }).filter(Boolean);
