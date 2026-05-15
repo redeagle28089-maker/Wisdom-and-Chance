@@ -2849,13 +2849,28 @@ export default function GameBoardPage() {
         const p2Cards = mapBattlefieldToCards(game.gameState.player2Battlefield, getCardById);
         
         const gs = game.gameState;
+        // Battlefield mode field effects for practice AI auto-resolution
+        const aiFieldEffects: any[] = practiceFieldEnabled
+          ? [
+              ...(practiceActiveFieldCards.p1Card?.effects || []),
+              ...(practiceActiveFieldCards.p2Card?.effects || []),
+            ]
+          : [];
+        const aiGuardianDisabled = aiFieldEffects.some(
+          (e: any) => e.type === "unique_effect" && e.key === "guardian_disabled"
+        );
+        const aiHealDoubled = aiFieldEffects.some(
+          (e: any) => e.type === "unique_effect" && e.key === "heal_doubled"
+        );
         const player1Breakdown = calculateBattlePower(
           p1Cards, p2Cards, getCardById,
-          gs.player1AbilityBuffs, gs.player1BlockedEffects, gs.player2NegateAndHalve, gs.player1ProtectedElement
+          gs.player1AbilityBuffs, gs.player1BlockedEffects, gs.player2NegateAndHalve, gs.player1ProtectedElement,
+          aiFieldEffects
         );
         const player2Breakdown = calculateBattlePower(
           p2Cards, p1Cards, getCardById,
-          gs.player2AbilityBuffs, gs.player2BlockedEffects, gs.player1NegateAndHalve, gs.player2ProtectedElement
+          gs.player2AbilityBuffs, gs.player2BlockedEffects, gs.player1NegateAndHalve, gs.player2ProtectedElement,
+          aiFieldEffects
         );
         
         const p1Power = player1Breakdown.reduce((sum, b) => sum + b.finalPower, 0);
@@ -2864,8 +2879,13 @@ export default function GameBoardPage() {
         const aiSummary = generateCombatLog(
           player1Breakdown, player2Breakdown, p1Power, p2Power,
           gs.player1AbilityBuffs || [], gs.player2AbilityBuffs || [],
-          gs.abilityLog || [], game.currentTurn
+          gs.abilityLog || [], game.currentTurn, aiGuardianDisabled
         );
+        // heal_doubled: double the heal totals exactly once
+        if (aiHealDoubled) {
+          aiSummary.player1Healing *= 2;
+          aiSummary.player2Healing *= 2;
+        }
 
         let newP1HP = Math.min(GAME_CONSTANTS.STARTING_HP, game.player1HP + aiSummary.player1Healing);
         newP1HP -= aiSummary.finalDamageToPlayer1;

@@ -1047,41 +1047,41 @@ class ServerGameEngine {
       gs.abilityLog || [], game.currentTurn
     );
 
-    // Apply unique field card effects: heal_doubled and guardian_disabled
+    // Apply unique field card effects: compute boolean flags once to prevent double-application
     if (activeFieldCards.length > 0) {
-      for (const fc of activeFieldCards) {
-        for (const eff of fc.effects as any[]) {
-          if (eff.type === "unique_effect") {
-            if (eff.key === "heal_doubled") {
-              combatSummary.player1Healing *= 2;
-              combatSummary.player2Healing *= 2;
-            } else if (eff.key === "guardian_disabled") {
-              // Only suppress Guardian TRAIT blocks; commander shield ability buffs still apply
-              const totalIncomingP1 = combatSummary.baseDamageToPlayer1 + combatSummary.player2QuickStrikeDamage;
-              const totalIncomingP2 = combatSummary.baseDamageToPlayer2 + combatSummary.player1QuickStrikeDamage;
-              // Compute Guardian-trait-only blocked amounts from the breakdown
-              let p1TraitBlocked = 0;
-              for (const b of p1Breakdown) {
-                if (b.traitInfo?.trait === "Guardian") {
-                  const blockable = Math.max(0, totalIncomingP1 - p1TraitBlocked);
-                  p1TraitBlocked += Math.min(b.traitInfo.value, blockable);
-                }
-              }
-              let p2TraitBlocked = 0;
-              for (const b of p2Breakdown) {
-                if (b.traitInfo?.trait === "Guardian") {
-                  const blockable = Math.max(0, totalIncomingP2 - p2TraitBlocked);
-                  p2TraitBlocked += Math.min(b.traitInfo.value, blockable);
-                }
-              }
-              // Remove only the trait-portion; shield ability buffs remain
-              combatSummary.player1GuardianBlocked = Math.max(0, combatSummary.player1GuardianBlocked - p1TraitBlocked);
-              combatSummary.player2GuardianBlocked = Math.max(0, combatSummary.player2GuardianBlocked - p2TraitBlocked);
-              combatSummary.finalDamageToPlayer1 = Math.max(0, totalIncomingP1 - combatSummary.player1GuardianBlocked);
-              combatSummary.finalDamageToPlayer2 = Math.max(0, totalIncomingP2 - combatSummary.player2GuardianBlocked);
-            }
+      const allFieldEffects = activeFieldCards.flatMap(fc => fc.effects as any[]);
+      const hasHealDoubled = allFieldEffects.some(e => e.type === "unique_effect" && e.key === "heal_doubled");
+      const hasGuardianDisabled = allFieldEffects.some(e => e.type === "unique_effect" && e.key === "guardian_disabled");
+
+      if (hasHealDoubled) {
+        combatSummary.player1Healing *= 2;
+        combatSummary.player2Healing *= 2;
+      }
+
+      if (hasGuardianDisabled) {
+        // Only suppress Guardian TRAIT blocks; commander shield ability buffs still apply
+        const totalIncomingP1 = combatSummary.baseDamageToPlayer1 + combatSummary.player2QuickStrikeDamage;
+        const totalIncomingP2 = combatSummary.baseDamageToPlayer2 + combatSummary.player1QuickStrikeDamage;
+        // Compute Guardian-trait-only blocked amounts from the breakdown
+        let p1TraitBlocked = 0;
+        for (const b of p1Breakdown) {
+          if (b.traitInfo?.trait === "Guardian") {
+            const blockable = Math.max(0, totalIncomingP1 - p1TraitBlocked);
+            p1TraitBlocked += Math.min(b.traitInfo.value, blockable);
           }
         }
+        let p2TraitBlocked = 0;
+        for (const b of p2Breakdown) {
+          if (b.traitInfo?.trait === "Guardian") {
+            const blockable = Math.max(0, totalIncomingP2 - p2TraitBlocked);
+            p2TraitBlocked += Math.min(b.traitInfo.value, blockable);
+          }
+        }
+        // Remove only the trait-portion; shield ability buffs remain
+        combatSummary.player1GuardianBlocked = Math.max(0, combatSummary.player1GuardianBlocked - p1TraitBlocked);
+        combatSummary.player2GuardianBlocked = Math.max(0, combatSummary.player2GuardianBlocked - p2TraitBlocked);
+        combatSummary.finalDamageToPlayer1 = Math.max(0, totalIncomingP1 - combatSummary.player1GuardianBlocked);
+        combatSummary.finalDamageToPlayer2 = Math.max(0, totalIncomingP2 - combatSummary.player2GuardianBlocked);
       }
     }
 

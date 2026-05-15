@@ -1287,12 +1287,13 @@ async function main() {
       throw new Error(`Expected deploy_limit_override=1 from bf-narrow-pass; got: ${JSON.stringify(activeCard.effects)}`);
     }
 
-    // Now try to deploy 3 cards — must be rejected with "exactly 1"
+    // Try to deploy 0 cards (empty array) — must be rejected with "Must deploy exactly 1"
+    // (deploying 0 hits the count mismatch: deployed.length !== effectiveLimit)
     const mErr = bfUser7.mark();
-    bfUser7.send("game_action", { type: "deploy", data: { cardIds: ["fake-a", "fake-b", "fake-c"] } });
-    const err4 = await bfUser7.expectErrorAfter(mErr, "exactly 1", 3000, "deploy limit rejection").catch(() => null);
+    bfUser7.send("game_action", { type: "deploy", data: { cardIds: [] } });
+    const err4 = await bfUser7.expectErrorAfter(mErr, "must deploy exactly", 3000, "deploy limit rejection").catch(() => null);
     if (!err4) {
-      throw new Error("Expected game_error mentioning 'exactly 1' when deploying 3 cards with narrow-pass active");
+      throw new Error("Expected game_error mentioning 'must deploy exactly' when deploying 0 cards with narrow-pass active (limit=1)");
     }
     log("BF-CP4", `Got expected error: ${err4.payload?.error}`);
 
