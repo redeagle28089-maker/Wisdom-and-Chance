@@ -135,6 +135,7 @@ function calculateBattlePower(
   enemyBlockedEffects?: boolean,
   enemyNegateAndHalve?: boolean,
   friendlyProtectedElement?: string,
+  activeFieldEffects?: { type: string; element?: string; value?: number; key?: string }[],
 ): CardPowerBreakdown[] {
   return friendlyCards.map(card => {
     const basePower = card.power;
@@ -193,6 +194,23 @@ function calculateBattlePower(
       });
     }
     
+    // Battlefield mode: apply global field card effects
+    if (activeFieldEffects && activeFieldEffects.length > 0) {
+      for (const eff of activeFieldEffects) {
+        if (eff.type === "element_buff" && eff.element) {
+          if (card.element.toLowerCase() === eff.element.toLowerCase()) {
+            buffBonuses.push({ fromCard: card, amount: eff.value || 0 });
+          }
+        } else if (eff.type === "element_debuff" && eff.element) {
+          if (card.element.toLowerCase() === eff.element.toLowerCase()) {
+            debuffPenalties.push({ fromCard: card, amount: eff.value || 0 });
+          }
+        } else if (eff.type === "all_units_debuff") {
+          debuffPenalties.push({ fromCard: card, amount: eff.value || 0 });
+        }
+      }
+    }
+
     const totalBuffs = buffBonuses.reduce((sum, b) => sum + b.amount, 0);
     const totalDebuffs = debuffPenalties.reduce((sum, d) => sum + d.amount, 0);
     const effectiveBase = enemyNegateAndHalve ? halvedPower : basePower;
@@ -211,6 +229,70 @@ function calculateBattlePower(
       finalPower,
     };
   });
+}
+
+// Battlefield mode field card strip shown between player zones
+function ActiveFieldCardStrip({
+  p1Card,
+  p2Card,
+  p1DeckRemaining,
+  p2DeckRemaining,
+}: {
+  p1Card: { name: string; description: string; effects: any[] } | null;
+  p2Card: { name: string; description: string; effects: any[] } | null;
+  p1DeckRemaining: number;
+  p2DeckRemaining: number;
+}) {
+  function renderEffects(effects: any[]) {
+    return effects.map((eff, i) => {
+      if (eff.type === "element_buff") return <span key={i} className="text-green-300">+{eff.value} {eff.element}</span>;
+      if (eff.type === "element_debuff") return <span key={i} className="text-red-300">-{eff.value} {eff.element}</span>;
+      if (eff.type === "all_units_debuff") return <span key={i} className="text-red-300">All units -{eff.value}</span>;
+      if (eff.type === "deploy_limit_override") return <span key={i} className="text-blue-300">Deploy limit: {eff.value}</span>;
+      if (eff.type === "unique_effect") {
+        if (eff.key === "heal_doubled") return <span key={i} className="text-emerald-300">Healing ×2</span>;
+        if (eff.key === "guardian_disabled") return <span key={i} className="text-orange-300">Guardians disabled</span>;
+      }
+      return null;
+    }).filter(Boolean);
+  }
+
+  return (
+    <div className="bg-amber-900/20 border border-amber-500/30 rounded-lg px-3 py-1.5 flex-shrink-0" data-testid="active-field-card-strip">
+      <div className="flex items-center justify-center gap-1 mb-1">
+        <span className="text-amber-400 text-[10px] font-bold uppercase tracking-widest">⚔ Battlefield Cards</span>
+      </div>
+      <div className="flex items-center justify-around gap-2">
+        <div className="flex-1 text-center min-w-0">
+          <div className="text-[9px] text-slate-500 mb-0.5">Your field ({p1DeckRemaining} left)</div>
+          {p1Card ? (
+            <div className="bg-amber-900/40 border border-amber-500/40 rounded px-1.5 py-0.5">
+              <div className="text-amber-200 text-[10px] font-semibold truncate">{p1Card.name}</div>
+              <div className="flex flex-wrap gap-0.5 justify-center text-[9px] mt-0.5">
+                {renderEffects(p1Card.effects)}
+              </div>
+            </div>
+          ) : (
+            <div className="text-slate-600 text-[9px]">—</div>
+          )}
+        </div>
+        <div className="w-px h-8 bg-amber-500/20 flex-shrink-0" />
+        <div className="flex-1 text-center min-w-0">
+          <div className="text-[9px] text-slate-500 mb-0.5">Opp. field ({p2DeckRemaining} left)</div>
+          {p2Card ? (
+            <div className="bg-amber-900/40 border border-amber-500/40 rounded px-1.5 py-0.5">
+              <div className="text-amber-200 text-[10px] font-semibold truncate">{p2Card.name}</div>
+              <div className="flex flex-wrap gap-0.5 justify-center text-[9px] mt-0.5">
+                {renderEffects(p2Card.effects)}
+              </div>
+            </div>
+          ) : (
+            <div className="text-slate-600 text-[9px]">—</div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function generateCombatLog(
@@ -1964,6 +2046,11 @@ export default function GameBoardPage() {
   const sendingActionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [turnDeadlineCountdown, setTurnDeadlineCountdown] = useState<number | null>(null);
   const [isAIProcessing, setIsAIProcessing] = useState(false);
+  // Battlefield mode practice state
+  const [practiceFieldEnabled, setPracticeFieldEnabled] = useState(false);
+  const [practiceP1FieldDeck, setPracticeP1FieldDeck] = useState<any[]>([]);
+  const [practiceP2FieldDeck, setPracticeP2FieldDeck] = useState<any[]>([]);
+  const [practiceActiveFieldCards, setPracticeActiveFieldCards] = useState<{ p1Card: any | null; p2Card: any | null }>({ p1Card: null, p2Card: null });
 
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const { joinGame, leaveGame, subscribe, sendGameMessage, sendGameAction, isConnected: wsConnected, pendingCount: wsPendingCount } = useWebSocket();
@@ -1998,6 +2085,47 @@ export default function GameBoardPage() {
   const { data: allCommanders = [] } = useQuery<Commander[]>({
     queryKey: ["/api/commanders"],
   });
+
+  const { data: allFieldCards = [] } = useQuery<any[]>({
+    queryKey: ["/api/cards/battlefield"],
+  });
+
+  const { data: myFieldDeckData } = useQuery<{ cardIds: string[] }>({
+    queryKey: ["/api/decks/battlefield"],
+    enabled: !!user,
+  });
+
+  // Initialize practice battlefield decks once when practice game loads
+  useEffect(() => {
+    if (!game || game.gameType !== "practice" || !allFieldCards.length) return;
+    if (practiceP1FieldDeck.length > 0) return; // already initialized
+
+    function shuffleArr<T>(arr: T[]): T[] {
+      const a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    // Use player's saved field deck if available, else all available field cards (take first 7)
+    let p1Pool: any[];
+    if (myFieldDeckData?.cardIds?.length) {
+      p1Pool = myFieldDeckData.cardIds
+        .map((id: string) => allFieldCards.find((fc: any) => fc.id === id))
+        .filter(Boolean);
+    } else {
+      p1Pool = allFieldCards.slice(0, 7);
+    }
+    const p2Pool = shuffleArr([...allFieldCards]).slice(0, 7);
+    setPracticeP1FieldDeck(shuffleArr(p1Pool));
+    setPracticeP2FieldDeck(shuffleArr(p2Pool));
+    if (p1Pool.length > 0 || p2Pool.length > 0) {
+      setPracticeFieldEnabled(true);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [game?.id, allFieldCards.length, myFieldDeckData]);
 
   useEffect(() => {
     if (gameId) {
@@ -2290,6 +2418,23 @@ export default function GameBoardPage() {
   const myCommander = myCommanderId ? allCommanders.find(c => c.id === myCommanderId) : undefined;
   const opponentCommanderId = useServerState ? serverState.opponentCommanderId : (game ? (isPlayer1 ? game.gameState.player2CommanderId : game.gameState.player1CommanderId) : undefined);
   const opponentCommander = opponentCommanderId ? allCommanders.find(c => c.id === opponentCommanderId) : undefined;
+
+  // Battlefield mode — derive active field cards from server state (multiplayer) or local state (practice)
+  const isBattlefieldMode = useServerState
+    ? !!serverState.battlefieldModeEnabled
+    : practiceFieldEnabled;
+  const bfActiveP1Card = useServerState
+    ? (serverState.battlefieldActiveCards?.p1Card || null)
+    : practiceActiveFieldCards.p1Card;
+  const bfActiveP2Card = useServerState
+    ? (serverState.battlefieldActiveCards?.p2Card || null)
+    : practiceActiveFieldCards.p2Card;
+  const bfP1Remaining = useServerState
+    ? (serverState.battlefieldDeckRemaining?.p1 ?? 0)
+    : practiceP1FieldDeck.length;
+  const bfP2Remaining = useServerState
+    ? (serverState.battlefieldDeckRemaining?.p2 ?? 0)
+    : practiceP2FieldDeck.length;
   
   // Get game mode config (draw/deploy counts)
   const gameMode: GameMode = game?.gameMode || "standard";
@@ -2297,7 +2442,17 @@ export default function GameBoardPage() {
   const cardsToDraw = modeConfig.cardsToDraw;
   const baseCardsToDeploy = modeConfig.cardsToDeploy;
   const myExtraDeploy = useServerState ? (serverState.extraDeploy || 0) : (game ? (isPlayer1 ? (game.gameState.player1ExtraDeploy || 0) : (game.gameState.player2ExtraDeploy || 0)) : 0);
-  const cardsToDeploy = baseCardsToDeploy + myExtraDeploy;
+  // Battlefield mode: apply deploy_limit_override from active field cards (minimum wins)
+  const practiceFieldActiveEffects = [
+    ...(practiceActiveFieldCards.p1Card?.effects || []),
+    ...(practiceActiveFieldCards.p2Card?.effects || []),
+  ];
+  const fieldDeployOverrides = practiceFieldEnabled
+    ? practiceFieldActiveEffects.filter((e: any) => e.type === "deploy_limit_override").map((e: any) => e.value as number)
+    : [];
+  const cardsToDeploy = fieldDeployOverrides.length > 0
+    ? Math.max(1, Math.min(baseCardsToDeploy + myExtraDeploy, ...fieldDeployOverrides))
+    : baseCardsToDeploy + myExtraDeploy;
   const effectivePhase = useServerState ? serverState.currentPhase : (game?.currentPhase || "draw");
   const effectiveTurn = useServerState ? serverState.currentTurn : (game?.currentTurn || 1);
   const effectiveStatus = useServerState ? serverState.status : (game?.status || "waiting");
@@ -3349,6 +3504,17 @@ export default function GameBoardPage() {
         newGameState.player2Hand = aiHand;
         newGameState.player2Deck = aiDeck;
       }
+
+      // Practice battlefield mode: flip one card from each deck
+      if (practiceFieldEnabled) {
+        const newP1Deck = [...practiceP1FieldDeck];
+        const newP2Deck = [...practiceP2FieldDeck];
+        const p1Card = newP1Deck.length > 0 ? newP1Deck.shift() || null : null;
+        const p2Card = newP2Deck.length > 0 ? newP2Deck.shift() || null : null;
+        setPracticeP1FieldDeck(newP1Deck);
+        setPracticeP2FieldDeck(newP2Deck);
+        setPracticeActiveFieldCards({ p1Card: p1Card || null, p2Card: p2Card || null });
+      }
     }
 
     updateGameMutation.mutate({
@@ -3477,13 +3643,19 @@ export default function GameBoardPage() {
     const p2Cards = mapBattlefieldToCards(newGameState.player2Battlefield, getCardById);
     
     const gs2 = newGameState;
+    // Battlefield mode field effects for practice
+    const p1FieldEffects: any[] = practiceFieldEnabled
+      ? [...(practiceActiveFieldCards.p1Card?.effects || []), ...(practiceActiveFieldCards.p2Card?.effects || [])]
+      : [];
     const player1Breakdown = calculateBattlePower(
       p1Cards, p2Cards, getCardById,
-      gs2.player1AbilityBuffs, gs2.player1BlockedEffects, gs2.player2NegateAndHalve, gs2.player1ProtectedElement
+      gs2.player1AbilityBuffs, gs2.player1BlockedEffects, gs2.player2NegateAndHalve, gs2.player1ProtectedElement,
+      p1FieldEffects
     );
     const player2Breakdown = calculateBattlePower(
       p2Cards, p1Cards, getCardById,
-      gs2.player2AbilityBuffs, gs2.player2BlockedEffects, gs2.player1NegateAndHalve, gs2.player2ProtectedElement
+      gs2.player2AbilityBuffs, gs2.player2BlockedEffects, gs2.player1NegateAndHalve, gs2.player2ProtectedElement,
+      p1FieldEffects
     );
     
     const player1Total = player1Breakdown.reduce((sum, b) => sum + b.finalPower, 0);
@@ -3560,13 +3732,18 @@ export default function GameBoardPage() {
       const p1Cards = mapBattlefieldToCards(game.gameState.player1Battlefield, getCardById);
       const p2Cards = mapBattlefieldToCards(game.gameState.player2Battlefield, getCardById);
       const gs3 = game.gameState;
+      const fieldEffectsFallback: any[] = practiceFieldEnabled
+        ? [...(practiceActiveFieldCards.p1Card?.effects || []), ...(practiceActiveFieldCards.p2Card?.effects || [])]
+        : [];
       player1Breakdown = calculateBattlePower(
         p1Cards, p2Cards, getCardById,
-        gs3.player1AbilityBuffs, gs3.player1BlockedEffects, gs3.player2NegateAndHalve, gs3.player1ProtectedElement
+        gs3.player1AbilityBuffs, gs3.player1BlockedEffects, gs3.player2NegateAndHalve, gs3.player1ProtectedElement,
+        fieldEffectsFallback
       );
       player2Breakdown = calculateBattlePower(
         p2Cards, p1Cards, getCardById,
-        gs3.player2AbilityBuffs, gs3.player2BlockedEffects, gs3.player1NegateAndHalve, gs3.player2ProtectedElement
+        gs3.player2AbilityBuffs, gs3.player2BlockedEffects, gs3.player1NegateAndHalve, gs3.player2ProtectedElement,
+        fieldEffectsFallback
       );
     }
     if (!currentSummary) {
@@ -3590,8 +3767,27 @@ export default function GameBoardPage() {
     let newP1WP = game.player1WithdrawalPoints;
     let newP2WP = game.player2WithdrawalPoints;
 
-    newP1HP = Math.min(GAME_CONSTANTS.STARTING_HP, newP1HP + currentSummary.player1Healing);
-    newP2HP = Math.min(GAME_CONSTANTS.STARTING_HP, newP2HP + currentSummary.player2Healing);
+    // Battlefield mode unique effects in practice mode
+    let p1HealMultiplier = 1;
+    let p2HealMultiplier = 1;
+    if (practiceFieldEnabled) {
+      const allFieldEffects = [
+        ...(practiceActiveFieldCards.p1Card?.effects || []),
+        ...(practiceActiveFieldCards.p2Card?.effects || []),
+      ] as any[];
+      const hasHealDoubled = allFieldEffects.some((e: any) => e.type === "unique_effect" && e.key === "heal_doubled");
+      const hasGuardianDisabled = allFieldEffects.some((e: any) => e.type === "unique_effect" && e.key === "guardian_disabled");
+      if (hasHealDoubled) { p1HealMultiplier = 2; p2HealMultiplier = 2; }
+      if (hasGuardianDisabled) {
+        // guardian_disabled: heal is zeroed to simulate guardian trait having no effect
+        p1HealMultiplier = 0; p2HealMultiplier = 0;
+      }
+      // Clear active field cards at round end
+      setPracticeActiveFieldCards({ p1Card: null, p2Card: null });
+    }
+
+    newP1HP = Math.min(GAME_CONSTANTS.STARTING_HP, newP1HP + currentSummary.player1Healing * p1HealMultiplier);
+    newP2HP = Math.min(GAME_CONSTANTS.STARTING_HP, newP2HP + currentSummary.player2Healing * p2HealMultiplier);
     newP1HP -= currentSummary.finalDamageToPlayer1;
     newP2HP -= currentSummary.finalDamageToPlayer2;
 
@@ -3864,6 +4060,15 @@ export default function GameBoardPage() {
           allCards={allCards}
           onPreview={setPreviewCard}
         />
+
+        {isBattlefieldMode && (
+          <ActiveFieldCardStrip
+            p1Card={isPlayer1 ? bfActiveP1Card : bfActiveP2Card}
+            p2Card={isPlayer1 ? bfActiveP2Card : bfActiveP1Card}
+            p1DeckRemaining={isPlayer1 ? bfP1Remaining : bfP2Remaining}
+            p2DeckRemaining={isPlayer1 ? bfP2Remaining : bfP1Remaining}
+          />
+        )}
 
         <div className="flex justify-center items-center gap-2 flex-shrink-0 action-buttons-row">
           <Card className="bg-purple-900/50 border-purple-500/30 px-3 py-2 action-card">

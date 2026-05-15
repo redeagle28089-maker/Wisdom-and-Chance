@@ -311,7 +311,7 @@ export function registerMultiplayerRoutes(app: Express) {
     }
 
     const userId = (req.user as any).claims.sub;
-    const { name, isPrivate, password, gameMode } = req.body;
+    const { name, isPrivate, password, gameMode, battlefieldMode } = req.body;
 
     if (!name) {
       return res.status(400).json({ message: "Room name is required" });
@@ -325,7 +325,7 @@ export function registerMultiplayerRoutes(app: Express) {
         isPrivate: isPrivate || false,
         password: isPrivate ? password : null,
         status: "waiting",
-        settings: { gameMode: gameMode || "standard" },
+        settings: { gameMode: gameMode || "standard", battlefieldMode: !!battlefieldMode },
       })
       .returning();
 
@@ -501,6 +501,28 @@ export function registerMultiplayerRoutes(app: Express) {
       return shuffled;
     }
 
+    // Battlefield mode: validate and fetch battlefield decks
+    const roomSettings = room.settings as any;
+    const isBattlefieldMode = roomSettings?.battlefieldMode || false;
+    const battlefieldInitState: Record<string, any> = {};
+    if (isBattlefieldMode) {
+      const [p1FieldDeckIds, p2FieldDeckIds] = await Promise.all([
+        storage.getPlayerBattlefieldDeck(room.hostId),
+        storage.getPlayerBattlefieldDeck(room.guestId!),
+      ]);
+      if (p1FieldDeckIds.length !== 7) {
+        return res.status(400).json({ message: "Host needs a complete 7-card battlefield deck for Battlefield Mode" });
+      }
+      if (p2FieldDeckIds.length !== 7) {
+        return res.status(400).json({ message: "Guest needs a complete 7-card battlefield deck for Battlefield Mode" });
+      }
+      battlefieldInitState.battlefieldMode = true;
+      battlefieldInitState.p1BattlefieldDeck = shuffleArray([...p1FieldDeckIds]);
+      battlefieldInitState.p2BattlefieldDeck = shuffleArray([...p2FieldDeckIds]);
+      battlefieldInitState.p1ActiveFieldCardId = null;
+      battlefieldInitState.p2ActiveFieldCardId = null;
+    }
+
     // Helper to create card instances with unique IDs
     function createCardInstances(cardIds: string[]): string[] {
       const cardCounts: Record<string, number> = {};
@@ -530,6 +552,7 @@ export function registerMultiplayerRoutes(app: Express) {
       player2HasDrawn: false,
       player1CommanderId: hostDeck.commanderId,
       player2CommanderId: guestDeck.commanderId,
+      ...battlefieldInitState,
     };
 
     const gameData = {

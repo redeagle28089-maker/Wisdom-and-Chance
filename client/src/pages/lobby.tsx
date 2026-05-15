@@ -35,6 +35,7 @@ interface GameRoom {
   isPrivate: boolean;
   status: string;
   createdAt: string;
+  settings?: { gameMode?: string; battlefieldMode?: boolean };
   host: {
     id: string;
     firstName: string | null;
@@ -69,6 +70,7 @@ export default function LobbyPage() {
   const [joinPassword, setJoinPassword] = useState("");
   const [joiningRoomId, setJoiningRoomId] = useState<string | null>(null);
   const [selectedGameMode, setSelectedGameMode] = useState<GameMode>("standard");
+  const [battlefieldMode, setBattlefieldMode] = useState(false);
 
   const { data: rooms = [], refetch, isLoading } = useQuery<GameRoom[]>({
     queryKey: ["/api/rooms"],
@@ -82,6 +84,7 @@ export default function LobbyPage() {
         isPrivate,
         password: isPrivate ? roomPassword : undefined,
         gameMode: selectedGameMode,
+        battlefieldMode,
       });
       return res.json();
     },
@@ -92,6 +95,7 @@ export default function LobbyPage() {
       setIsPrivate(false);
       setRoomPassword("");
       setSelectedGameMode("standard");
+      setBattlefieldMode(false);
       setIsCreateDialogOpen(false);
       navigate(`/room/${room.id}`);
     },
@@ -272,6 +276,18 @@ export default function LobbyPage() {
                       })}
                     </div>
                   </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Swords className="w-4 h-4 text-amber-400" />
+                      <Label className="text-purple-200">Battlefield Mode</Label>
+                      <span className="text-purple-400 text-[10px]">(7-card field deck required)</span>
+                    </div>
+                    <Switch
+                      checked={battlefieldMode}
+                      onCheckedChange={setBattlefieldMode}
+                      data-testid="switch-battlefield"
+                    />
+                  </div>
                   <Button 
                     onClick={() => createRoomMutation.mutate()}
                     disabled={!roomName || createRoomMutation.isPending}
@@ -353,12 +369,17 @@ export default function LobbyPage() {
                         <Swords className="w-6 h-6 text-white" />
                       </div>
                       <div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <h3 className="text-white font-bold text-lg">{room.name}</h3>
                           {room.isPrivate ? (
                             <Lock className="w-4 h-4 text-yellow-400" />
                           ) : (
                             <Unlock className="w-4 h-4 text-green-400" />
+                          )}
+                          {room.settings?.battlefieldMode && (
+                            <Badge className="bg-amber-700/60 text-amber-200 border-amber-500/40 text-[10px]" data-testid={`badge-battlefield-${room.id}`}>
+                              ⚔ Battlefield
+                            </Badge>
                           )}
                         </div>
                         <div className="flex items-center gap-2 mt-1">

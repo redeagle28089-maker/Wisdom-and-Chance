@@ -1,4 +1,5 @@
 import type { Card, Commander, CommanderAbility, BattlefieldCard, GameState, Game, CombatLog, CardPowerBreakdown, Element } from "@shared/schema";
+import type { FieldCard } from "@shared/models/cards";
 import { GAME_CONSTANTS, GAME_MODE_CONFIG, ALLOWED_ABILITY_EFFECTS } from "@shared/schema";
 import { storage } from "./storage";
 
@@ -123,6 +124,9 @@ interface ActivePvPGame {
   consecutiveTimeouts: Map<string, number>;
   recentActionIds: Map<string, Set<string>>;
   broadcastHandler?: (eventType: string, payload: any) => void;
+  battlefieldMode: boolean;
+  p1ActiveFieldCard: FieldCard | null;
+  p2ActiveFieldCard: FieldCard | null;
 }
 
 type EngineBroadcastHandler = (eventType: string, payload: any) => void;
@@ -176,6 +180,9 @@ export interface SanitizedGameState {
   turnDeadline: number | null;
   responsiblePlayerIds: string[];
   consecutiveTimeouts: { player1: number; player2: number };
+  battlefieldModeEnabled?: boolean;
+  battlefieldActiveCards?: { p1Card: FieldCard | null; p2Card: FieldCard | null };
+  battlefieldDeckRemaining?: { p1: number; p2: number };
 }
 
 export interface CombatResult {
@@ -250,6 +257,9 @@ class ServerGameEngine {
       turnDeadline: null,
       consecutiveTimeouts: new Map(),
       recentActionIds: new Map(),
+      battlefieldMode: !!((game.gameState as any).battlefieldMode),
+      p1ActiveFieldCard: null,
+      p2ActiveFieldCard: null,
     });
     // Start the inactivity turn timer for the initial phase.
     this.scheduleTurnTimer(game.id);
@@ -523,6 +533,30 @@ class ServerGameEngine {
 
     if (active.player1DrawnThisTurn && active.player2DrawnThisTurn) {
       game.currentPhase = "deployment";
+      // Battlefield mode: flip one card from each player's field deck for this round
+      if (active.battlefieldMode) {
+        const gsAny = gs as any;
+        const p1Deck: string[] = [...(gsAny.p1BattlefieldDeck || [])];
+        const p2Deck: string[] = [...(gsAny.p2BattlefieldDeck || [])];
+        if (p1Deck.length > 0) {
+          const cardId = p1Deck.shift()!;
+          gsAny.p1BattlefieldDeck = p1Deck;
+          gsAny.p1ActiveFieldCardId = cardId;
+          active.p1ActiveFieldCard = (await storage.getFieldCard(cardId)) || null;
+        } else {
+          gsAny.p1ActiveFieldCardId = null;
+          active.p1ActiveFieldCard = null;
+        }
+        if (p2Deck.length > 0) {
+          const cardId = p2Deck.shift()!;
+          gsAny.p2BattlefieldDeck = p2Deck;
+          gsAny.p2ActiveFieldCardId = cardId;
+          active.p2ActiveFieldCard = (await storage.getFieldCard(cardId)) || null;
+        } else {
+          gsAny.p2ActiveFieldCardId = null;
+          active.p2ActiveFieldCard = null;
+        }
+      }
     }
 
     await this.persistGame(game);
@@ -546,7 +580,18 @@ class ServerGameEngine {
     const battlefield = isP1 ? [...gs.player1Battlefield] : [...gs.player2Battlefield];
 
     const modeConfig = this.getGameMode(game);
-    const maxDeploy = modeConfig.cardsToDeploy + ((isP1 ? gs.player1ExtraDeploy : gs.player2ExtraDeploy) || 0);
+    let maxDeploy = modeConfig.cardsToDeploy + ((isP1 ? gs.player1ExtraDeploy : gs.player2ExtraDeploy) || 0);
+    // Battlefield mode: apply deploy_limit_override from active field cards (minimum value wins)
+    if (active.battlefieldMode) {
+      const overrides: number[] = [active.p1ActiveFieldCard, active.p2ActiveFieldCard]
+        .filter((fc): fc is FieldCard => fc !== null)
+        .flatMap(fc => fc.effects)
+        .filter((eff): eff is any => eff.type === "deploy_limit_override")
+        .map((eff: any) => eff.value as number);
+      if (overrides.length > 0) {
+        maxDeploy = Math.max(1, Math.min(maxDeploy, ...overrides));
+      }
+    }
 
     if (cardIds.length > maxDeploy) {
       return { success: false, error: `Cannot deploy more than ${maxDeploy} cards` };
@@ -974,13 +1019,22 @@ class ServerGameEngine {
     const p1BFCards = await this.mapBattlefieldToCards(gs.player1Battlefield);
     const p2BFCards = await this.mapBattlefieldToCards(gs.player2Battlefield);
 
+    // Collect active field cards for this round (battlefield mode)
+    const activeFieldCards: FieldCard[] = [];
+    if (active.battlefieldMode) {
+      if (active.p1ActiveFieldCard) activeFieldCards.push(active.p1ActiveFieldCard);
+      if (active.p2ActiveFieldCard) activeFieldCards.push(active.p2ActiveFieldCard);
+    }
+
     const p1Breakdown = await this.calculateBattlePower(
       p1BFCards, p2BFCards, gs.player1Battlefield,
-      gs.player1AbilityBuffs, gs.player1BlockedEffects, gs.player2NegateAndHalve, gs.player1ProtectedElement
+      gs.player1AbilityBuffs, gs.player1BlockedEffects, gs.player2NegateAndHalve, gs.player1ProtectedElement,
+      activeFieldCards
     );
     const p2Breakdown = await this.calculateBattlePower(
       p2BFCards, p1BFCards, gs.player2Battlefield,
-      gs.player2AbilityBuffs, gs.player2BlockedEffects, gs.player1NegateAndHalve, gs.player2ProtectedElement
+      gs.player2AbilityBuffs, gs.player2BlockedEffects, gs.player1NegateAndHalve, gs.player2ProtectedElement,
+      activeFieldCards
     );
 
     const p1Total = p1Breakdown.reduce((sum, b) => sum + b.finalPower, 0);
@@ -992,6 +1046,27 @@ class ServerGameEngine {
       gs.player1AbilityBuffs || [], gs.player2AbilityBuffs || [],
       gs.abilityLog || [], game.currentTurn
     );
+
+    // Apply unique field card effects: heal_doubled and guardian_disabled
+    if (activeFieldCards.length > 0) {
+      for (const fc of activeFieldCards) {
+        for (const eff of fc.effects as any[]) {
+          if (eff.type === "unique_effect") {
+            if (eff.key === "heal_doubled") {
+              combatSummary.player1Healing *= 2;
+              combatSummary.player2Healing *= 2;
+            } else if (eff.key === "guardian_disabled") {
+              combatSummary.player1GuardianBlocked = 0;
+              combatSummary.player2GuardianBlocked = 0;
+              const totalIncomingP1 = combatSummary.baseDamageToPlayer1 + combatSummary.player2QuickStrikeDamage;
+              const totalIncomingP2 = combatSummary.baseDamageToPlayer2 + combatSummary.player1QuickStrikeDamage;
+              combatSummary.finalDamageToPlayer1 = Math.max(0, totalIncomingP1);
+              combatSummary.finalDamageToPlayer2 = Math.max(0, totalIncomingP2);
+            }
+          }
+        }
+      }
+    }
 
     let newP1HP = Math.min(GAME_CONSTANTS.STARTING_HP, game.player1HP + combatSummary.player1Healing);
     newP1HP -= combatSummary.finalDamageToPlayer1;
@@ -1098,6 +1173,13 @@ class ServerGameEngine {
     gs.player2NegateAndHalve = false;
     gs.player1ProtectedElement = undefined;
     gs.player2ProtectedElement = undefined;
+    // Clear battlefield field cards after round resolves
+    if (active.battlefieldMode) {
+      (gs as any).p1ActiveFieldCardId = null;
+      (gs as any).p2ActiveFieldCardId = null;
+      active.p1ActiveFieldCard = null;
+      active.p2ActiveFieldCard = null;
+    }
     gs.lastCombatLog = combatLog;
     gs.combatHistory = [...(gs.combatHistory || []), combatLog];
     gs.player1HasDrawn = false;
@@ -1192,6 +1274,7 @@ class ServerGameEngine {
     enemyBlockedEffects?: boolean,
     enemyNegateAndHalve?: boolean,
     friendlyProtectedElement?: string,
+    activeFieldCards?: FieldCard[],
   ): Promise<ServerCardBreakdown[]> {
     return friendlyCards.map(card => {
       const basePower = card.power;
@@ -1258,6 +1341,25 @@ class ServerGameEngine {
             }
           }
         });
+      }
+
+      // Battlefield mode: apply global field card effects (element_buff / element_debuff / all_units_debuff)
+      if (activeFieldCards && activeFieldCards.length > 0) {
+        for (const fc of activeFieldCards) {
+          for (const eff of fc.effects as any[]) {
+            if (eff.type === "element_buff" && eff.element) {
+              if (normEl(card.element) === normEl(eff.element)) {
+                buffBonuses.push({ fromCard: card, amount: eff.value });
+              }
+            } else if (eff.type === "element_debuff" && eff.element) {
+              if (normEl(card.element) === normEl(eff.element)) {
+                debuffPenalties.push({ fromCard: card, amount: eff.value });
+              }
+            } else if (eff.type === "all_units_debuff") {
+              debuffPenalties.push({ fromCard: card, amount: eff.value });
+            }
+          }
+        }
       }
 
       const totalBuffs = buffBonuses.reduce((sum, b) => sum + b.amount, 0);
@@ -1442,6 +1544,16 @@ class ServerGameEngine {
         player1: active.consecutiveTimeouts.get(game.player1Id) || 0,
         player2: active.consecutiveTimeouts.get(game.player2Id || "") || 0,
       },
+      battlefieldModeEnabled: active.battlefieldMode || false,
+      battlefieldActiveCards: active.battlefieldMode
+        ? { p1Card: active.p1ActiveFieldCard, p2Card: active.p2ActiveFieldCard }
+        : undefined,
+      battlefieldDeckRemaining: active.battlefieldMode
+        ? {
+            p1: ((gs as any).p1BattlefieldDeck || []).length,
+            p2: ((gs as any).p2BattlefieldDeck || []).length,
+          }
+        : undefined,
     };
   }
 
