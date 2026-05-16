@@ -528,7 +528,7 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
       const collection = await db.select().from(playerCollection).where(eq(playerCollection.userId, userId));
       const ownedMap = new Map(collection.map(e => [e.cardId, e.quantity]));
 
-      for (const [cardId, needed] of cardCounts.entries()) {
+      for (const [cardId, needed] of Array.from(cardCounts.entries())) {
         const owned = ownedMap.get(cardId) ?? 0;
         if (owned < needed) {
           const card = cardMap.get(cardId);
@@ -1125,7 +1125,7 @@ IMPORTANT:
       const packDef = PACK_TYPES[packTypeId as keyof typeof PACK_TYPES];
       if (!packDef) return res.status(400).json({ message: "Invalid pack type" });
 
-      let cost = currencyType === "gems" ? packDef.costGems : packDef.costGold;
+      let cost: number = currencyType === "gems" ? packDef.costGems : packDef.costGold;
       if (cost <= 0) return res.status(400).json({ message: `This pack cannot be purchased with ${currencyType}` });
 
       if (useDailyDeal && currencyType === "gold") {
@@ -2602,15 +2602,15 @@ Return ONLY a raw JSON array, no prose, no markdown fences. Each element shape:
 
       const saveToFile = req.query.save === "true";
       if (saveToFile) {
-        const backupDir = path.default.join(process.cwd(), "backups");
-        if (!fs.default.existsSync(backupDir)) {
-          fs.default.mkdirSync(backupDir, { recursive: true });
+        const backupDir = path.join(process.cwd(), "backups");
+        if (!fs.existsSync(backupDir)) {
+          fs.mkdirSync(backupDir, { recursive: true });
         }
         const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
         const filename = `db-backup-${timestamp}.json`;
-        const filepath = path.default.join(backupDir, filename);
+        const filepath = path.join(backupDir, filename);
 
-        fs.default.writeFileSync(filepath, JSON.stringify(exportData, null, 2));
+        fs.writeFileSync(filepath, JSON.stringify(exportData, null, 2));
         exportData.savedToFile = filepath;
         exportData.note = "Full backup including card image data saved to file.";
       }

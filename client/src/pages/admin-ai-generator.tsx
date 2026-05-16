@@ -207,7 +207,7 @@ export default function AdminAiGeneratorPage() {
           description: `Fanning out ${data.candidates.length} parallel image jobs.`,
         });
         const outcomes = await Promise.all(
-          data.candidates.map((payload, i) => runArtGeneration(i, payload, data.kind)),
+          data.candidates.map((payload, i) => runArtGeneration(i, payload as InsertCard | InsertCommander, data.kind)),
         );
         const okCount = outcomes.filter((o) => o.ok).length;
         const failCount = outcomes.length - okCount;

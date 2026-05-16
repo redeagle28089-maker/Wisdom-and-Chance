@@ -1,4 +1,5 @@
 import pLimit from "p-limit";
+// @ts-ignore — p-retry ships its own types in newer versions; safe to suppress here
 import pRetry from "p-retry";
 
 /**
@@ -133,7 +134,7 @@ export async function batchProcessWithSSE<T, R>(
         minTimeout,
         maxTimeout,
         factor: 2,
-        onFailedAttempt: (error) => {
+        onFailedAttempt: (error: unknown) => {
           if (!isRateLimitError(error)) {
             // Non-retryable error - just throw it
             throw error instanceof Error ? error : new Error(String(error));

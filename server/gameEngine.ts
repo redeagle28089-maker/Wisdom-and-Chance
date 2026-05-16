@@ -38,8 +38,8 @@ export const IMPLEMENTED_ABILITY_TYPES = [
 (function assertEffectListsMatch() {
   const allowed = new Set(ALLOWED_ABILITY_EFFECTS.map((e) => e.type));
   const implemented = new Set(IMPLEMENTED_ABILITY_TYPES);
-  const missingFromEngine = [...allowed].filter((t) => !implemented.has(t as any));
-  const extraInEngine = [...implemented].filter((t) => !allowed.has(t));
+  const missingFromEngine = Array.from(allowed).filter((t) => !implemented.has(t as any));
+  const extraInEngine = Array.from(implemented).filter((t) => !allowed.has(t));
   if (missingFromEngine.length > 0 || extraInEngine.length > 0) {
     throw new Error(
       `[gameEngine] ALLOWED_ABILITY_EFFECTS / IMPLEMENTED_ABILITY_TYPES drift detected. ` +
@@ -277,7 +277,7 @@ class ServerGameEngine {
   removeGame(gameId: string): void {
     const active = this.activeGames.get(gameId);
     if (active) {
-      for (const timer of active.disconnectTimers.values()) {
+      for (const timer of Array.from(active.disconnectTimers.values())) {
         clearTimeout(timer);
       }
       if (active.turnTimer) {

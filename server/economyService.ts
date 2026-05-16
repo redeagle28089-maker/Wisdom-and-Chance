@@ -60,7 +60,7 @@ export async function grantStarterCollection(userId: string) {
   if (cur.length > 0 && cur[0].starterClaimed) return;
 
   const allCards = await storage.getCards();
-  const starterCards = allCards.filter(c => ECONOMY_CONSTANTS.STARTER_COLLECTION_POWERS.includes(c.power));
+  const starterCards = allCards.filter(c => (ECONOMY_CONSTANTS.STARTER_COLLECTION_POWERS as readonly number[]).includes(c.power));
 
   for (const c of starterCards) {
     await db.insert(playerCollection)

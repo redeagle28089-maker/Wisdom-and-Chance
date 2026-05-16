@@ -11,6 +11,14 @@ import { getCardRarity, ECONOMY_CONSTANTS } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 
+const elementButtonConfig: Record<Element, { bgClass: string; emoji: string }> = {
+  Fire:   { bgClass: "bg-red-600",   emoji: "🔥" },
+  Water:  { bgClass: "bg-blue-500",  emoji: "💧" },
+  Earth:  { bgClass: "bg-orange-600", emoji: "⛰️" },
+  Air:    { bgClass: "bg-cyan-500",  emoji: "🌪️" },
+  Nature: { bgClass: "bg-green-600", emoji: "🌿" },
+};
+
 interface CollectionEntry {
   cardId: string;
   quantity: number;
@@ -204,9 +212,9 @@ export default function CollectionPage() {
             size="sm"
             onClick={() => setFilterElement(el)}
             data-testid={`button-filter-${el.toLowerCase()}`}
-            className={filterElement === el ? elementConfig[el]?.bgClass : ""}
+            className={filterElement === el ? elementButtonConfig[el].bgClass : ""}
           >
-            {elementConfig[el]?.emoji} {el}
+            {elementButtonConfig[el].emoji} {el}
           </Button>
         ))}
         <div className="w-px bg-gray-600 mx-1" />

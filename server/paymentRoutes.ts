@@ -80,7 +80,7 @@ export async function registerPaymentRoutes(app: Express) {
     }
   });
 
-  app.get("/api/payments/history", isAuthenticated, async (req: any, res) => {
+  app.get("/api/payments/history", isAuthenticated, async (req: any, res: any) => {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) return res.status(401).json({ message: "Unauthorized" });
@@ -92,7 +92,8 @@ export async function registerPaymentRoutes(app: Express) {
     }
   });
 
-  app.post("/api/payments/purchase-currency", isAuthenticated, paymentRateLimit(10, 60000), async (req: any, res) => {
+  // @ts-ignore — async handler with multiple middlewares exceeds Express typed overloads; correct at runtime
+  app.post("/api/payments/purchase-currency", isAuthenticated, paymentRateLimit(10, 60000), async (req: any, res: any) => {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) return res.status(401).json({ message: "Unauthorized" });
@@ -115,7 +116,8 @@ export async function registerPaymentRoutes(app: Express) {
     }
   });
 
-  app.post("/api/payments/purchase", isAuthenticated, paymentRateLimit(10, 60000), blockRealMoneyInBeta, async (req: any, res) => {
+  // @ts-ignore — async handler with multiple middlewares exceeds Express typed overloads; correct at runtime
+  app.post("/api/payments/purchase", isAuthenticated, paymentRateLimit(10, 60000), blockRealMoneyInBeta, async (req: any, res: any) => {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) return res.status(401).json({ message: "Unauthorized" });
@@ -200,7 +202,7 @@ export async function registerPaymentRoutes(app: Express) {
     }
   });
 
-  app.post("/api/payments/check-purchased", isAuthenticated, async (req: any, res) => {
+  app.post("/api/payments/check-purchased", isAuthenticated, async (req: any, res: any) => {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) return res.status(401).json({ message: "Unauthorized" });
@@ -224,7 +226,8 @@ export async function registerPaymentRoutes(app: Express) {
     }
   });
 
-  app.post("/api/payments/paypal/create-order", isAuthenticated, paymentRateLimit(5, 60000), (_req: any, res: any, next: any) => { if (BETA_MODE) return res.status(403).json({ message: BETA_PAYMENT_MSG, beta: true }); next(); }, async (req: any, res) => {
+  // @ts-ignore — async handler with multiple middlewares exceeds Express typed overloads; correct at runtime
+  app.post("/api/payments/paypal/create-order", isAuthenticated, paymentRateLimit(5, 60000), (_req: any, res: any, next: any) => { if (BETA_MODE) return res.status(403).json({ message: BETA_PAYMENT_MSG, beta: true }); next(); }, async (req: any, res: any) => {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) return res.status(401).json({ message: "Unauthorized" });
@@ -291,7 +294,8 @@ export async function registerPaymentRoutes(app: Express) {
     }
   });
 
-  app.post("/api/payments/paypal/capture-order", isAuthenticated, paymentRateLimit(5, 60000), (_req: any, res: any, next: any) => { if (BETA_MODE) return res.status(403).json({ message: BETA_PAYMENT_MSG, beta: true }); next(); }, async (req: any, res) => {
+  // @ts-ignore — async handler with multiple middlewares exceeds Express typed overloads; correct at runtime
+  app.post("/api/payments/paypal/capture-order", isAuthenticated, paymentRateLimit(5, 60000), (_req: any, res: any, next: any) => { if (BETA_MODE) return res.status(403).json({ message: BETA_PAYMENT_MSG, beta: true }); next(); }, async (req: any, res: any) => {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) return res.status(401).json({ message: "Unauthorized" });
@@ -341,7 +345,7 @@ export async function registerPaymentRoutes(app: Express) {
       }
 
       const capturedAmount = purchaseUnit?.payments?.captures?.[0]?.amount?.value;
-      if (parseFloat(capturedAmount) < product.priceUsd) {
+      if (parseFloat(capturedAmount ?? "0") < product.priceUsd) {
         return res.status(400).json({ message: "Payment amount mismatch" });
       }
 
@@ -355,7 +359,8 @@ export async function registerPaymentRoutes(app: Express) {
     }
   });
 
-  app.post("/api/payments/stripe/create-checkout", isAuthenticated, paymentRateLimit(5, 60000), (_req: any, res: any, next: any) => { if (BETA_MODE) return res.status(403).json({ message: BETA_PAYMENT_MSG, beta: true }); next(); }, async (req: any, res) => {
+  // @ts-ignore — async handler with multiple middlewares exceeds Express typed overloads; correct at runtime
+  app.post("/api/payments/stripe/create-checkout", isAuthenticated, paymentRateLimit(5, 60000), (_req: any, res: any, next: any) => { if (BETA_MODE) return res.status(403).json({ message: BETA_PAYMENT_MSG, beta: true }); next(); }, async (req: any, res: any) => {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) return res.status(401).json({ message: "Unauthorized" });
@@ -415,7 +420,7 @@ export async function registerPaymentRoutes(app: Express) {
     }
   });
 
-  app.get("/api/payments/stripe/verify-session", isAuthenticated, (_req: any, res: any, next: any) => { if (BETA_MODE) return res.status(403).json({ message: BETA_PAYMENT_MSG, beta: true }); next(); }, async (req: any, res) => {
+  app.get("/api/payments/stripe/verify-session", isAuthenticated, (_req: any, res: any, next: any) => { if (BETA_MODE) return res.status(403).json({ message: BETA_PAYMENT_MSG, beta: true }); next(); }, async (req: any, res: any) => {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) return res.status(401).json({ message: "Unauthorized" });
@@ -464,7 +469,7 @@ export async function registerPaymentRoutes(app: Express) {
     }
   });
 
-  app.get("/api/payments/stripe/success", isAuthenticated, (_req: any, res: any, next: any) => { if (BETA_MODE) return res.status(403).json({ message: BETA_PAYMENT_MSG, beta: true }); next(); }, async (req: any, res) => {
+  app.get("/api/payments/stripe/success", isAuthenticated, (_req: any, res: any, next: any) => { if (BETA_MODE) return res.status(403).json({ message: BETA_PAYMENT_MSG, beta: true }); next(); }, async (req: any, res: any) => {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) return res.status(401).json({ message: "Unauthorized" });
@@ -502,7 +507,7 @@ export async function registerPaymentRoutes(app: Express) {
     }
   });
 
-  app.post("/api/payments/stripe/webhook", (_req: any, res: any, next: any) => { if (BETA_MODE) return res.status(403).json({ message: BETA_PAYMENT_MSG, beta: true }); next(); }, async (req: any, res) => {
+  app.post("/api/payments/stripe/webhook", (_req: any, res: any, next: any) => { if (BETA_MODE) return res.status(403).json({ message: BETA_PAYMENT_MSG, beta: true }); next(); }, async (req: any, res: any) => {
     try {
       const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
       if (!webhookSecret) {

@@ -2522,13 +2522,13 @@ export default function GameBoardPage() {
     if (lastGameIdRef.current !== gameId) {
       lastGameIdRef.current = gameId;
       previousHandRef.current = myHand;
-      previousBattlefieldRef.current = myBattlefield.map(bf => bf.cardId);
+      previousBattlefieldRef.current = myBattlefield.map((bf: BattlefieldCard) => bf.cardId);
       return;
     }
     
     const currentHand = myHand;
     const previousHand = previousHandRef.current || [];
-    const newCards = currentHand.filter(id => !previousHand.includes(id));
+    const newCards = currentHand.filter((id: string) => !previousHand.includes(id));
     if (newCards.length > 0) {
       setNewlyDrawnCards(new Set(newCards));
       const timer = setTimeout(() => setNewlyDrawnCards(new Set()), 500);
@@ -2542,9 +2542,9 @@ export default function GameBoardPage() {
     if (!game || !gameId) return;
     if (lastGameIdRef.current !== gameId) return;
     
-    const currentBattlefield = myBattlefield.map(bf => bf.cardId);
+    const currentBattlefield = myBattlefield.map((bf: BattlefieldCard) => bf.cardId);
     const previousBattlefield = previousBattlefieldRef.current || [];
-    const newDeployed = currentBattlefield.filter(id => !previousBattlefield.includes(id));
+    const newDeployed = currentBattlefield.filter((id: string) => !previousBattlefield.includes(id));
     if (newDeployed.length > 0) {
       setNewlyDeployedCards(new Set(newDeployed));
       const timer = setTimeout(() => setNewlyDeployedCards(new Set()), 600);
@@ -3594,7 +3594,7 @@ export default function GameBoardPage() {
       return;
     }
 
-    const newHand = myHand.filter((id) => !selectedCards.includes(id));
+    const newHand = myHand.filter((id: string) => !selectedCards.includes(id));
     const newBattlefield: BattlefieldCard[] = selectedCards.map((cardId) => ({
       cardId,
       faceDown: true,
@@ -4370,7 +4370,7 @@ export default function GameBoardPage() {
 
           {handView === "units" ? (
             <div className="flex gap-1.5 flex-wrap justify-center items-center" data-testid="unit-hand-cards">
-              {myHand.map((cardId) => {
+              {myHand.map((cardId: string) => {
                 const card = getCardById(cardId);
                 if (!card) return null;
                 const isPlayable = effectivePhase === "deployment" && (isMyTurn || isMultiplayer);

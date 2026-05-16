@@ -600,7 +600,7 @@ export default function FriendsPage() {
             <FriendChatPanel
               friend={chattingWith}
               onClose={() => setChattingWith(null)}
-              currentUserId={user.claims.sub}
+              currentUserId={user.id}
             />
           </div>
         )}
