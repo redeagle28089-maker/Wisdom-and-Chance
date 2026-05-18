@@ -519,8 +519,10 @@ export function registerMultiplayerRoutes(app: Express) {
       battlefieldInitState.battlefieldMode = true;
       battlefieldInitState.p1BattlefieldDeck = shuffleArray([...p1FieldDeckIds]);
       battlefieldInitState.p2BattlefieldDeck = shuffleArray([...p2FieldDeckIds]);
-      battlefieldInitState.p1ActiveFieldCardId = null;
-      battlefieldInitState.p2ActiveFieldCardId = null;
+      battlefieldInitState.p1BattlefieldDiscard = [];
+      battlefieldInitState.p2BattlefieldDiscard = [];
+      battlefieldInitState.activeFieldCardId = null;
+      battlefieldInitState.activeFieldCardOwner = null;
     }
 
     // Helper to create card instances with unique IDs
@@ -566,7 +568,7 @@ export function registerMultiplayerRoutes(app: Express) {
       player2VictoryPoints: 0,
       player1WithdrawalPoints: 0,
       player2WithdrawalPoints: 0,
-      currentPhase: "draw",
+      currentPhase: isBattlefieldMode ? "battlefield" : "draw",
       currentTurn: 1,
       activePlayer: room.hostId,
       status: "in_progress",

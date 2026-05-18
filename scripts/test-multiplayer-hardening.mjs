@@ -1204,8 +1204,14 @@ async function main() {
     }
     await sleep(400);
 
-    // Both players draw — this triggers the field card flip in the engine
-    // Mark BEFORE sending draw actions so we catch the game_state that follows
+    // New mechanic: game starts in "battlefield" phase; P1 (bfUser5) flips the battlefield card first.
+    const mFlip3 = bfUser5.mark();
+    bfUser5.send("game_action", { gameId: gameId3, action: "battlefield_flip" });
+    // Wait for phase to advance to "draw" after the flip
+    await bfUser5.waitForState(mFlip3, (s) => s.currentPhase === "draw", 5000, "draw phase after battlefield_flip").catch(() => null);
+    await sleep(200);
+
+    // Both players draw
     const markDraw = bfUser5.mark();
     bfUser5.send("game_action", { gameId: gameId3, action: "draw" });
     await sleep(200);
@@ -1213,23 +1219,22 @@ async function main() {
     await sleep(600);
     const gsAfterDraw = await bfUser5.waitForState(
       markDraw,
-      (s) => s.battlefieldActiveCards?.myCard != null && s.battlefieldActiveCards?.oppCard != null,
+      (s) => s.battlefieldActiveCards?.card != null,
       5000,
-      "game_state with battlefieldActiveCards.myCard and oppCard non-null"
+      "game_state with battlefieldActiveCards.card non-null"
     ).catch(() => null);
     if (!gsAfterDraw) {
       const latest = bfUser5.latestState();
       throw new Error(
-        `BF-U5 did not receive game_state with both battlefieldActiveCards (myCard/oppCard) after draw. ` +
+        `BF-U5 did not receive game_state with battlefieldActiveCards.card set after flip+draw. ` +
         `Latest battlefieldActiveCards: ${JSON.stringify(latest?.battlefieldActiveCards)}`
       );
     }
-    const myCard = gsAfterDraw.battlefieldActiveCards.myCard;
-    const oppCard = gsAfterDraw.battlefieldActiveCards.oppCard;
-    if (!Array.isArray(myCard.effects) || myCard.effects.length === 0) {
-      throw new Error(`Expected myCard.effects to be a non-empty array; got: ${JSON.stringify(myCard.effects)}`);
+    const activeCard3 = gsAfterDraw.battlefieldActiveCards.card;
+    if (!Array.isArray(activeCard3.effects) || activeCard3.effects.length === 0) {
+      throw new Error(`Expected card.effects to be a non-empty array; got: ${JSON.stringify(activeCard3.effects)}`);
     }
-    log("BF-CP3", `myCard=${myCard.name} effects=[${myCard.effects.map(e=>e.type).join(",")}], oppCard=${oppCard.name}`);
+    log("BF-CP3", `card=${activeCard3.name} effects=[${activeCard3.effects.map(e=>e.type).join(",")}]`);
 
     bfUser5.close(); bfUser6.close();
     await pgClient.query(`DELETE FROM game_rooms WHERE id = $1`, [bfRoom3.id]);
@@ -1279,6 +1284,12 @@ async function main() {
     }
     await sleep(400);
 
+    // New mechanic: battlefield phase first — P1 (bfUser7) flips the card
+    const mFlip4 = bfUser7.mark();
+    bfUser7.send("game_action", { gameId: gameId4, action: "battlefield_flip" });
+    await bfUser7.waitForState(mFlip4, (s) => s.currentPhase === "draw", 5000, "draw phase after flip CP4").catch(() => null);
+    await sleep(200);
+
     // Both players draw — triggers narrow-pass flip (deploy limit = 1)
     const md7 = bfUser7.mark(), md8 = bfUser8.mark();
     bfUser7.send("game_action", { gameId: gameId4, action: "draw" });
@@ -1291,7 +1302,7 @@ async function main() {
 
     // Verify active card is narrow-pass (deploy_limit_override=1)
     const stateAfterDraw = bfUser7.latestState();
-    const activeCard = stateAfterDraw?.battlefieldActiveCards?.myCard;
+    const activeCard = stateAfterDraw?.battlefieldActiveCards?.card;
     if (!activeCard) throw new Error("Expected myCard to be set after draw in narrow-pass game");
     const limitEff = (activeCard.effects || []).find((e) => e.type === "deploy_limit_override");
     if (!limitEff || limitEff.value !== 1) {
@@ -1369,7 +1380,13 @@ async function main() {
     }
     await sleep(400);
 
-    // Draw phase — triggers elemental-storm flip
+    // New mechanic: battlefield phase first — P1 (bfUser9) flips the card
+    const mFlip5 = bfUser9.mark();
+    bfUser9.send("game_action", { gameId: gameId5, action: "battlefield_flip" });
+    await bfUser9.waitForState(mFlip5, (s) => s.currentPhase === "draw", 5000, "draw phase after flip CP5").catch(() => null);
+    await sleep(200);
+
+    // Draw phase
     const md9 = bfUser9.mark(), md10 = bfUser10.mark();
     bfUser9.send("game_action", { gameId: gameId5, action: "draw" });
     bfUser10.send("game_action", { gameId: gameId5, action: "draw" });
@@ -1380,7 +1397,7 @@ async function main() {
 
     // Verify all_units_debuff effect is present in active card
     const state9 = bfUser9.latestState();
-    const stormCard = state9?.battlefieldActiveCards?.myCard;
+    const stormCard = state9?.battlefieldActiveCards?.card;
     if (!stormCard) throw new Error("Expected myCard to be set after draw in elemental-storm game");
     const debuffEff = (stormCard.effects || []).find((e) => e.type === "all_units_debuff");
     if (!debuffEff) {
@@ -1522,17 +1539,23 @@ async function main() {
     const specLeakedState = bfSpec.events.find((e) => e.type === "game_state");
     if (specLeakedState) throw new Error("BF-CP6: spectator received game_state — private data leaked");
 
-    // Both players draw — this triggers battlefield card flip
+    // New mechanic: battlefield phase first — P1 (bfUser11) flips the card
+    const mFlip6 = bfUser11.mark();
+    bfUser11.send("game_action", { gameId: gameId6, action: "battlefield_flip" });
+    await bfUser11.waitForState(mFlip6, (s) => s.currentPhase === "draw", 5000, "draw phase after flip CP6").catch(() => null);
+    await sleep(200);
+
+    // Both players draw — spectator should now receive spectator_battlefield_update with activeCard non-null
     const mSpec = bfSpec.mark();
     bfUser11.send("game_action", { gameId: gameId6, action: "draw" });
     bfUser12.send("game_action", { gameId: gameId6, action: "draw" });
 
-    // Spectator should receive spectator_battlefield_update with p1Card + p2Card non-null
+    // Spectator should receive spectator_battlefield_update with activeCard non-null
     const bfUpdateEv = await bfSpec.waitForAfter(
       mSpec,
-      (e) => e.type === "spectator_battlefield_update" && e.payload?.p1Card != null && e.payload?.p2Card != null,
+      (e) => e.type === "spectator_battlefield_update" && e.payload?.activeCard != null,
       5000,
-      "spectator_battlefield_update with p1Card+p2Card",
+      "spectator_battlefield_update with activeCard",
     );
     if (!bfUpdateEv.payload.battlefieldModeEnabled) {
       throw new Error(`BF-CP6: spectator_battlefield_update missing battlefieldModeEnabled flag`);

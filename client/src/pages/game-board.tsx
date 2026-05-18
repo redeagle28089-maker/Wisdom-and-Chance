@@ -236,15 +236,15 @@ function calculateBattlePower(
 
 // Battlefield mode field card strip shown between player zones
 function ActiveFieldCardStrip({
-  p1Card,
-  p2Card,
-  p1DeckRemaining,
-  p2DeckRemaining,
+  activeCard,
+  flippedByLabel,
+  myDeckRemaining,
+  oppDeckRemaining,
 }: {
-  p1Card: FieldCard | null;
-  p2Card: FieldCard | null;
-  p1DeckRemaining: number;
-  p2DeckRemaining: number;
+  activeCard: FieldCard | null;
+  flippedByLabel?: string;
+  myDeckRemaining: number;
+  oppDeckRemaining: number;
 }) {
   function renderEffects(effects: FieldCardEffect[]) {
     return effects.map((eff, i) => {
@@ -271,35 +271,28 @@ function ActiveFieldCardStrip({
   return (
     <div className="bg-amber-900/20 border border-amber-500/30 rounded-lg px-3 py-1.5 flex-shrink-0" data-testid="active-field-card-strip">
       <div className="flex items-center justify-center gap-1 mb-1">
-        <span className="text-amber-400 text-[10px] font-bold uppercase tracking-widest">⚔ Battlefield Cards</span>
+        <span className="text-amber-400 text-[10px] font-bold uppercase tracking-widest">⚔ Active Battlefield</span>
+        {flippedByLabel && (
+          <span className="text-amber-300/60 text-[9px]">({flippedByLabel})</span>
+        )}
       </div>
       <div className="flex items-center justify-around gap-2">
         <div className="flex-1 text-center min-w-0">
-          <div className="text-[9px] text-slate-500 mb-0.5">Your field ({p1DeckRemaining} left)</div>
-          {p1Card ? (
+          {activeCard ? (
             <div className="bg-amber-900/40 border border-amber-500/40 rounded px-1.5 py-0.5">
-              <div className="text-amber-200 text-[10px] font-semibold truncate">{p1Card.name}</div>
+              <div className="text-amber-200 text-[10px] font-semibold truncate">{activeCard.name}</div>
               <div className="flex flex-wrap gap-0.5 justify-center text-[9px] mt-0.5">
-                {renderEffects(p1Card.effects)}
+                {renderEffects(activeCard.effects)}
               </div>
             </div>
           ) : (
-            <div className="text-slate-600 text-[9px]">—</div>
+            <div className="text-slate-600 text-[9px]">No active battlefield card</div>
           )}
         </div>
         <div className="w-px h-8 bg-amber-500/20 flex-shrink-0" />
-        <div className="flex-1 text-center min-w-0">
-          <div className="text-[9px] text-slate-500 mb-0.5">Opp. field ({p2DeckRemaining} left)</div>
-          {p2Card ? (
-            <div className="bg-amber-900/40 border border-amber-500/40 rounded px-1.5 py-0.5">
-              <div className="text-amber-200 text-[10px] font-semibold truncate">{p2Card.name}</div>
-              <div className="flex flex-wrap gap-0.5 justify-center text-[9px] mt-0.5">
-                {renderEffects(p2Card.effects)}
-              </div>
-            </div>
-          ) : (
-            <div className="text-slate-600 text-[9px]">—</div>
-          )}
+        <div className="text-center text-[9px] text-slate-500 flex-shrink-0">
+          <div>My deck: {myDeckRemaining}</div>
+          <div>Opp: {oppDeckRemaining}</div>
         </div>
       </div>
     </div>
@@ -2436,31 +2429,30 @@ export default function GameBoardPage() {
   const opponentCommanderId = useServerState ? serverState.opponentCommanderId : (game ? (isPlayer1 ? game.gameState.player2CommanderId : game.gameState.player1CommanderId) : undefined);
   const opponentCommander = opponentCommanderId ? allCommanders.find(c => c.id === opponentCommanderId) : undefined;
 
-  // Battlefield mode — derive active field cards from server state (multiplayer) or local state (practice)
+  // Battlefield mode — derive active field card from server state (multiplayer) or local state (practice)
   const isBattlefieldMode = useServerState
     ? !!serverState.battlefieldModeEnabled
     : practiceFieldEnabled;
-  // Server sends myCard/oppCard (player-perspective). Convert back to global p1/p2 for UI.
-  const bfActiveP1Card = useServerState
-    ? (isPlayer1
-        ? (serverState.battlefieldActiveCards?.myCard || null)
-        : (serverState.battlefieldActiveCards?.oppCard || null))
-    : practiceActiveFieldCards.p1Card;
-  const bfActiveP2Card = useServerState
-    ? (isPlayer1
-        ? (serverState.battlefieldActiveCards?.oppCard || null)
-        : (serverState.battlefieldActiveCards?.myCard || null))
-    : practiceActiveFieldCards.p2Card;
-  const bfP1Remaining = useServerState
-    ? (isPlayer1
-        ? (serverState.battlefieldDeckRemaining?.myCount ?? 0)
-        : (serverState.battlefieldDeckRemaining?.oppCount ?? 0))
+  // Multiplayer: single shared active card flipped by one player per round.
+  // Practice: keep the two-card local system unchanged.
+  const bfActiveCard = useServerState
+    ? (serverState.battlefieldActiveCards?.card || null)
+    : (practiceActiveFieldCards.p1Card || practiceActiveFieldCards.p2Card || null);
+  // Backward-compat aliases used by practice-mode power calculations below.
+  const bfActiveP1Card = useServerState ? bfActiveCard : practiceActiveFieldCards.p1Card;
+  const bfActiveP2Card = useServerState ? bfActiveCard : practiceActiveFieldCards.p2Card;
+  const bfMyRemaining = useServerState
+    ? (serverState.battlefieldDeckRemaining?.myCount ?? 0)
     : practiceP1FieldDeck.length;
-  const bfP2Remaining = useServerState
-    ? (isPlayer1
-        ? (serverState.battlefieldDeckRemaining?.oppCount ?? 0)
-        : (serverState.battlefieldDeckRemaining?.myCount ?? 0))
+  const bfOppRemaining = useServerState
+    ? (serverState.battlefieldDeckRemaining?.oppCount ?? 0)
     : practiceP2FieldDeck.length;
+  const bfActiveFlippedById = useServerState
+    ? (serverState.battlefieldActiveCards?.flippedByPlayerId ?? null)
+    : null;
+  const bfFlipPlayerId = useServerState
+    ? (serverState.battlefieldFlipPlayerId ?? null)
+    : null;
   
   // Get game mode config (draw/deploy counts)
   const gameMode: GameMode = game?.gameMode || "standard";
@@ -2469,12 +2461,9 @@ export default function GameBoardPage() {
   const baseCardsToDeploy = modeConfig.cardsToDeploy;
   const myExtraDeploy = useServerState ? (serverState.extraDeploy || 0) : (game ? (isPlayer1 ? (game.gameState.player1ExtraDeploy || 0) : (game.gameState.player2ExtraDeploy || 0)) : 0);
   // Battlefield mode: apply deploy_limit_override from active field cards (minimum wins)
-  // Multiplayer: read from serverState.battlefieldActiveCards; Practice: read from local state
+  // Multiplayer: single active card; Practice: two-card local system
   const serverFieldEffects = (useServerState && serverState?.battlefieldModeEnabled)
-    ? [
-        ...(serverState.battlefieldActiveCards?.myCard?.effects || []),
-        ...(serverState.battlefieldActiveCards?.oppCard?.effects || []),
-      ]
+    ? (serverState.battlefieldActiveCards?.card?.effects || [])
     : [];
   const practiceFieldActiveEffects = practiceFieldEnabled
     ? [
@@ -4124,10 +4113,14 @@ export default function GameBoardPage() {
 
         {isBattlefieldMode && (
           <ActiveFieldCardStrip
-            p1Card={isPlayer1 ? bfActiveP1Card : bfActiveP2Card}
-            p2Card={isPlayer1 ? bfActiveP2Card : bfActiveP1Card}
-            p1DeckRemaining={isPlayer1 ? bfP1Remaining : bfP2Remaining}
-            p2DeckRemaining={isPlayer1 ? bfP2Remaining : bfP1Remaining}
+            activeCard={bfActiveCard}
+            flippedByLabel={
+              bfActiveFlippedById
+                ? (bfActiveFlippedById === user?.id ? "flipped by you" : "flipped by opponent")
+                : undefined
+            }
+            myDeckRemaining={bfMyRemaining}
+            oppDeckRemaining={bfOppRemaining}
           />
         )}
 
@@ -4146,7 +4139,7 @@ export default function GameBoardPage() {
                 <div className="flex items-center gap-2 text-amber-300" data-testid="text-waiting-opponent">
                   <div className="animate-pulse w-2 h-2 rounded-full bg-amber-400"></div>
                   <span className="text-sm">
-                    Waiting for opponent to {effectivePhase === "draw" ? "draw cards" : effectivePhase === "deployment" ? "deploy cards" : "end turn"}...
+                    Waiting for opponent to {effectivePhase === "battlefield" ? "flip battlefield card" : effectivePhase === "draw" ? "draw cards" : effectivePhase === "deployment" ? "deploy cards" : "end turn"}...
                   </span>
                 </div>
               )}
@@ -4184,6 +4177,16 @@ export default function GameBoardPage() {
                   <div className="animate-pulse w-2 h-2 rounded-full bg-amber-400"></div>
                   <span className="text-sm">AI is thinking…</span>
                 </div>
+              )}
+              {effectivePhase === "battlefield" && isMultiplayer && bfFlipPlayerId === user?.id && (
+                <Button
+                  onClick={() => sendAction("battlefield_flip")}
+                  disabled={isMultiplayer && !wsConnected}
+                  className="bg-gradient-to-r from-amber-600 to-yellow-600"
+                  data-testid="button-battlefield-flip"
+                >
+                  Flip Battlefield Card
+                </Button>
               )}
               {effectivePhase === "draw" && (isMyTurn || isMultiplayer) && !(useServerState && serverState.myHasDrawn) && (
                 <Button

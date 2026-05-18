@@ -125,8 +125,8 @@ interface ActivePvPGame {
   recentActionIds: Map<string, Set<string>>;
   broadcastHandler?: (eventType: string, payload: any) => void;
   battlefieldMode: boolean;
-  p1ActiveFieldCard: FieldCard | null;
-  p2ActiveFieldCard: FieldCard | null;
+  activeFieldCard: FieldCard | null;
+  battlefieldFlipPlayer: "player1" | "player2";
 }
 
 type EngineBroadcastHandler = (eventType: string, payload: any) => void;
@@ -181,8 +181,9 @@ export interface SanitizedGameState {
   responsiblePlayerIds: string[];
   consecutiveTimeouts: { player1: number; player2: number };
   battlefieldModeEnabled?: boolean;
-  battlefieldActiveCards?: { myCard: FieldCard | null; oppCard: FieldCard | null } | null;
-  battlefieldDeckRemaining?: { myCount: number; oppCount: number } | null;
+  battlefieldActiveCards?: { card: FieldCard | null; flippedByPlayerId: string | null } | null;
+  battlefieldDeckRemaining?: { myCount: number; oppCount: number; myDiscardCount: number; oppDiscardCount: number } | null;
+  battlefieldFlipPlayerId?: string | null;
 }
 
 export interface CombatResult {
@@ -258,8 +259,8 @@ class ServerGameEngine {
       consecutiveTimeouts: new Map(),
       recentActionIds: new Map(),
       battlefieldMode: !!((game.gameState as any).battlefieldMode),
-      p1ActiveFieldCard: null,
-      p2ActiveFieldCard: null,
+      activeFieldCard: null,
+      battlefieldFlipPlayer: "player1",
     });
     // Start the inactivity turn timer for the initial phase.
     this.scheduleTurnTimer(game.id);
@@ -361,6 +362,8 @@ class ServerGameEngine {
           ...(active.player1TurnEnded ? [] : [p1]),
           ...(active.player2TurnEnded ? [] : [p2]),
         ];
+      case "battlefield":
+        return [active.battlefieldFlipPlayer === "player1" ? p1 : p2];
       default:
         return [];
     }
@@ -463,7 +466,11 @@ class ServerGameEngine {
     const isP1 = this.isPlayer1(game, playerId);
     const phase = game.currentPhase;
 
-    if (phase === "draw") {
+    if (phase === "battlefield") {
+      if (active.battlefieldFlipPlayer === (isP1 ? "player1" : "player2")) {
+        await this.processBattlefieldPhase(gameId, playerId);
+      }
+    } else if (phase === "draw") {
       const drawn = isP1 ? active.player1DrawnThisTurn : active.player2DrawnThisTurn;
       if (!drawn) await this.processDrawPhase(gameId, playerId);
     } else if (phase === "deployment") {
@@ -533,34 +540,69 @@ class ServerGameEngine {
 
     if (active.player1DrawnThisTurn && active.player2DrawnThisTurn) {
       game.currentPhase = "deployment";
-      // Battlefield mode: flip one card from each player's field deck for this round
-      if (active.battlefieldMode) {
-        const gsAny = gs as any;
-        const p1Deck: string[] = [...(gsAny.p1BattlefieldDeck || [])];
-        const p2Deck: string[] = [...(gsAny.p2BattlefieldDeck || [])];
-        if (p1Deck.length > 0) {
-          const cardId = p1Deck.shift()!;
-          gsAny.p1BattlefieldDeck = p1Deck;
-          gsAny.p1ActiveFieldCardId = cardId;
-          active.p1ActiveFieldCard = (await storage.getFieldCard(cardId)) || null;
-        } else {
-          gsAny.p1ActiveFieldCardId = null;
-          active.p1ActiveFieldCard = null;
-        }
-        if (p2Deck.length > 0) {
-          const cardId = p2Deck.shift()!;
-          gsAny.p2BattlefieldDeck = p2Deck;
-          gsAny.p2ActiveFieldCardId = cardId;
-          active.p2ActiveFieldCard = (await storage.getFieldCard(cardId)) || null;
-        } else {
-          gsAny.p2ActiveFieldCardId = null;
-          active.p2ActiveFieldCard = null;
-        }
-      }
     }
 
     await this.persistGame(game);
     return { success: true, type: "state_update", broadcast: "opponent_drew" };
+  }
+
+  /**
+   * Handles the "battlefield" phase at the start of each round.
+   * Only the designated flip player may call this.  Pops the top card from
+   * their field deck (reshuffling their own discard back in when empty), marks
+   * it as the single active field card for the round, then advances to "draw".
+   */
+  async processBattlefieldPhase(gameId: string, playerId: string): Promise<ActionResult> {
+    const active = this.activeGames.get(gameId);
+    if (!active) return { success: false, error: "Game not found" };
+
+    const game = active.game;
+    if (game.status !== "in_progress") return { success: false, error: "Game is not in progress" };
+    if (game.currentPhase !== "battlefield") return { success: false, error: "Not in battlefield phase" };
+
+    const isP1 = this.isPlayer1(game, playerId);
+    const flipPlayerIsP1 = active.battlefieldFlipPlayer === "player1";
+    if (isP1 !== flipPlayerIsP1) {
+      return { success: false, error: "Not your turn to flip a battlefield card" };
+    }
+
+    const gs = game.gameState as any;
+    const deckKey = isP1 ? "p1BattlefieldDeck" : "p2BattlefieldDeck";
+    const discardKey = isP1 ? "p1BattlefieldDiscard" : "p2BattlefieldDiscard";
+
+    // Move the previous active card back to its owner's discard before flipping a new one
+    if (gs.activeFieldCardId && gs.activeFieldCardOwner) {
+      const ownerDiscardKey = gs.activeFieldCardOwner === "player1"
+        ? "p1BattlefieldDiscard"
+        : "p2BattlefieldDiscard";
+      gs[ownerDiscardKey] = [...(gs[ownerDiscardKey] || []), gs.activeFieldCardId];
+      gs.activeFieldCardId = null;
+      gs.activeFieldCardOwner = null;
+      active.activeFieldCard = null;
+    }
+
+    let deck: string[] = [...(gs[deckKey] || [])];
+    let discard: string[] = [...(gs[discardKey] || [])];
+
+    // Reshuffle discard back into deck when deck is exhausted
+    if (deck.length === 0) {
+      if (discard.length === 0) {
+        return { success: false, error: "No battlefield cards available" };
+      }
+      deck = shuffleArray([...discard]);
+      discard = [];
+    }
+
+    const cardId = deck.shift()!;
+    gs[deckKey] = deck;
+    gs[discardKey] = discard;
+    gs.activeFieldCardId = cardId;
+    gs.activeFieldCardOwner = isP1 ? "player1" : "player2";
+    active.activeFieldCard = (await storage.getFieldCard(cardId)) || null;
+
+    game.currentPhase = "draw";
+    await this.persistGame(game);
+    return { success: true, type: "state_update", broadcast: "battlefield_flipped" };
   }
 
   async processDeployment(gameId: string, playerId: string, cardIds: string[]): Promise<ActionResult> {
@@ -581,11 +623,9 @@ class ServerGameEngine {
 
     const modeConfig = this.getGameMode(game);
     let maxDeploy = modeConfig.cardsToDeploy + ((isP1 ? gs.player1ExtraDeploy : gs.player2ExtraDeploy) || 0);
-    // Battlefield mode: apply deploy_limit_override from active field cards (minimum value wins)
-    if (active.battlefieldMode) {
-      const overrides: number[] = [active.p1ActiveFieldCard, active.p2ActiveFieldCard]
-        .filter((fc): fc is FieldCard => fc !== null)
-        .flatMap(fc => fc.effects)
+    // Battlefield mode: apply deploy_limit_override from the single active field card
+    if (active.battlefieldMode && active.activeFieldCard) {
+      const overrides: number[] = active.activeFieldCard.effects
         .filter((eff): eff is Extract<FieldCard["effects"][number], { type: "deploy_limit_override" }> => eff.type === "deploy_limit_override")
         .map(eff => eff.value);
       if (overrides.length > 0) {
@@ -1019,11 +1059,10 @@ class ServerGameEngine {
     const p1BFCards = await this.mapBattlefieldToCards(gs.player1Battlefield);
     const p2BFCards = await this.mapBattlefieldToCards(gs.player2Battlefield);
 
-    // Collect active field cards for this round (battlefield mode)
+    // Collect active field card for this round (battlefield mode — single shared card)
     const activeFieldCards: FieldCard[] = [];
-    if (active.battlefieldMode) {
-      if (active.p1ActiveFieldCard) activeFieldCards.push(active.p1ActiveFieldCard);
-      if (active.p2ActiveFieldCard) activeFieldCards.push(active.p2ActiveFieldCard);
+    if (active.battlefieldMode && active.activeFieldCard) {
+      activeFieldCards.push(active.activeFieldCard);
     }
 
     const p1Breakdown = await this.calculateBattlePower(
@@ -1166,13 +1205,7 @@ class ServerGameEngine {
     gs.player2NegateAndHalve = false;
     gs.player1ProtectedElement = undefined;
     gs.player2ProtectedElement = undefined;
-    // Clear battlefield field cards after round resolves
-    if (active.battlefieldMode) {
-      (gs as any).p1ActiveFieldCardId = null;
-      (gs as any).p2ActiveFieldCardId = null;
-      active.p1ActiveFieldCard = null;
-      active.p2ActiveFieldCard = null;
-    }
+    // Battlefield mode: active card persists until replaced next round (no clear here)
     gs.lastCombatLog = combatLog;
     gs.combatHistory = [...(gs.combatHistory || []), combatLog];
     gs.player1HasDrawn = false;
@@ -1192,7 +1225,14 @@ class ServerGameEngine {
       gameOver = true;
       resultWinnerId = game.player1Id;
     } else {
-      game.currentPhase = "draw";
+      // Battlefield mode: next round starts with the battlefield phase (other player flips);
+      // toggle which player flips next before advancing to let scheduleTurnTimer pick the right responsible player.
+      if (active.battlefieldMode) {
+        active.battlefieldFlipPlayer = active.battlefieldFlipPlayer === "player1" ? "player2" : "player1";
+        game.currentPhase = "battlefield";
+      } else {
+        game.currentPhase = "draw";
+      }
       game.currentTurn += 1;
     }
 
@@ -1544,8 +1584,12 @@ class ServerGameEngine {
       battlefieldModeEnabled: active.battlefieldMode || false,
       battlefieldActiveCards: active.battlefieldMode
         ? {
-            myCard: isP1 ? active.p1ActiveFieldCard : active.p2ActiveFieldCard,
-            oppCard: isP1 ? active.p2ActiveFieldCard : active.p1ActiveFieldCard,
+            card: active.activeFieldCard,
+            flippedByPlayerId: (gs as any).activeFieldCardOwner === "player1"
+              ? game.player1Id
+              : (gs as any).activeFieldCardOwner === "player2"
+                ? game.player2Id!
+                : null,
           }
         : null,
       battlefieldDeckRemaining: active.battlefieldMode
@@ -1556,7 +1600,16 @@ class ServerGameEngine {
             oppCount: isP1
               ? ((gs as any).p2BattlefieldDeck || []).length
               : ((gs as any).p1BattlefieldDeck || []).length,
+            myDiscardCount: isP1
+              ? ((gs as any).p1BattlefieldDiscard || []).length
+              : ((gs as any).p2BattlefieldDiscard || []).length,
+            oppDiscardCount: isP1
+              ? ((gs as any).p2BattlefieldDiscard || []).length
+              : ((gs as any).p1BattlefieldDiscard || []).length,
           }
+        : null,
+      battlefieldFlipPlayerId: active.battlefieldMode
+        ? (active.battlefieldFlipPlayer === "player1" ? game.player1Id : game.player2Id!)
         : null,
     };
   }

@@ -673,6 +673,9 @@ class GameWebSocketServer {
 
     let result;
     switch (action) {
+      case "battlefield_flip":
+        result = await gameEngine.processBattlefieldPhase(gameId, userId);
+        break;
       case "draw":
         result = await gameEngine.processDrawPhase(gameId, userId);
         break;
@@ -802,8 +805,8 @@ class GameWebSocketServer {
     const payload = {
       gameId,
       battlefieldModeEnabled: true,
-      p1Card: active.p1ActiveFieldCard,
-      p2Card: active.p2ActiveFieldCard,
+      activeCard: active.activeFieldCard,
+      activeCardOwner: (gs.activeFieldCardOwner as string | undefined) || null,
       p1DeckRemaining: (gs.p1BattlefieldDeck as string[] | undefined)?.length ?? 0,
       p2DeckRemaining: (gs.p2BattlefieldDeck as string[] | undefined)?.length ?? 0,
     };
