@@ -5,17 +5,17 @@ modules = ["nodejs-20", "web", "python3", "python-3.11", "postgresql-16"]
   [nix]
   channel = "stable-24_05"
 
-  [[ports]]
-  localPort = 5000
-  externalPort = 80
+[[ports]]
+localPort = 5000
+externalPort = 80
 
-  [[ports]]
-  localPort = 8080
-  externalPort = 8080
+[[ports]]
+localPort = 8080
+externalPort = 8080
 
-  [[ports]]
-  localPort = 8081
-  externalPort = 8081
+[[ports]]
+localPort = 8081
+externalPort = 8081
 
   [env]
   PORT = "5000"

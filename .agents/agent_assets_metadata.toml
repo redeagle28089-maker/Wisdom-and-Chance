@@ -162,3 +162,9 @@ id = "KAm6T_m4r736HoqNeuSmK"
 uri = "file://exports/steam-electron-implementation-plan.pdf"
 type = "pdf"
 title = "Steam / Desktop Electron Client — Implementation Plan"
+
+[[outputs]]
+id = "6MQQ2-2lp3-5uD6l7m1UA"
+uri = "file://exports/game-board-layout.pdf"
+type = "pdf"
+title = "Game Board Zone Layout — Draw Your Zones"
