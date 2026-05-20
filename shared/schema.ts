@@ -15,7 +15,7 @@ export type Element = typeof ELEMENTS[number];
 export const TRAITS = ["Quick Strike", "Care Package", "Restoration", "Guardian"] as const;
 export type Trait = typeof TRAITS[number];
 
-export const GAME_PHASES = ["draw", "deployment", "combat", "calculation", "end"] as const;
+export const GAME_PHASES = ["battlefield", "draw", "deployment", "combat", "calculation", "end"] as const;
 export type GamePhase = typeof GAME_PHASES[number];
 
 export const GAME_STATUS = ["waiting", "in_progress", "completed"] as const;

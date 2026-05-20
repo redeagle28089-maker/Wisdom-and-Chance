@@ -4180,7 +4180,7 @@ export default function GameBoardPage() {
               )}
               {effectivePhase === "battlefield" && isMultiplayer && bfFlipPlayerId === user?.id && (
                 <Button
-                  onClick={() => sendAction("battlefield_flip")}
+                  onClick={() => trackedSendGameAction("battlefield_flip", {})}
                   disabled={isMultiplayer && !wsConnected}
                   className="bg-gradient-to-r from-amber-600 to-yellow-600"
                   data-testid="button-battlefield-flip"
