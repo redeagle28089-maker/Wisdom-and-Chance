@@ -240,9 +240,15 @@ async function runPracticeGame({
     }, token);
   }
 
+  // Never force-complete: if the game is still in_progress here, the
+  // simulation logic has a bug.  A 40-card deck with 2 drawn/turn exhausts
+  // in ≤18 turns, so maxTurns=30 should never be reached under normal play.
   if (current.status !== "completed") {
-    const winner = current.player1HP >= current.player2HP ? userId : "player-ai";
-    current = await api(`/api/games/${current.id}`, "PATCH", { status: "completed", currentPhase: "end", winnerId: winner }, token);
+    throw new Error(
+      `Game did not reach completion after ${turns} turns (still ${current.status}). ` +
+      `P1HP=${current.player1HP} P2HP=${current.player2HP}. ` +
+      `AI simulation loop must drive the game to a natural terminal state.`
+    );
   }
   return current;
 }
@@ -357,9 +363,19 @@ async function main() {
     });
     if (result.status !== "completed") throw new Error(`status=${result.status}`);
     if (!result.winnerId) throw new Error("winnerId null");
+    // Winner correctness: the winner must still be alive (HP > 0).
+    // Terminal conditions are either HP ≤ 0 OR deck exhaustion — in both cases
+    // the winner retains positive HP, but the loser's HP may still be > 0 if
+    // their deck ran out before combat could finish them.
+    if (result.winnerId === userId && result.player1HP <= 0)
+      throw new Error(`winner=player but P1HP=${result.player1HP} ≤ 0 — winner must be alive`);
+    if (result.winnerId === "player-ai" && result.player2HP <= 0)
+      throw new Error(`winner=AI but P2HP=${result.player2HP} ≤ 0 — AI (player2) must be alive`);
     const p = await api(`/api/games/${result.id}`, "GET", null, token);
     if (p.status !== "completed" || !p.winnerId) throw new Error("DB not updated");
-    log("PR-CP3", `winner=${p.winnerId === userId ? "player" : "AI"} P1HP=${p.player1HP} P2HP=${p.player2HP}`);
+    if (p.winnerId !== result.winnerId)
+      throw new Error(`DB winnerId=${p.winnerId} does not match simulation=${result.winnerId}`);
+    log("PR-CP3", `winner=${p.winnerId === userId ? "player" : "AI"} P1HP=${p.player1HP} P2HP=${p.player2HP} (HP terminal state correct)`);
   });
 
   // -----------------------------------------------------------------------
@@ -372,9 +388,14 @@ async function main() {
     });
     if (result.status !== "completed") throw new Error(`status=${result.status}`);
     if (!result.winnerId) throw new Error("winnerId null");
+    if (result.winnerId === userId && result.player1HP <= 0)
+      throw new Error(`winner=player but P1HP=${result.player1HP} ≤ 0 — winner must be alive`);
+    if (result.winnerId === "player-ai" && result.player2HP <= 0)
+      throw new Error(`winner=AI but P2HP=${result.player2HP} ≤ 0 — AI (player2) must be alive`);
     const p = await api(`/api/games/${result.id}`, "GET", null, token);
     if (p.status !== "completed" || !p.winnerId) throw new Error("DB not updated");
-    log("PR-CP4", `winner=${p.winnerId === userId ? "player" : "AI"}`);
+    if (p.winnerId !== result.winnerId) throw new Error(`DB winner mismatch`);
+    log("PR-CP4", `winner=${p.winnerId === userId ? "player" : "AI"} P1HP=${p.player1HP} P2HP=${p.player2HP}`);
   });
 
   // -----------------------------------------------------------------------
@@ -387,9 +408,14 @@ async function main() {
     });
     if (result.status !== "completed") throw new Error(`status=${result.status}`);
     if (!result.winnerId) throw new Error("winnerId null");
+    if (result.winnerId === userId && result.player1HP <= 0)
+      throw new Error(`winner=player but P1HP=${result.player1HP} ≤ 0 — winner must be alive`);
+    if (result.winnerId === "player-ai" && result.player2HP <= 0)
+      throw new Error(`winner=AI but P2HP=${result.player2HP} ≤ 0 — AI (player2) must be alive`);
     const p = await api(`/api/games/${result.id}`, "GET", null, token);
     if (p.status !== "completed" || !p.winnerId) throw new Error("DB not updated");
-    log("PR-CP5", `winner=${p.winnerId === userId ? "player" : "AI"}`);
+    if (p.winnerId !== result.winnerId) throw new Error(`DB winner mismatch`);
+    log("PR-CP5", `winner=${p.winnerId === userId ? "player" : "AI"} P1HP=${p.player1HP} P2HP=${p.player2HP}`);
   });
 
   // -----------------------------------------------------------------------
@@ -581,10 +607,54 @@ async function main() {
       log("PR-CP6", `Round 2: HP after debuffed combat — P1=${persisted2.player1HP} P2=${persisted2.player2HP} (persisted, reflects debuffed delta=${debuffDamage})`);
     }
 
-    // Finish the game
-    const winner = current.player1HP >= current.player2HP ? userId : "player-ai";
-    await api(`/api/games/${current.id}`, "PATCH", { status: "completed", currentPhase: "end", winnerId: winner }, token);
-    log("PR-CP6", `Battlefield game complete — winner=${winner === userId ? "player" : "AI"}`);
+    // Continue the game naturally to completion (no force-complete)
+    let bfFinal = current;
+    let bfTurns = 0;
+    const BF_CARDS_TO_DRAW = 2;
+    while (bfFinal.status === "in_progress" && bfTurns < 28) {
+      bfTurns++;
+      const bgs = bfFinal.gameState;
+      const pd1 = [...bgs.player1Deck], pd2 = [...bgs.player2Deck];
+      const ph1 = [...bgs.player1Hand], ph2 = [...bgs.player2Hand];
+      if (pd1.length < CARDS_TO_DRAW) {
+        bfFinal = await api(`/api/games/${bfFinal.id}`, "PATCH", { status: "completed", currentPhase: "end", winnerId: "player-ai", player1HP: bfFinal.player1HP, player2HP: bfFinal.player2HP }, token);
+        break;
+      }
+      if (pd2.length < CARDS_TO_DRAW) {
+        bfFinal = await api(`/api/games/${bfFinal.id}`, "PATCH", { status: "completed", currentPhase: "end", winnerId: userId, player1HP: bfFinal.player1HP, player2HP: bfFinal.player2HP }, token);
+        break;
+      }
+      ph1.push(...pd1.splice(0, CARDS_TO_DRAW));
+      ph2.push(...pd2.splice(0, CARDS_TO_DRAW));
+      const dep1 = [...ph1].sort((a, b) => cardPower(b, cardMap) - cardPower(a, cardMap)).slice(0, 2);
+      const dep2 = aiSelectCards(ph2, 2, "medium", cardMap);
+      if (dep1.length < 2 || dep2.length < 2) {
+        bfFinal = await api(`/api/games/${bfFinal.id}`, "PATCH", { status: "completed", currentPhase: "end", winnerId: userId, player1HP: bfFinal.player1HP, player2HP: bfFinal.player2HP }, token);
+        break;
+      }
+      const bf1 = dep1.map((c) => ({ cardId: c, faceDown: false }));
+      const bf2 = dep2.map((c) => ({ cardId: c, faceDown: false }));
+      const t1 = calcBattlePower(bf1, cardMap), t2 = calcBattlePower(bf2, cardMap);
+      const dmg = Math.max(1, Math.abs(t1 - t2));
+      let hp1 = bfFinal.player1HP, hp2 = bfFinal.player2HP;
+      if (t1 >= t2) hp2 = Math.max(0, hp2 - dmg); else hp1 = Math.max(0, hp1 - dmg);
+      const over = hp1 <= 0 || hp2 <= 0;
+      const wid = over ? (hp1 > 0 ? userId : "player-ai") : null;
+      bfFinal = await api(`/api/games/${bfFinal.id}`, "PATCH", {
+        currentPhase: over ? "end" : "draw", currentTurn: bfFinal.currentTurn + (over ? 0 : 1),
+        status: over ? "completed" : "in_progress", winnerId: wid,
+        player1HP: hp1, player2HP: hp2,
+        gameState: { ...bgs, player1Hand: ph1.filter(c => !dep1.includes(c)), player1Deck: pd1, player2Hand: ph2.filter(c => !dep2.includes(c)), player2Deck: pd2, player1Battlefield: [], player2Battlefield: [], player1HasDrawn: false, player2HasDrawn: false },
+      }, token);
+    }
+    if (bfFinal.status !== "completed") {
+      throw new Error(`Battlefield game did not complete naturally after ${bfTurns + 2} rounds`);
+    }
+    if (bfFinal.winnerId === userId && bfFinal.player1HP <= 0)
+      throw new Error(`BF winner=player but P1HP=${bfFinal.player1HP} ≤ 0 — winner must be alive`);
+    if (bfFinal.winnerId === "player-ai" && bfFinal.player2HP <= 0)
+      throw new Error(`BF winner=AI but P2HP=${bfFinal.player2HP} ≤ 0 — AI (player2) must be alive`);
+    log("PR-CP6", `Battlefield game complete — winner=${bfFinal.winnerId === userId ? "player" : "AI"} P1HP=${bfFinal.player1HP} P2HP=${bfFinal.player2HP}`);
   });
 
   // -----------------------------------------------------------------------
