@@ -22,8 +22,11 @@ import {
   RefreshCw,
   Eye,
   User,
-  Layers
+  Layers,
+  LayoutGrid,
+  AlertTriangle
 } from "lucide-react";
+import { Link } from "wouter";
 import type { GameMode } from "@shared/schema";
 import { GAME_MODES, GAME_MODE_CONFIG } from "@shared/schema";
 
@@ -74,7 +77,7 @@ export default function LobbyPage() {
 
   const { data: fieldDeckData, isLoading: fieldDeckLoading } = useQuery<{ cardIds?: string[] } | null>({
     queryKey: ["/api/decks/battlefield"],
-    enabled: battlefieldMode,
+    enabled: isAuthenticated,
   });
   const hasValidFieldDeck = !!(fieldDeckData?.cardIds && fieldDeckData.cardIds.length >= 7);
 
@@ -297,7 +300,11 @@ export default function LobbyPage() {
                     </div>
                     {battlefieldMode && !fieldDeckLoading && !hasValidFieldDeck && (
                       <p className="text-amber-400 text-xs">
-                        You need a saved 7-card battlefield deck. Build one in the Deck Builder before starting a Battlefield room.
+                        You need a saved 7-card battlefield deck.{" "}
+                        <Link href="/deck-builder" className="underline text-amber-300 hover:text-amber-100 font-medium">
+                          Build one in the Deck Builder
+                        </Link>{" "}
+                        before starting a Battlefield room.
                       </p>
                     )}
                     {battlefieldMode && hasValidFieldDeck && (
@@ -353,6 +360,23 @@ export default function LobbyPage() {
               </div>
             </DialogContent>
           </Dialog>
+        )}
+
+        {/* Persistent banner: battlefield rooms exist but player has no field deck */}
+        {isAuthenticated && !fieldDeckLoading && !hasValidFieldDeck && allRooms.some(r => r.settings?.battlefieldMode) && (
+          <div className="flex items-start gap-3 bg-amber-900/30 border border-amber-500/40 rounded-lg px-4 py-3" data-testid="banner-bf-deck-missing">
+            <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+            <div className="text-sm">
+              <p className="text-amber-200 font-medium">Battlefield rooms are open — but you need a field deck to join them.</p>
+              <p className="text-amber-400/80 mt-0.5">
+                <Link href="/deck-builder" className="underline text-amber-300 hover:text-amber-100 font-medium" data-testid="link-build-bf-deck">
+                  <LayoutGrid className="w-3.5 h-3.5 inline mr-1 -mt-0.5" />
+                  Build your 7-card Battlefield Deck
+                </Link>{" "}
+                in the Deck Builder, then come back to join.
+              </p>
+            </div>
+          </div>
         )}
 
         {allRooms.length === 0 ? (
