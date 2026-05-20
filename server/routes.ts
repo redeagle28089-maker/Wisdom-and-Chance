@@ -409,6 +409,20 @@ export async function registerRoutes(server: Server, app: Express): Promise<void
       }
     }
 
+    // Practice games: hide the AI player's hand and deck from anyone who is
+    // not the game owner (player1).  The owner needs this data to drive AI
+    // logic client-side, but third-party callers must not see private AI state.
+    if (game.gameType === "practice" && req.user) {
+      const userId = (req.user as any).claims?.sub || (req.user as any).userId;
+      if (userId && userId !== game.player1Id) {
+        const { gameState, ...rest } = game as any;
+        const sanitizedGs = gameState
+          ? { ...gameState, player2Hand: undefined, player2Deck: undefined }
+          : gameState;
+        return res.json({ ...rest, gameState: sanitizedGs });
+      }
+    }
+
     res.json(game);
   });
 
