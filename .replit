@@ -1,88 +1,89 @@
 modules = ["nodejs-20", "web", "python3", "python-3.11", "postgresql-16"]
-run = "npm run dev"
-hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
+  run = "npm run dev"
+  hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
 
-[nix]
-channel = "stable-24_05"
+  [nix]
+  channel = "stable-24_05"
 
-[[ports]]
-localPort = 5000
-externalPort = 5000
+  [[ports]]
+  localPort = 5000
+  externalPort = 80
 
-[[ports]]
-localPort = 8080
-externalPort = 8080
+  [[ports]]
+  localPort = 8080
+  externalPort = 8080
 
-[[ports]]
-localPort = 8081
-externalPort = 8081
+  [[ports]]
+  localPort = 8081
+  externalPort = 8081
 
-[env]
-PORT = "5000"
+  [env]
+  PORT = "5000"
 
-[deployment]
-deploymentTarget = "autoscale"
-run = ["node", "./dist/index.cjs"]
-build = ["npm", "run", "build"]
+  [deployment]
+  deploymentTarget = "autoscale"
+  run = ["node", "./dist/index.cjs"]
+  build = ["npm", "run", "build"]
 
-[workflows]
-runButton = "Project"
+  [workflows]
+  runButton = "Project"
 
-[[workflows.workflow]]
-name = "Project"
-mode = "parallel"
-author = "agent"
+  [[workflows.workflow]]
+  name = "Project"
+  mode = "parallel"
+  author = "agent"
 
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Start application"
+  [[workflows.workflow.tasks]]
+  task = "workflow.run"
+  args = "Start application"
 
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Start mobile app"
+  [[workflows.workflow.tasks]]
+  task = "workflow.run"
+  args = "Start mobile app"
 
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Start desktop app"
+  [[workflows.workflow.tasks]]
+  task = "workflow.run"
+  args = "Start desktop app"
 
-[[workflows.workflow]]
-name = "Start application"
-author = "agent"
+  [[workflows.workflow]]
+  name = "Start application"
+  author = "agent"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "npm run dev"
-waitForPort = 5000
+  [[workflows.workflow.tasks]]
+  task = "shell.exec"
+  args = "npm run dev"
+  waitForPort = 5000
 
-[workflows.workflow.metadata]
-outputType = "webview"
+  [workflows.workflow.metadata]
+  outputType = "webview"
 
-[[workflows.workflow]]
-name = "Start mobile app"
-author = "agent"
+  [[workflows.workflow]]
+  name = "Start mobile app"
+  author = "agent"
 
-[workflows.workflow.metadata]
-outputType = "console"
+  [workflows.workflow.metadata]
+  outputType = "console"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd mobile && npm run expo:dev"
-waitForPort = 8080
+  [[workflows.workflow.tasks]]
+  task = "shell.exec"
+  args = "cd mobile && npm run expo:dev"
+  waitForPort = 8080
 
-[[workflows.workflow]]
-name = "Start desktop app"
-author = "agent"
+  [[workflows.workflow]]
+  name = "Start desktop app"
+  author = "agent"
 
-[workflows.workflow.metadata]
-outputType = "vnc"
+  [workflows.workflow.metadata]
+  outputType = "vnc"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd electron && ([ -d node_modules ] && echo 'deps ready' || npm install) && npm start"
+  [[workflows.workflow.tasks]]
+  task = "shell.exec"
+  args = "cd electron && ([ -d node_modules ] && echo 'deps ready' || npm install) && npm start"
 
-[agent]
-integrations = ["javascript_log_in_with_replit:2.0.0", "javascript_gemini_ai_integrations:2.0.0", "stripe:1.0.0", "javascript_paypal:1.0.0"]
+  [agent]
+  integrations = ["javascript_log_in_with_replit:2.0.0", "javascript_gemini_ai_integrations:2.0.0", "stripe:1.0.0", "javascript_paypal:1.0.0"]
 
-[postMerge]
-path = "scripts/post-merge.sh"
-timeoutMs = 20000
+  [postMerge]
+  path = "scripts/post-merge.sh"
+  timeoutMs = 20000
+  
