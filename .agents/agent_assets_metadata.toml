@@ -168,3 +168,9 @@ id = "6MQQ2-2lp3-5uD6l7m1UA"
 uri = "file://exports/game-board-layout.pdf"
 type = "pdf"
 title = "Game Board Zone Layout — Draw Your Zones"
+
+[[outputs]]
+id = "TXfIirLvFpn-JFK3PEljo"
+uri = "file://exports/Jason_Myers_Resume_Autofill.pdf"
+type = "pdf"
+title = "Jason Myers — Autofill-Ready Resume (PDF)"
