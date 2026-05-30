@@ -1860,6 +1860,127 @@ function AbilityCard({
   );
 }
 
+// ── PlayerZoneRow ─────────────────────────────────────────────────────────────
+// Compact strip shown at opponent top and player bottom showing all side zones:
+// [BF Deck]  [Main Deck]  [Commander Card — clickable]  ···  [Discard Pile]
+function PlayerZoneRow({
+  isOpponent,
+  deckSize,
+  yardSize,
+  yardTopCard,
+  commander,
+  bfDeckRemaining,
+  isBattlefieldMode,
+  onCommanderClick,
+}: {
+  isOpponent: boolean;
+  deckSize: number;
+  yardSize: number;
+  yardTopCard: { name: string; element: string; imageUrl?: string | null } | null | undefined;
+  commander: { name: string; element: string; imageUrl?: string | null; abilities: unknown[] } | null | undefined;
+  bfDeckRemaining: number;
+  isBattlefieldMode: boolean;
+  onCommanderClick: () => void;
+}) {
+  const elementGradients: Record<string, string> = {
+    fire:   'from-red-900 to-orange-950 border-red-500/50 text-red-200',
+    water:  'from-blue-900 to-cyan-950 border-blue-500/50 text-blue-200',
+    earth:  'from-amber-800 to-yellow-950 border-amber-600/50 text-amber-200',
+    air:    'from-slate-700 to-gray-900 border-slate-400/50 text-slate-200',
+    nature: 'from-green-900 to-emerald-950 border-green-500/50 text-green-200',
+  };
+  const cmdrGrad = commander
+    ? (elementGradients[(commander.element || '').toLowerCase()] ?? 'from-purple-900 to-slate-900 border-purple-500/50 text-purple-200')
+    : 'from-slate-800 to-slate-900 border-slate-600/30 text-slate-500';
+  const sideBorder  = isOpponent ? 'border-red-500/20 bg-red-950/10'   : 'border-green-500/20 bg-green-950/10';
+  const labelColor  = isOpponent ? 'text-red-400/60'                   : 'text-green-400/60';
+
+  return (
+    <div className={`flex items-center gap-2 px-2 py-1 rounded-lg border ${sideBorder} flex-shrink-0`}
+         data-testid={isOpponent ? 'opponent-zone-row' : 'my-zone-row'}>
+
+      {/* BF Deck (shown only in battlefield mode) */}
+      {isBattlefieldMode && (
+        <div className="flex flex-col items-center gap-0.5 flex-shrink-0">
+          <div className="relative w-9 h-[3.2rem] rounded bg-gradient-to-br from-amber-800 to-amber-950 border border-amber-500/40 shadow flex items-center justify-center overflow-hidden">
+            <div className="absolute inset-0 translate-x-[2px] translate-y-[2px] rounded bg-amber-900/50 -z-10 border border-amber-600/20" />
+            <span className="text-amber-400/50 text-[8px] font-bold select-none">⚔</span>
+            <div className="absolute -top-1 -right-1 bg-amber-600 text-white text-[8px] rounded-full w-4 h-4 flex items-center justify-center font-bold shadow">
+              {bfDeckRemaining}
+            </div>
+          </div>
+          <span className={`text-[7px] ${labelColor} uppercase tracking-wide`}>BF Deck</span>
+        </div>
+      )}
+
+      {/* Main Deck */}
+      <div className="flex flex-col items-center gap-0.5 flex-shrink-0">
+        <div className="relative w-9 h-[3.2rem] rounded bg-gradient-to-br from-purple-800 to-purple-950 border border-purple-500/30 shadow flex items-center justify-center overflow-hidden">
+          <div className="absolute inset-0 translate-x-[2px] translate-y-[2px] rounded bg-purple-900/60 -z-10 border border-purple-600/20" />
+          <div className="absolute inset-0 translate-x-[4px] translate-y-[4px] rounded bg-purple-900/40 -z-20 border border-purple-700/10" />
+          <div className="text-purple-500/40 text-[10px] select-none">▣</div>
+          <div className="absolute -top-1 -right-1 bg-purple-600 text-white text-[8px] rounded-full w-4 h-4 flex items-center justify-center font-bold shadow">
+            {deckSize > 99 ? '99+' : deckSize}
+          </div>
+        </div>
+        <span className={`text-[7px] ${labelColor} uppercase tracking-wide`}>Deck</span>
+      </div>
+
+      {/* Commander Card — always visible, clickable */}
+      <div
+        className="flex flex-col items-center gap-0.5 flex-shrink-0 cursor-pointer group"
+        onClick={onCommanderClick}
+        data-testid={isOpponent ? 'zone-opponent-commander' : 'zone-my-commander'}
+        title={commander ? `${commander.name} — click to view abilities` : 'No commander'}
+      >
+        <div className={`relative w-14 h-20 rounded-lg bg-gradient-to-br ${cmdrGrad} border-2 shadow-md overflow-hidden group-hover:scale-[1.05] group-hover:shadow-lg transition-all duration-150`}>
+          {commander?.imageUrl ? (
+            <img src={commander.imageUrl} alt={commander.name} className="absolute inset-0 w-full h-full object-cover opacity-90" />
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full gap-0.5 p-1">
+              <Crown className="w-4 h-4 opacity-60" />
+              <span className="text-[7px] font-bold text-center leading-tight opacity-80 line-clamp-2">
+                {commander ? commander.name : '—'}
+              </span>
+            </div>
+          )}
+          {commander && (
+            <div className="absolute bottom-0 left-0 right-0 bg-black/70 px-1 py-0.5 text-center">
+              <span className="text-[6px] uppercase tracking-wide font-bold opacity-90 line-clamp-1">{commander.element}</span>
+            </div>
+          )}
+          <div className="absolute inset-0 bg-white/0 group-hover:bg-white/5 transition-colors rounded-lg" />
+        </div>
+        <span className={`text-[7px] ${labelColor} uppercase tracking-wide`}>Commander</span>
+      </div>
+
+      {/* Spacer */}
+      <div className="flex-1 min-w-0" />
+
+      {/* Discard Pile */}
+      <div className="flex flex-col items-center gap-0.5 flex-shrink-0">
+        <div className="relative w-9 h-[3.2rem] rounded border border-dashed border-slate-600/40 bg-slate-800/20 flex items-center justify-center overflow-hidden shadow">
+          {yardTopCard ? (
+            <div className="absolute inset-0 flex flex-col items-center justify-center p-1 bg-slate-800/80">
+              <span className="text-[6px] font-bold text-slate-300 leading-tight text-center line-clamp-2">{yardTopCard.name}</span>
+              <span className="text-[6px] text-slate-500 mt-0.5">{yardTopCard.element}</span>
+            </div>
+          ) : (
+            <span className="text-slate-700 text-[10px]">∅</span>
+          )}
+          {yardSize > 0 && (
+            <div className="absolute -top-1 -right-1 bg-slate-600 text-white text-[8px] rounded-full w-4 h-4 flex items-center justify-center font-bold shadow">
+              {yardSize}
+            </div>
+          )}
+        </div>
+        <span className={`text-[7px] ${labelColor} uppercase tracking-wide`}>Discard</span>
+      </div>
+
+    </div>
+  );
+}
+
 function CommanderInfoDialog({
   commander,
   open,
@@ -2453,7 +2574,15 @@ export default function GameBoardPage() {
   const bfFlipPlayerId = useServerState
     ? (serverState.battlefieldFlipPlayerId ?? null)
     : null;
-  
+
+  // Discard pile (yard) — public info, both modes
+  const myYard: string[] = game ? (isPlayer1 ? (game.gameState.player1Yard || []) : (game.gameState.player2Yard || [])) : [];
+  const opponentYard: string[] = game ? (isPlayer1 ? (game.gameState.player2Yard || []) : (game.gameState.player1Yard || [])) : [];
+  const myYardSize = myYard.length;
+  const opponentYardSize = opponentYard.length;
+  const myYardTopCard = myYard.length > 0 ? getCardById(myYard[myYard.length - 1]) ?? null : null;
+  const opponentYardTopCard = opponentYard.length > 0 ? getCardById(opponentYard[opponentYard.length - 1]) ?? null : null;
+
   // Get game mode config (draw/deploy counts)
   const gameMode: GameMode = game?.gameMode || "standard";
   const modeConfig = GAME_MODE_CONFIG[gameMode];
@@ -4002,19 +4131,6 @@ export default function GameBoardPage() {
       <div className="max-w-6xl mx-auto flex flex-col h-full gap-1.5 relative z-10 main-game-column">
         <div className="flex items-center justify-between flex-shrink-0 gap-2 top-status-bar">
           <div className="flex items-center gap-2">
-            {opponentCommander && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setShowOpponentCommanderDialog(true)}
-                className="border-red-500/40 text-red-300 gap-1"
-                data-testid="button-opponent-commander"
-              >
-                <Crown className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">{opponentCommander.name}</span>
-                <span className="sm:hidden">Cmdr</span>
-              </Button>
-            )}
             <AnimatedHPBar current={opponentHP} max={GAME_CONSTANTS.STARTING_HP} isPlayer={false} label="Opponent" previousHP={previousOpponentHP} />
             <VictoryWithdrawalCounter 
               victories={opponentVP} 
@@ -4050,19 +4166,6 @@ export default function GameBoardPage() {
               isPlayer={true} 
             />
             <AnimatedHPBar current={myHP} max={GAME_CONSTANTS.STARTING_HP} isPlayer={true} label="You" previousHP={previousMyHP} />
-            {myCommander && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setShowMyCommanderDialog(true)}
-                className="border-green-500/40 text-green-300 gap-1"
-                data-testid="button-my-commander"
-              >
-                <Crown className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">{myCommander.name}</span>
-                <span className="sm:hidden">Cmdr</span>
-              </Button>
-            )}
             <div className="flex items-center gap-1.5">
               {isMultiplayer && (
                 <Button 
@@ -4081,14 +4184,22 @@ export default function GameBoardPage() {
           </div>
         </div>
 
+        {/* OPPONENT ZONE ROW — Deck, Commander, Discard */}
+        <PlayerZoneRow
+          isOpponent={true}
+          deckSize={opponentDeckSize}
+          yardSize={opponentYardSize}
+          yardTopCard={opponentYardTopCard}
+          commander={opponentCommander}
+          bfDeckRemaining={bfOppRemaining}
+          isBattlefieldMode={isBattlefieldMode}
+          onCommanderClick={() => setShowOpponentCommanderDialog(true)}
+        />
+
         <div className="bg-slate-800/30 rounded-lg border border-purple-500/10 px-3 py-1.5 flex-shrink-0 opponent-hand-zone">
           <div className="flex items-center justify-between mb-1">
             <span className="text-purple-300 text-[10px] font-medium uppercase tracking-wider">Opponent's Hand</span>
-            <div className="flex items-center gap-2 text-[10px] text-purple-400">
-              <span>{opponentHandSize} cards</span>
-              <span className="opacity-50">|</span>
-              <span>Deck: {opponentDeckSize}</span>
-            </div>
+            <span className="text-[10px] text-purple-400">{opponentHandSize} cards</span>
           </div>
           <div className="flex gap-1 justify-center items-center">
             {Array(Math.min(opponentHandSize, 10)).fill(0).map((_, i) => (
@@ -4419,6 +4530,19 @@ export default function GameBoardPage() {
             </div>
           )}
         </div>
+
+        {/* MY ZONE ROW — Deck, Commander, Discard */}
+        <PlayerZoneRow
+          isOpponent={false}
+          deckSize={myDeckSize}
+          yardSize={myYardSize}
+          yardTopCard={myYardTopCard}
+          commander={myCommander}
+          bfDeckRemaining={bfMyRemaining}
+          isBattlefieldMode={isBattlefieldMode}
+          onCommanderClick={() => setShowMyCommanderDialog(true)}
+        />
+
       </div>
       <CardPreviewDialog 
         card={previewCard} 
