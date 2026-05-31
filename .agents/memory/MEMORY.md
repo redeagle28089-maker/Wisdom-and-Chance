@@ -1,2 +1,4 @@
 - [Battlefield Mode architecture](battlefield-mode.md) — single activeFieldCard per round (not two); flip alternates by player; `battlefield` phase precedes `draw` each round.
 - [New unit traits (14 total)](unit-traits.md) — 10 new traits added; Banish Zone persists Reserve/Infiltrator/HoldTheLine cards; test-new-traits.mjs needs real DB cards to pass combat CPs.
+- [Simulate endpoints for trait tests](simulate-endpoints-trait-tests.md) — practice-mode PATCH never runs server combat; use simulate-combat/deploy endpoints instead.
+- [Rally/Saboteur element matching](rally-saboteur-element-matching.md) — buff/debuff card mechanics are element-gated; cross-element pairings produce zero buffBonus/debuffPenalty.

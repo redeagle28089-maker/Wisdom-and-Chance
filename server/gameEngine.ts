@@ -1835,6 +1835,219 @@ class ServerGameEngine {
     // Clients use seq to drop stale game_state messages after reconnect.
     this.bumpSeqAndReschedule(game.id);
   }
+
+  /**
+   * Simulate one round of combat with explicit card arrays — no active game required.
+   * Used by the admin test suite to verify server-side trait logic (multiplayer engine)
+   * without needing a full WebSocket multiplayer game.
+   */
+  async simulateCombat(opts: {
+    p1Cards: Array<{ cardId: string; modifiedPower?: number; reserveDeployed?: boolean }>;
+    p2Cards: Array<{ cardId: string; modifiedPower?: number; reserveDeployed?: boolean }>;
+    p1Yard?: string[];
+    p2Yard?: string[];
+    p1AbilityBuffs?: AbilityBuff[];
+    p2AbilityBuffs?: AbilityBuff[];
+  }): Promise<{
+    combatLog: any;
+    p1Battlefield: BattlefieldCard[];
+    p2Battlefield: BattlefieldCard[];
+    p1Yard: string[];
+    p2Yard: string[];
+    p1Banish: string[];
+    p2Banish: string[];
+    winner: string;
+    p1Total: number;
+    p2Total: number;
+    p1Breakdown: any[];
+    p2Breakdown: any[];
+  }> {
+    const p1BF: BattlefieldCard[] = opts.p1Cards.map(c => ({
+      cardId: c.cardId, faceDown: false,
+      ...(c.modifiedPower !== undefined && { modifiedPower: c.modifiedPower }),
+      ...(c.reserveDeployed && { reserveDeployed: true }),
+    }));
+    const p2BF: BattlefieldCard[] = opts.p2Cards.map(c => ({
+      cardId: c.cardId, faceDown: false,
+      ...(c.modifiedPower !== undefined && { modifiedPower: c.modifiedPower }),
+      ...(c.reserveDeployed && { reserveDeployed: true }),
+    }));
+
+    const p1BFCards = await this.mapBattlefieldToCards(p1BF);
+    const p2BFCards = await this.mapBattlefieldToCards(p2BF);
+
+    const p1RallyBonus = p1BFCards.reduce((s, c) => s + (c.trait === "Rally" && c.traitValue ? c.traitValue : 0), 0);
+    const p2RallyBonus = p2BFCards.reduce((s, c) => s + (c.trait === "Rally" && c.traitValue ? c.traitValue : 0), 0);
+    const p1Saboteur = p1BFCards.reduce((s, c) => s + (c.trait === "Saboteur" && c.traitValue ? c.traitValue : 0), 0);
+    const p2Saboteur = p2BFCards.reduce((s, c) => s + (c.trait === "Saboteur" && c.traitValue ? c.traitValue : 0), 0);
+    const p1Steadfast = p1BFCards.reduce((s, c) => s + (c.trait === "Steadfast" && c.traitValue ? c.traitValue : 0), 0);
+    const p2Steadfast = p2BFCards.reduce((s, c) => s + (c.trait === "Steadfast" && c.traitValue ? c.traitValue : 0), 0);
+    const p1Tactician = p1BFCards.reduce((s, c) => s + (c.trait === "Tactician" && c.traitValue ? c.traitValue : 0), 0);
+    const p2Tactician = p2BFCards.reduce((s, c) => s + (c.trait === "Tactician" && c.traitValue ? c.traitValue : 0), 0);
+
+    const p1Breakdown = await this.calculateBattlePower(
+      p1BFCards, p2BFCards, p1BF,
+      opts.p1AbilityBuffs, false, false, undefined, [],
+      { myRallyBonus: p1RallyBonus, enemySaboteurReduction: p2Saboteur, mySteadfastReduction: p1Steadfast, enemyTacticianBonus: p2Tactician }
+    );
+    const p2Breakdown = await this.calculateBattlePower(
+      p2BFCards, p1BFCards, p2BF,
+      opts.p2AbilityBuffs, false, false, undefined, [],
+      { myRallyBonus: p2RallyBonus, enemySaboteurReduction: p1Saboteur, mySteadfastReduction: p2Steadfast, enemyTacticianBonus: p1Tactician }
+    );
+
+    const p1Total = p1Breakdown.reduce((sum, b) => sum + b.finalPower, 0);
+    const p2Total = p2Breakdown.reduce((sum, b) => sum + b.finalPower, 0);
+    const winner: "player1" | "player2" | "tie" = p1Total > p2Total ? "player1" : p2Total > p1Total ? "player2" : "tie";
+
+    const combatSummary = this.generateCombatSummary(
+      p1Breakdown, p2Breakdown, p1Total, p2Total,
+      opts.p1AbilityBuffs || [], opts.p2AbilityBuffs || [], [], 1, false
+    );
+
+    const mapBreakdown = (bd: typeof p1Breakdown) => bd.map(b => ({
+      cardId: b.card.id,
+      cardName: b.card.name,
+      basePower: b.basePower,
+      buffBonus: b.buffBonuses.reduce((s: number, bb: any) => s + bb.amount, 0),
+      debuffPenalty: b.debuffPenalties.reduce((s: number, dp: any) => s + dp.amount, 0),
+      finalPower: b.finalPower,
+      traitName: b.traitInfo?.trait,
+      traitValue: b.traitInfo?.value,
+    }));
+
+    const loserNetDmg = winner === "player1"
+      ? combatSummary.finalDamageToPlayer2
+      : winner === "player2"
+        ? combatSummary.finalDamageToPlayer1
+        : 0;
+
+    const combatLog = {
+      player1Cards: mapBreakdown(p1Breakdown),
+      player2Cards: mapBreakdown(p2Breakdown),
+      player1Total: p1Total,
+      player2Total: p2Total,
+      damage: loserNetDmg,
+      winner,
+      turn: 1,
+      abilityEffects: combatSummary.abilityEffects,
+      player1QuickStrikeDamage: combatSummary.player1QuickStrikeDamage,
+      player2QuickStrikeDamage: combatSummary.player2QuickStrikeDamage,
+      player1GuardianBlocked: combatSummary.player1GuardianBlocked,
+      player2GuardianBlocked: combatSummary.player2GuardianBlocked,
+      player1Healing: combatSummary.player1Healing,
+      player2Healing: combatSummary.player2Healing,
+      player1CardsDrawn: combatSummary.player1CardsDrawn,
+      player2CardsDrawn: combatSummary.player2CardsDrawn,
+      player1NetDmg: combatSummary.finalDamageToPlayer1,
+      player2NetDmg: combatSummary.finalDamageToPlayer2,
+      player1LastStandDamage: combatSummary.player1LastStandDamage,
+      player2LastStandDamage: combatSummary.player2LastStandDamage,
+    };
+
+    const p1Persistent: BattlefieldCard[] = [];
+    const p1ToYard: string[] = [];
+    const p1ToBanish: string[] = [];
+    p1BF.forEach((bf, i) => {
+      if (bf.persisted) {
+        p1ToYard.push(bf.cardId);
+      } else if (bf.reserveDeployed) {
+        p1ToBanish.push(bf.cardId);
+      } else {
+        const card = p1BFCards[i];
+        if (card?.trait === "Infiltrator") {
+          p1Persistent.push({ cardId: bf.cardId, faceDown: false, persisted: true });
+        } else if (card?.trait === "Hold the Line") {
+          p1Persistent.push({ cardId: bf.cardId, faceDown: false, modifiedPower: 1, persisted: true });
+        } else {
+          p1ToYard.push(bf.cardId);
+        }
+      }
+    });
+
+    const p2Persistent: BattlefieldCard[] = [];
+    const p2ToYard: string[] = [];
+    const p2ToBanish: string[] = [];
+    p2BF.forEach((bf, i) => {
+      if (bf.persisted) {
+        p2ToYard.push(bf.cardId);
+      } else if (bf.reserveDeployed) {
+        p2ToBanish.push(bf.cardId);
+      } else {
+        const card = p2BFCards[i];
+        if (card?.trait === "Infiltrator") {
+          p2Persistent.push({ cardId: bf.cardId, faceDown: false, persisted: true });
+        } else if (card?.trait === "Hold the Line") {
+          p2Persistent.push({ cardId: bf.cardId, faceDown: false, modifiedPower: 1, persisted: true });
+        } else {
+          p2ToYard.push(bf.cardId);
+        }
+      }
+    });
+
+    return {
+      combatLog,
+      p1Battlefield: p1Persistent,
+      p2Battlefield: p2Persistent,
+      p1Yard: [...(opts.p1Yard || []), ...p1ToYard],
+      p2Yard: [...(opts.p2Yard || []), ...p2ToYard],
+      p1Banish: p1ToBanish,
+      p2Banish: p2ToBanish,
+      winner,
+      p1Total,
+      p2Total,
+      p1Breakdown: mapBreakdown(p1Breakdown),
+      p2Breakdown: mapBreakdown(p2Breakdown),
+    };
+  }
+
+  /**
+   * Simulate a deployment action — Vanguard auto-deploy and Flanking slot check.
+   * Used by the admin test suite without requiring an active game.
+   */
+  async simulateDeploy(opts: {
+    deployCardIds: string[];
+    handCardIds: string[];
+    deckCardIds: string[];
+  }): Promise<{
+    battlefield: Array<{ cardId: string; faceDown: boolean }>;
+    hand: string[];
+    deck: string[];
+    extraDeploySlots: number;
+    vanguardAutoDeployed: boolean;
+    vanguardAutoDeployedCardId: string | null;
+  }> {
+    let deck = [...opts.deckCardIds];
+    const battlefield: Array<{ cardId: string; faceDown: boolean }> = opts.deployCardIds.map(id => ({ cardId: id, faceDown: false }));
+    let vanguardAutoDeployed = false;
+    let vanguardAutoDeployedCardId: string | null = null;
+
+    for (const cardId of opts.deployCardIds) {
+      const c = await this.getCardById(cardId);
+      if (c?.trait === "Vanguard" && (c.traitValue ?? 0) > 0) {
+        if (deck.length > 0) {
+          const topId = deck[0];
+          const topCard = await this.getCardById(topId);
+          if (topCard && topCard.power <= c.power) {
+            deck = deck.slice(1);
+            battlefield.push({ cardId: topId, faceDown: true });
+            vanguardAutoDeployed = true;
+            vanguardAutoDeployedCardId = topId;
+          }
+        }
+        break;
+      }
+    }
+
+    let extraDeploySlots = 0;
+    for (const cardId of opts.deployCardIds) {
+      const c = await this.getCardById(cardId);
+      if (c?.trait === "Flanking") { extraDeploySlots = 1; break; }
+    }
+
+    const hand = opts.handCardIds.filter(id => !opts.deployCardIds.includes(id));
+    return { battlefield, hand, deck, extraDeploySlots, vanguardAutoDeployed, vanguardAutoDeployedCardId };
+  }
 }
 
 export const gameEngine = new ServerGameEngine();

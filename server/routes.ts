@@ -1624,6 +1624,32 @@ IMPORTANT:
     res.json({ ok: true, scopedTo: userId ?? null });
   });
 
+  app.post("/api/admin/test/simulate-combat", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { p1Cards, p2Cards, p1Yard, p2Yard, p1AbilityBuffs, p2AbilityBuffs } = req.body || {};
+      if (!Array.isArray(p1Cards) || !Array.isArray(p2Cards)) {
+        return res.status(400).json({ message: "p1Cards and p2Cards must be arrays" });
+      }
+      const result = await gameEngine.simulateCombat({ p1Cards, p2Cards, p1Yard, p2Yard, p1AbilityBuffs, p2AbilityBuffs });
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ message: err?.message || "Simulation failed" });
+    }
+  });
+
+  app.post("/api/admin/test/simulate-deploy", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { deployCardIds, handCardIds, deckCardIds } = req.body || {};
+      if (!Array.isArray(deployCardIds) || !Array.isArray(handCardIds) || !Array.isArray(deckCardIds)) {
+        return res.status(400).json({ message: "deployCardIds, handCardIds, and deckCardIds must be arrays" });
+      }
+      const result = await gameEngine.simulateDeploy({ deployCardIds, handCardIds, deckCardIds });
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ message: err?.message || "Simulation failed" });
+    }
+  });
+
   app.get("/api/admin/feature-flags", isAuthenticated, isAdmin, async (_req, res) => {
     try {
       const flags = await db.select().from(featureFlags);
