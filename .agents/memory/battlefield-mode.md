@@ -1,28 +1,20 @@
 ---
 name: Battlefield Mode architecture
-description: Key design decisions and gotchas for the Battlefield Mode feature.
+description: Durable design decisions for Battlefield Mode that aren't obvious from reading the code.
 ---
 
-## Rule
-One player flips one card per round (alternating `battlefieldFlipPlayer`); only that card's effects apply for the whole round. Not two cards simultaneously.
+## Single-card-per-round, not two
+One player flips one FieldCard per round (alternating `battlefieldFlipPlayer`). The original spec said "both players flip," but the engine was settled on a single flip alternating between players — this is what all tests validate. Do not change to two simultaneous cards without updating the test suite.
 
-**Why:** The original spec said "both players' cards flip" but the engine settled on a single flip per round alternating between players — this is what the test suite validates.
+**Why:** Simplifies state (one `activeFieldCard`) and prevents effect stacking conflicts between two simultaneous field cards.
 
-**How to apply:** `active.activeFieldCard` is a single `FieldCard | null`, not an array. `battlefieldActiveCards` in sanitized state wraps it with `{ card, flippedByPlayerId }`.
+## Phase order is battlefield → draw, not draw → battlefield
+The `battlefield` phase fires before draw each round. The flip player sends `{ action: "battlefield_flip" }`. After that, both players proceed to draw normally.
 
-## Phase order
-`battlefield → draw → deployment → combat → (repeat)`
+**Why:** Field-card effects (e.g. deploy_limit_override, all_units_debuff) must be known before the draw/deploy decision so players can adapt their strategy that round.
 
-The `battlefield` phase fires **before** draw each round, not after. The flip player sends `game_action { action: "battlefield_flip" }`.
+## Spectator isolation
+Spectators receive `spectator_battlefield_update` (not `game_state`) after the flip. Sending `game_state` to spectators would leak hand/deck info.
 
-## Spectator events
-Spectators receive `spectator_battlefield_update` (not `game_state`) after the flip, containing `activeCard` and `battlefieldModeEnabled`.
-
-## Validation
-Room start rejects if either player lacks a saved 7-card battlefield deck (`/api/decks/battlefield` PUT to save, GET /api/cards/battlefield for pool).
-
-## Key files
-- `server/gameEngine.ts` — `processBattlefieldPhase`, `calculateBattlePower`, `resolveCombat`
-- `server/multiplayerRoutes.ts` — room creation + start validation
-- `client/src/pages/game-board.tsx` — `BattlefieldZone` component, practice mode flip via `handleDraw`
-- `scripts/test-multiplayer-hardening.mjs` — BF-CP1 through BF-CP6
+## Validation gate
+Room start rejects if either player lacks a saved 7-card battlefield deck. This check fires server-side in `multiplayerRoutes.ts`, not client-side.
