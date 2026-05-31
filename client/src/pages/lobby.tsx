@@ -301,7 +301,7 @@ export default function LobbyPage() {
                     {battlefieldMode && !fieldDeckLoading && !hasValidFieldDeck && (
                       <p className="text-amber-400 text-xs">
                         You need a saved 7-card battlefield deck.{" "}
-                        <Link href="/deck-builder" className="underline text-amber-300 hover:text-amber-100 font-medium">
+                        <Link href="/deck-builder#battlefield-deck" className="underline text-amber-300 hover:text-amber-100 font-medium">
                           Build one in the Deck Builder
                         </Link>{" "}
                         before starting a Battlefield room.
@@ -369,7 +369,7 @@ export default function LobbyPage() {
             <div className="text-sm">
               <p className="text-amber-200 font-medium">Battlefield rooms are open — but you need a field deck to join them.</p>
               <p className="text-amber-400/80 mt-0.5">
-                <Link href="/deck-builder" className="underline text-amber-300 hover:text-amber-100 font-medium" data-testid="link-build-bf-deck">
+                <Link href="/deck-builder#battlefield-deck" className="underline text-amber-300 hover:text-amber-100 font-medium" data-testid="link-build-bf-deck">
                   <LayoutGrid className="w-3.5 h-3.5 inline mr-1 -mt-0.5" />
                   Build your 7-card Battlefield Deck
                 </Link>{" "}

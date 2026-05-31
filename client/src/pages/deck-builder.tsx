@@ -1003,7 +1003,7 @@ export default function DeckBuilderPage() {
         </div>
 
         {/* ── Battlefield Deck ─────────────────────────────────── */}
-        <div className="mt-8">
+        <div id="battlefield-deck" className="mt-8">
           <Card className="bg-slate-800/50 border-amber-500/20">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
