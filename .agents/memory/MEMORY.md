@@ -1,0 +1,2 @@
+- [Battlefield Mode architecture](battlefield-mode.md) — single activeFieldCard per round (not two); flip alternates by player; `battlefield` phase precedes `draw` each round.
+- [New unit traits (14 total)](unit-traits.md) — 10 new traits added; Banish Zone persists Reserve/Infiltrator/HoldTheLine cards; test-new-traits.mjs needs real DB cards to pass combat CPs.

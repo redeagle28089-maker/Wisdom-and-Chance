@@ -12,7 +12,12 @@ import { commanderAbilityEffectSchema } from "./models/cards";
 export const ELEMENTS = ["Fire", "Water", "Earth", "Air", "Nature"] as const;
 export type Element = typeof ELEMENTS[number];
 
-export const TRAITS = ["Quick Strike", "Care Package", "Restoration", "Guardian"] as const;
+export const TRAITS = [
+  "Quick Strike", "Care Package", "Restoration", "Guardian",
+  "Infiltrator", "Hold the Line", "Rally", "Saboteur",
+  "Steadfast", "Tactician", "Flanking", "Vanguard",
+  "Reserve", "Last Stand",
+] as const;
 export type Trait = typeof TRAITS[number];
 
 export const GAME_PHASES = ["battlefield", "draw", "deployment", "combat", "calculation", "end"] as const;
@@ -107,6 +112,8 @@ export const battlefieldCardSchema = z.object({
   cardId: z.string(),
   faceDown: z.boolean().default(true),
   modifiedPower: z.number().optional(),
+  persisted: z.boolean().optional(),
+  reserveDeployed: z.boolean().optional(),
 });
 
 export type BattlefieldCard = z.infer<typeof battlefieldCardSchema>;
@@ -187,6 +194,10 @@ export const gameStateSchema = z.object({
   player2NegateAndHalve: z.boolean().optional(),
   player1ProtectedElement: z.string().optional(),
   player2ProtectedElement: z.string().optional(),
+  player1Banish: z.array(z.string()).optional(),
+  player2Banish: z.array(z.string()).optional(),
+  player1UsedReserve: z.boolean().optional(),
+  player2UsedReserve: z.boolean().optional(),
   abilityLog: z.array(z.object({
     turn: z.number(),
     phase: z.string(),

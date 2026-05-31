@@ -99,6 +99,8 @@ interface CombatSummary {
   player2Healing: number;
   player1CardsDrawn: number;
   player2CardsDrawn: number;
+  player1LastStandDamage: number;
+  player2LastStandDamage: number;
   baseDamageToPlayer1: number;
   baseDamageToPlayer2: number;
   finalDamageToPlayer1: number;
@@ -184,6 +186,9 @@ export interface SanitizedGameState {
   battlefieldActiveCards?: { card: FieldCard | null; flippedByPlayerId: string | null } | null;
   battlefieldDeckRemaining?: { myCount: number; oppCount: number; myDiscardCount: number; oppDiscardCount: number } | null;
   battlefieldFlipPlayerId?: string | null;
+  myBanishCount: number;
+  opponentBanishCount: number;
+  myUsedReserve: boolean;
 }
 
 export interface CombatResult {
@@ -633,22 +638,73 @@ class ServerGameEngine {
       }
     }
 
+    // ── Flanking: allow one extra deploy slot if a Flanking card is being deployed ──
+    let flankingCard: Card | null = null;
+    for (const cardId of cardIds) {
+      const c = await this.getCardById(cardId);
+      if (c?.trait === "Flanking") { flankingCard = c; break; }
+    }
+    if (flankingCard) maxDeploy += 1;
+
+    // ── Reserve: a card from the discard pile may be included once per game ──
+    const myYard = isP1 ? [...gs.player1Yard] : [...gs.player2Yard];
+    const myUsedReserve = isP1 ? !!gs.player1UsedReserve : !!gs.player2UsedReserve;
+    const reserveCardIds = cardIds.filter(id => myYard.includes(id));
+    const handCardIds    = cardIds.filter(id => !myYard.includes(id));
+
+    if (reserveCardIds.length > 1) {
+      return { success: false, error: "Can only use Reserve for one card per game" };
+    }
+    if (reserveCardIds.length === 1) {
+      if (myUsedReserve) return { success: false, error: "Reserve already used this game" };
+      const rc = await this.getCardById(reserveCardIds[0]);
+      if (!rc || rc.trait !== "Reserve") return { success: false, error: "That card does not have the Reserve trait" };
+    }
+
     if (cardIds.length > maxDeploy) {
       return { success: false, error: `Cannot deploy more than ${maxDeploy} cards` };
     }
-    
-    const requiredDeploy = Math.min(maxDeploy, hand.length);
+
+    const requiredDeploy = Math.min(maxDeploy, hand.length + reserveCardIds.length);
     if (cardIds.length < requiredDeploy) {
       return { success: false, error: `Must deploy exactly ${requiredDeploy} cards` };
     }
 
-    for (const cardId of cardIds) {
+    // Deploy hand cards
+    for (const cardId of handCardIds) {
       const idx = hand.indexOf(cardId);
       if (idx === -1) {
         return { success: false, error: `Card ${cardId} not in hand` };
       }
       hand.splice(idx, 1);
       battlefield.push({ cardId, faceDown: true });
+    }
+
+    // Deploy Reserve card from yard
+    if (reserveCardIds.length === 1) {
+      const reserveId = reserveCardIds[0];
+      const yardIdx = myYard.indexOf(reserveId);
+      myYard.splice(yardIdx, 1);
+      battlefield.push({ cardId: reserveId, faceDown: true, reserveDeployed: true });
+      if (isP1) { gs.player1Yard = myYard; gs.player1UsedReserve = true; }
+      else       { gs.player2Yard = myYard; gs.player2UsedReserve = true; }
+    }
+
+    // ── Vanguard: auto-deploy top-of-deck if power ≤ Vanguard card's power ──
+    for (const cardId of handCardIds) {
+      const c = await this.getCardById(cardId);
+      if (c?.trait === "Vanguard" && (c.traitValue ?? 0) > 0) {
+        const myDeck = isP1 ? gs.player1Deck : gs.player2Deck;
+        if (myDeck.length > 0) {
+          const topId = myDeck[0];
+          const topCard = await this.getCardById(topId);
+          if (topCard && topCard.power <= c.power) {
+            myDeck.shift();
+            battlefield.push({ cardId: topId, faceDown: true });
+          }
+        }
+        break;
+      }
     }
 
     if (isP1) {
@@ -1065,15 +1121,27 @@ class ServerGameEngine {
       activeFieldCards.push(active.activeFieldCard);
     }
 
+    // Compute side-wide trait modifiers for Rally / Saboteur / Steadfast / Tactician
+    const p1RallyBonus = p1BFCards.reduce((s, c) => s + (c.trait === "Rally" && c.traitValue ? c.traitValue : 0), 0);
+    const p2RallyBonus = p2BFCards.reduce((s, c) => s + (c.trait === "Rally" && c.traitValue ? c.traitValue : 0), 0);
+    const p1Saboteur = p1BFCards.reduce((s, c) => s + (c.trait === "Saboteur" && c.traitValue ? c.traitValue : 0), 0);
+    const p2Saboteur = p2BFCards.reduce((s, c) => s + (c.trait === "Saboteur" && c.traitValue ? c.traitValue : 0), 0);
+    const p1Steadfast = p1BFCards.reduce((s, c) => s + (c.trait === "Steadfast" && c.traitValue ? c.traitValue : 0), 0);
+    const p2Steadfast = p2BFCards.reduce((s, c) => s + (c.trait === "Steadfast" && c.traitValue ? c.traitValue : 0), 0);
+    const p1Tactician = p1BFCards.reduce((s, c) => s + (c.trait === "Tactician" && c.traitValue ? c.traitValue : 0), 0);
+    const p2Tactician = p2BFCards.reduce((s, c) => s + (c.trait === "Tactician" && c.traitValue ? c.traitValue : 0), 0);
+
     const p1Breakdown = await this.calculateBattlePower(
       p1BFCards, p2BFCards, gs.player1Battlefield,
       gs.player1AbilityBuffs, gs.player1BlockedEffects, gs.player2NegateAndHalve, gs.player1ProtectedElement,
-      activeFieldCards
+      activeFieldCards,
+      { myRallyBonus: p1RallyBonus, enemySaboteurReduction: p2Saboteur, mySteadfastReduction: p1Steadfast, enemyTacticianBonus: p2Tactician }
     );
     const p2Breakdown = await this.calculateBattlePower(
       p2BFCards, p1BFCards, gs.player2Battlefield,
       gs.player2AbilityBuffs, gs.player2BlockedEffects, gs.player1NegateAndHalve, gs.player2ProtectedElement,
-      activeFieldCards
+      activeFieldCards,
+      { myRallyBonus: p2RallyBonus, enemySaboteurReduction: p1Saboteur, mySteadfastReduction: p2Steadfast, enemyTacticianBonus: p1Tactician }
     );
 
     const p1Total = p1Breakdown.reduce((sum, b) => sum + b.finalPower, 0);
@@ -1137,8 +1205,47 @@ class ServerGameEngine {
       gs.player2Hand = hand;
     }
 
-    const p1Yard = [...gs.player1Yard, ...gs.player1Battlefield.map(bf => bf.cardId)];
-    const p2Yard = [...gs.player2Yard, ...gs.player2Battlefield.map(bf => bf.cardId)];
+    // Separate survivors (Infiltrator / Hold the Line) and Reserve-used cards from normal yard
+    const p1Persistent: BattlefieldCard[] = [];
+    const p1ToYard: string[] = [];
+    const p1ToBanish: string[] = [];
+    gs.player1Battlefield.forEach((bf, i) => {
+      if (bf.persisted) {
+        p1ToYard.push(bf.cardId);
+      } else if (bf.reserveDeployed) {
+        p1ToBanish.push(bf.cardId);
+      } else {
+        const card = p1BFCards[i];
+        if (card?.trait === "Infiltrator") {
+          p1Persistent.push({ cardId: bf.cardId, faceDown: false, persisted: true });
+        } else if (card?.trait === "Hold the Line") {
+          p1Persistent.push({ cardId: bf.cardId, faceDown: false, modifiedPower: 1, persisted: true });
+        } else {
+          p1ToYard.push(bf.cardId);
+        }
+      }
+    });
+    const p2Persistent: BattlefieldCard[] = [];
+    const p2ToYard: string[] = [];
+    const p2ToBanish: string[] = [];
+    gs.player2Battlefield.forEach((bf, i) => {
+      if (bf.persisted) {
+        p2ToYard.push(bf.cardId);
+      } else if (bf.reserveDeployed) {
+        p2ToBanish.push(bf.cardId);
+      } else {
+        const card = p2BFCards[i];
+        if (card?.trait === "Infiltrator") {
+          p2Persistent.push({ cardId: bf.cardId, faceDown: false, persisted: true });
+        } else if (card?.trait === "Hold the Line") {
+          p2Persistent.push({ cardId: bf.cardId, faceDown: false, modifiedPower: 1, persisted: true });
+        } else {
+          p2ToYard.push(bf.cardId);
+        }
+      }
+    });
+    const p1Yard = [...gs.player1Yard, ...p1ToYard];
+    const p2Yard = [...gs.player2Yard, ...p2ToYard];
 
     const loserNetDmg = winner === "player1"
       ? combatSummary.finalDamageToPlayer2
@@ -1191,10 +1298,12 @@ class ServerGameEngine {
     game.player2VictoryPoints = newP2VP;
     game.player1WithdrawalPoints = newP1WP;
     game.player2WithdrawalPoints = newP2WP;
-    gs.player1Battlefield = [];
-    gs.player2Battlefield = [];
+    gs.player1Battlefield = p1Persistent;
+    gs.player2Battlefield = p2Persistent;
     gs.player1Yard = p1Yard;
     gs.player2Yard = p2Yard;
+    gs.player1Banish = [...(gs.player1Banish || []), ...p1ToBanish];
+    gs.player2Banish = [...(gs.player2Banish || []), ...p2ToBanish];
     gs.player1AbilityBuffs = [];
     gs.player2AbilityBuffs = [];
     gs.player1ExtraDeploy = 0;
@@ -1308,6 +1417,12 @@ class ServerGameEngine {
     enemyNegateAndHalve?: boolean,
     friendlyProtectedElement?: string,
     activeFieldCards?: FieldCard[],
+    traitModifiers?: {
+      myRallyBonus: number;
+      enemySaboteurReduction: number;
+      mySteadfastReduction: number;
+      enemyTacticianBonus: number;
+    },
   ): Promise<ServerCardBreakdown[]> {
     return friendlyCards.map(card => {
       const basePower = card.power;
@@ -1393,6 +1508,20 @@ class ServerGameEngine {
             }
           }
         }
+      }
+
+      // Side-wide trait modifiers: Rally / Saboteur / Steadfast / Tactician
+      if (traitModifiers?.myRallyBonus) {
+        buffBonuses.forEach(bb => { bb.amount += traitModifiers!.myRallyBonus; });
+      }
+      if (traitModifiers?.enemySaboteurReduction) {
+        buffBonuses.forEach(bb => { bb.amount = Math.max(0, bb.amount - traitModifiers!.enemySaboteurReduction); });
+      }
+      if (traitModifiers?.mySteadfastReduction) {
+        debuffPenalties.forEach(dp => { dp.amount = Math.max(0, dp.amount - traitModifiers!.mySteadfastReduction); });
+      }
+      if (traitModifiers?.enemyTacticianBonus) {
+        debuffPenalties.forEach(dp => { dp.amount += traitModifiers!.enemyTacticianBonus; });
       }
 
       const totalBuffs = buffBonuses.reduce((sum, b) => sum + b.amount, 0);
@@ -1491,8 +1620,19 @@ class ServerGameEngine {
       player2CardsDrawn += b.traitInfo!.value;
     });
 
-    const finalDamageToPlayer1 = Math.max(0, baseDamageToPlayer1 + player2QuickStrikeDamage - player1GuardianBlocked);
-    const finalDamageToPlayer2 = Math.max(0, baseDamageToPlayer2 + player1QuickStrikeDamage - player2GuardianBlocked);
+    // Last Stand: always deals the unit's finalPower as direct damage regardless of win/lose.
+    // Bypasses Guardian blocking.
+    let player1LastStandDamage = 0;
+    let player2LastStandDamage = 0;
+    p1Breakdown.filter(b => b.traitInfo?.trait === "Last Stand").forEach(b => {
+      player1LastStandDamage += b.finalPower;
+    });
+    p2Breakdown.filter(b => b.traitInfo?.trait === "Last Stand").forEach(b => {
+      player2LastStandDamage += b.finalPower;
+    });
+
+    const finalDamageToPlayer1 = Math.max(0, baseDamageToPlayer1 + player2QuickStrikeDamage - player1GuardianBlocked) + player2LastStandDamage;
+    const finalDamageToPlayer2 = Math.max(0, baseDamageToPlayer2 + player1QuickStrikeDamage - player2GuardianBlocked) + player1LastStandDamage;
 
     const abilityEffects: Array<{ playerSide: string; abilityName: string; effectDescription: string; phase: string }> = [];
     const turnEntries = abilityLog.filter((entry: any) => entry.turn === currentTurn);
@@ -1510,6 +1650,7 @@ class ServerGameEngine {
       player1GuardianBlocked, player2GuardianBlocked,
       player1Healing, player2Healing,
       player1CardsDrawn, player2CardsDrawn,
+      player1LastStandDamage, player2LastStandDamage,
       baseDamageToPlayer1, baseDamageToPlayer2,
       finalDamageToPlayer1, finalDamageToPlayer2,
       abilityEffects,
@@ -1611,6 +1752,9 @@ class ServerGameEngine {
       battlefieldFlipPlayerId: active.battlefieldMode
         ? (active.battlefieldFlipPlayer === "player1" ? game.player1Id : game.player2Id!)
         : null,
+      myBanishCount: ((isP1 ? gs.player1Banish : gs.player2Banish) || []).length,
+      opponentBanishCount: ((isP1 ? gs.player2Banish : gs.player1Banish) || []).length,
+      myUsedReserve: (isP1 ? !!gs.player1UsedReserve : !!gs.player2UsedReserve),
     };
   }
 

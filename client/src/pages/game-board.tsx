@@ -1868,6 +1868,7 @@ function PlayerZoneRow({
   deckSize,
   yardSize,
   yardTopCard,
+  banishCount,
   commander,
   bfDeckRemaining,
   isBattlefieldMode,
@@ -1877,6 +1878,7 @@ function PlayerZoneRow({
   deckSize: number;
   yardSize: number;
   yardTopCard: { name: string; element: string; imageUrl?: string | null } | null | undefined;
+  banishCount: number;
   commander: { name: string; element: string; imageUrl?: string | null; abilities: unknown[] } | null | undefined;
   bfDeckRemaining: number;
   isBattlefieldMode: boolean;
@@ -1975,6 +1977,20 @@ function PlayerZoneRow({
           )}
         </div>
         <span className={`text-[7px] ${labelColor} uppercase tracking-wide`}>Discard</span>
+      </div>
+
+      {/* Banish Zone */}
+      <div className="flex flex-col items-center gap-0.5 flex-shrink-0">
+        <div className="relative w-9 h-[3.2rem] rounded border border-dashed border-violet-900/50 bg-violet-950/20 flex items-center justify-center overflow-hidden shadow"
+             title="Banish Zone — cards here cannot be retrieved">
+          <span className="text-violet-700/60 text-[10px] select-none">✦</span>
+          {banishCount > 0 && (
+            <div className="absolute -top-1 -right-1 bg-violet-700 text-white text-[8px] rounded-full w-4 h-4 flex items-center justify-center font-bold shadow">
+              {banishCount}
+            </div>
+          )}
+        </div>
+        <span className={`text-[7px] ${labelColor} uppercase tracking-wide`}>Banish</span>
       </div>
 
     </div>
@@ -2582,6 +2598,14 @@ export default function GameBoardPage() {
   const opponentYardSize = opponentYard.length;
   const myYardTopCard = myYard.length > 0 ? getCardById(myYard[myYard.length - 1]) ?? null : null;
   const opponentYardTopCard = opponentYard.length > 0 ? getCardById(opponentYard[opponentYard.length - 1]) ?? null : null;
+
+  // Banish Zone counts — practice mode reads from game state, multiplayer reads from server state
+  const myBanishCount: number = serverState
+    ? (serverState as any).myBanishCount ?? 0
+    : ((game?.gameState as any)?.[isPlayer1 ? 'player1Banish' : 'player2Banish'] || []).length;
+  const opponentBanishCount: number = serverState
+    ? (serverState as any).opponentBanishCount ?? 0
+    : ((game?.gameState as any)?.[isPlayer1 ? 'player2Banish' : 'player1Banish'] || []).length;
 
   // Get game mode config (draw/deploy counts)
   const gameMode: GameMode = game?.gameMode || "standard";
@@ -4184,12 +4208,13 @@ export default function GameBoardPage() {
           </div>
         </div>
 
-        {/* OPPONENT ZONE ROW — Deck, Commander, Discard */}
+        {/* OPPONENT ZONE ROW — Deck, Commander, Discard, Banish */}
         <PlayerZoneRow
           isOpponent={true}
           deckSize={opponentDeckSize}
           yardSize={opponentYardSize}
           yardTopCard={opponentYardTopCard}
+          banishCount={opponentBanishCount}
           commander={opponentCommander}
           bfDeckRemaining={bfOppRemaining}
           isBattlefieldMode={isBattlefieldMode}
@@ -4531,12 +4556,13 @@ export default function GameBoardPage() {
           )}
         </div>
 
-        {/* MY ZONE ROW — Deck, Commander, Discard */}
+        {/* MY ZONE ROW — Deck, Commander, Discard, Banish */}
         <PlayerZoneRow
           isOpponent={false}
           deckSize={myDeckSize}
           yardSize={myYardSize}
           yardTopCard={myYardTopCard}
+          banishCount={myBanishCount}
           commander={myCommander}
           bfDeckRemaining={bfMyRemaining}
           isBattlefieldMode={isBattlefieldMode}
